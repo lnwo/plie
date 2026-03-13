@@ -327,8 +327,69 @@ let appState = {
     dimensions: null,
     rawDimensions: null,
     skills: [...DATA.skills],
-    sessions: [],
-    sessionTemplates: [],   // saved recurring/named sessions
+    sessions: [
+        {
+            id: 1741824000000,
+            date: '2026-03-12',
+            sessionName: 'Wednesday RAD class',
+            templateId: null,
+            classType: 'technique',
+            blocks: [
+                {
+                    id: 1741824001000,
+                    topicId: 'general',
+                    title: 'General warm-up',
+                    notes: 'Focused on épaulement at the barre today. Felt more connected through the upper back than usual.',
+                    corrections: 'Keep shoulders down and back — teacher corrected this twice during the adagio.',
+                    highlight: true
+                },
+                {
+                    id: 1741824002000,
+                    topicId: 'skill:Pirouette',
+                    title: '',
+                    notes: 'Single turns feeling more stable. Tried a double — lost it about 70% of the time.',
+                    corrections: 'Spot earlier. Pull up through the supporting leg before initiating the turn.',
+                    highlight: false
+                }
+            ],
+            savedAt: 1741824060000
+        },
+        {
+            id: 1741651200000,
+            date: '2026-03-10',
+            sessionName: 'Monday open class',
+            templateId: null,
+            classType: 'open',
+            blocks: [
+                {
+                    id: 1741651201000,
+                    topicId: 'skill:Arabesque',
+                    title: 'Arabesque extension',
+                    notes: 'Working on getting the leg higher without losing the line through the back.',
+                    corrections: 'Don\'t tilt the pelvis — the height comes from the hip flexor, not the lower back.',
+                    highlight: true
+                }
+            ],
+            savedAt: 1741651260000
+        }
+    ],
+    sessionTemplates: [],
+    timeline: [
+        {
+            date: '2026-03-12',
+            type: 'session',
+            title: 'Wednesday RAD class',
+            subtitle: 'Technique class · 2 notes',
+            sessionId: 1741824000000
+        },
+        {
+            date: '2026-03-10',
+            type: 'session',
+            title: 'Monday open class',
+            subtitle: 'Open class · 1 note',
+            sessionId: 1741651200000
+        }
+    ],
     goals: [],
     notes: [],
     wardrobe: [],
@@ -1858,12 +1919,14 @@ function initProfile() {
             : `Completed placement quiz — ${(DATA.levelLabels[level] || 'BEGINNER').charAt(0) + (DATA.levelLabels[level] || 'BEGINNER').slice(1).toLowerCase()}`;
 
         const sessionEntries = (appState.timeline || []).map(entry => `
-            <div class="timeline-item">
-                <div class="timeline-dot timeline-dot-session"></div>
+            <div class="timeline-item ${entry.sessionId ? 'timeline-item-tappable' : ''}"
+                 ${entry.sessionId ? `onclick="showSessionDetail(${entry.sessionId})"` : ''}>
+                <div class="timeline-dot ${entry.type === 'session' ? 'timeline-dot-session' : ''}"></div>
                 <div class="timeline-content">
                     <div class="timeline-date">${formatTimelineDate(entry.date)}</div>
                     <div class="timeline-title">${entry.title}</div>
                     ${entry.subtitle ? `<div class="timeline-subtitle">${entry.subtitle}</div>` : ''}
+                    ${entry.sessionId ? `<div class="timeline-tap-hint">tap to review →</div>` : ''}
                 </div>
             </div>
         `).join('');
@@ -1891,6 +1954,148 @@ function formatTimelineDate(dateStr) {
     if (d.toDateString() === today.toDateString()) return 'Today';
     if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
     return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   SESSION DETAIL VIEW
+   Full-screen slide-in from right. Read-only review of a saved session.
+   ═══════════════════════════════════════════════════════════════ */
+
+function showSessionDetail(sessionId) {
+    const session = appState.sessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    const returnTo = appState.currentScreen;
+
+    let screen = document.getElementById(`session-detail-${sessionId}`);
+    if (!screen) {
+        screen = document.createElement('div');
+        screen.className = 'screen session-detail-screen';
+        screen.id = `session-detail-${sessionId}`;
+        document.querySelector('.app-container').appendChild(screen);
+    }
+
+    const classTypeLabel = session.classType
+        ? ALL_CLASS_TYPES.find(ct => ct.id === session.classType)?.label || session.classType
+        : null;
+
+    const template = appState.sessionTemplates.find(t => t.id === session.templateId);
+    const sessionTitle = session.sessionName || template?.name || 'Session';
+    const location = template?.location || session.sessionLocation || null;
+
+    // Meta line: date · class type
+    const datePart = new Date(session.date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const metaParts = [datePart, classTypeLabel].filter(Boolean);
+
+    // Linked skills (blocks that reference a skill)
+    const linkedSkills = session.blocks
+        .filter(b => b.topicId?.startsWith('skill:'))
+        .map(b => b.topicId.replace('skill:', ''));
+    const uniqueSkills = [...new Set(linkedSkills)];
+
+    // Render blocks
+    const blocksHtml = session.blocks.length > 0
+        ? session.blocks.map(block => renderDetailBlockHtml(block)).join('')
+        : `<div class="session-detail-empty">No notes recorded for this session.</div>`;
+
+    // Linked skills chips
+    const skillChipsHtml = uniqueSkills.length > 0 ? `
+        <div class="session-detail-section">
+            <div class="session-detail-section-label">Linked skills</div>
+            <div class="session-detail-skill-chips">
+                ${uniqueSkills.map(skill => `
+                    <button class="session-skill-chip" onclick="alert('Skill detail coming soon')">
+                        ${skill}
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    ` : '';
+
+    screen.innerHTML = `
+        <div class="session-detail-view">
+
+            <!-- Header -->
+            <div class="session-detail-header">
+                <button class="session-detail-back" onclick="closeSessionDetail(${sessionId}, '${returnTo}')">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="13 4 7 10 13 16"/>
+                    </svg>
+                    back
+                </button>
+                <button class="session-detail-edit" onclick="alert('Edit coming soon')">edit</button>
+            </div>
+
+            <!-- Session identity -->
+            <div class="session-detail-hero">
+                <h1 class="session-detail-title">${sessionTitle}</h1>
+                <div class="session-detail-meta">${metaParts.join(' · ')}</div>
+                ${location ? `<div class="session-detail-location">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                        <circle cx="6" cy="5" r="2"/><path d="M6 1a4 4 0 0 1 4 4c0 3-4 7-4 7S2 8 2 5a4 4 0 0 1 4-4z"/>
+                    </svg>
+                    ${location}
+                </div>` : ''}
+            </div>
+
+            <!-- Notes & corrections -->
+            <div class="session-detail-section">
+                <div class="session-detail-section-label">Notes &amp; corrections</div>
+                <div class="session-detail-blocks">
+                    ${blocksHtml}
+                </div>
+            </div>
+
+            ${skillChipsHtml}
+
+            <div style="height: 120px;"></div>
+        </div>
+    `;
+
+    showScreen(`session-detail-${sessionId}`);
+}
+
+function closeSessionDetail(sessionId, returnTo) {
+    // Navigate back to wherever we came from
+    if (returnTo === 'profile') {
+        showScreen('profile');
+        document.querySelector('[data-nav="profile"]')?.classList.add('active');
+        appState.currentNav = 'profile';
+    } else if (returnTo) {
+        navigateTo(returnTo.replace('-screen', ''));
+    } else {
+        navigateTo('profile');
+    }
+}
+
+function renderDetailBlockHtml(block) {
+    const topics = getBlockTopics();
+    const topic = topics.find(t => t.id === block.topicId);
+    const topicLabel = topic?.label || 'General';
+    const isSkill = block.topicId?.startsWith('skill:');
+    const skillName = isSkill ? block.topicId.replace('skill:', '') : null;
+
+    const hasContent = block.title || block.notes || block.corrections;
+    if (!hasContent) return '';
+
+    return `
+        <div class="detail-block ${block.highlight ? 'detail-block-highlighted' : ''}">
+            <div class="detail-block-header">
+                <span class="detail-block-topic">${topicLabel}</span>
+                ${isSkill ? `<button class="detail-block-skill-link" onclick="alert('Skill detail coming soon')">learn more →</button>` : ''}
+                ${block.highlight ? '<span class="detail-block-star">★</span>' : ''}
+            </div>
+            ${block.title ? `<div class="detail-block-title">${block.title}</div>` : ''}
+            ${block.notes ? `<div class="detail-block-notes">${block.notes}</div>` : ''}
+            ${block.corrections ? `
+                <div class="detail-block-corrections">
+                    <span class="detail-block-corrections-label">correction</span>
+                    ${block.corrections}
+                </div>
+            ` : ''}
+        </div>
+    `;
 }
 
 
