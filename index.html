@@ -38,42 +38,30 @@
             </div>
         </header>
 
-        <!-- Onboarding Screen 1 -->
+        <!-- Onboarding Screen 1 — Welcome -->
         <div class="screen onboarding-screen active" id="onboarding-1">
             <div class="onboarding-content">
                 <div class="onboarding-illustration">
                     <svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 180px; height: 180px;">
-                        <!-- Ballet dancer in arabesque - elegant line art -->
                         <circle cx="120" cy="120" r="110" fill="var(--accent-wash)" opacity="0.5"/>
                         <circle cx="120" cy="120" r="80" fill="var(--accent-wash)" opacity="0.3"/>
-                        <!-- Head -->
                         <ellipse cx="130" cy="68" rx="12" ry="14" stroke="var(--primary)" stroke-width="2" fill="none"/>
-                        <!-- Bun -->
                         <circle cx="133" cy="56" r="7" stroke="var(--primary)" stroke-width="1.5" fill="var(--accent-wash)"/>
-                        <!-- Neck -->
                         <line x1="128" y1="82" x2="125" y2="92" stroke="var(--primary)" stroke-width="2" stroke-linecap="round"/>
-                        <!-- Torso -->
                         <path d="M125 92 C122 105, 118 118, 120 130" stroke="var(--primary)" stroke-width="2" fill="none" stroke-linecap="round"/>
-                        <!-- Standing leg -->
                         <path d="M120 130 C119 145, 118 160, 118 178" stroke="var(--primary)" stroke-width="2" fill="none" stroke-linecap="round"/>
-                        <!-- Standing foot (en pointe) -->
                         <path d="M118 178 L118 186" stroke="var(--primary)" stroke-width="2" stroke-linecap="round"/>
-                        <!-- Back leg (arabesque) -->
                         <path d="M120 130 C135 132, 155 128, 175 115" stroke="var(--primary)" stroke-width="2" fill="none" stroke-linecap="round"/>
-                        <!-- Back foot -->
                         <path d="M175 115 L182 112" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round"/>
-                        <!-- Front arm -->
                         <path d="M124 96 C115 92, 95 85, 78 80" stroke="var(--primary)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-                        <!-- Hand -->
                         <path d="M78 80 C75 79, 73 80, 72 82" stroke="var(--primary)" stroke-width="1" stroke-linecap="round"/>
-                        <!-- Back arm -->
                         <path d="M126 96 C135 100, 148 108, 158 115" stroke="var(--primary)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-                        <!-- Tutu suggestion -->
                         <path d="M110 128 C112 124, 128 124, 132 128" stroke="var(--accent)" stroke-width="1.5" fill="var(--accent-wash)" opacity="0.6" stroke-linecap="round"/>
                     </svg>
                 </div>
                 <h1 class="onboarding-title">welcome to <span class="brand">plié</span></h1>
-                <p class="onboarding-subtitle">set your goals. build your practice. see your progress.</p>
+                <p class="onboarding-lead">A training companion for what happens outside the studio</p>
+                <p class="onboarding-body">Log classes and corrections, map your skills with photos and notes, and set goals that follow your training. Designed for dancers and teachers who value clarity and craft.</p>
             </div>
             <div class="onboarding-cta">
                 <div class="onboarding-dots">
@@ -81,43 +69,41 @@
                     <div class="onboarding-dot"></div>
                     <div class="onboarding-dot"></div>
                 </div>
-                <button class="btn-large" onclick="nextOnboarding()">begin</button>
+                <button class="btn-large" onclick="nextOnboarding()">get started</button>
                 <div class="onboarding-skip">
-                    <button onclick="skipOnboarding()" style="background: none; border: none; cursor: pointer; font-family: inherit; font-size: inherit; color: inherit; padding: 0;">skip</button>
+                    <button onclick="skipOnboarding()" style="background:none;border:none;cursor:pointer;font-family:inherit;font-size:inherit;color:inherit;padding:0;">skip</button>
                 </div>
+                <p class="onboarding-swipe-hint">swipe to learn more</p>
             </div>
         </div>
 
-        <!-- Onboarding Screen 2 -->
+        <!-- Onboarding Screen 2 — Know where you stand -->
         <div class="screen onboarding-screen" id="onboarding-2">
             <div class="onboarding-logo-small">plié</div>
-            <div class="onboarding-content">
-                <div class="onboarding-illustration">
-                    <svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 160px; height: 160px;">
-                        <!-- Clipboard / quiz concept -->
-                        <circle cx="120" cy="120" r="110" fill="var(--accent-wash)" opacity="0.4"/>
-                        <!-- Clipboard body -->
-                        <rect x="72" y="60" width="96" height="125" rx="8" stroke="var(--primary)" stroke-width="2" fill="var(--surface)"/>
-                        <!-- Clipboard clip -->
-                        <rect x="100" y="52" width="40" height="16" rx="4" stroke="var(--primary)" stroke-width="2" fill="var(--accent-wash)"/>
-                        <circle cx="120" cy="60" r="4" fill="var(--primary)"/>
-                        <!-- Checklist lines -->
-                        <circle cx="92" cy="95" r="5" stroke="var(--accent)" stroke-width="1.5" fill="none"/>
-                        <path d="M89 95 L91 97.5 L96 92" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        <line x1="106" y1="95" x2="148" y2="95" stroke="var(--border)" stroke-width="2" stroke-linecap="round"/>
-                        <circle cx="92" cy="115" r="5" stroke="var(--accent)" stroke-width="1.5" fill="none"/>
-                        <path d="M89 115 L91 117.5 L96 112" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        <line x1="106" y1="115" x2="142" y2="115" stroke="var(--border)" stroke-width="2" stroke-linecap="round"/>
-                        <circle cx="92" cy="135" r="5" stroke="var(--border)" stroke-width="1.5" fill="none"/>
-                        <line x1="106" y1="135" x2="145" y2="135" stroke="var(--border)" stroke-width="2" stroke-linecap="round"/>
-                        <circle cx="92" cy="155" r="5" stroke="var(--border)" stroke-width="1.5" fill="none"/>
-                        <line x1="106" y1="155" x2="138" y2="155" stroke="var(--border)" stroke-width="2" stroke-linecap="round"/>
-                        <!-- Small sparkle -->
-                        <path d="M160 72 L162 68 L164 72 L168 74 L164 76 L162 80 L160 76 L156 74Z" fill="var(--accent)" opacity="0.6"/>
-                    </svg>
+            <div class="onboarding-content onboarding-content-top">
+                <h2 class="onboarding-heading">know where you stand</h2>
+                <p class="onboarding-lead">Answer the first four placement questions for a provisional level. The full assessment maps strengths and areas to refine.</p>
+                <p class="onboarding-body">Track technical stages (barre, centre, allegro, turns, flexibility) and artistry (musicality, repertoire). Save teacher corrections, attach photos and videos, and flag skills you want to prioritise.</p>
+
+                <div class="onboarding-examples">
+                    <div class="onboarding-example-row" onclick="this.classList.toggle('open')">
+                        <span class="onboarding-example-label">Flag plié → add photos → build a practice plan</span>
+                        <svg class="onboarding-example-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 6 8 10 12 6"/></svg>
+                        <div class="onboarding-example-detail">Mark any skill as "in focus" from The Barre. Attach photos or videos, log corrections from your teacher, and include it in a 4-week practice programme.</div>
+                    </div>
+                    <div class="onboarding-example-row" onclick="this.classList.toggle('open')">
+                        <span class="onboarding-example-label">Save a correction → see it on the skill page</span>
+                        <svg class="onboarding-example-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 6 8 10 12 6"/></svg>
+                        <div class="onboarding-example-detail">After class, log what your teacher said. Corrections link directly to the skill and appear chronologically — so you can see patterns over time.</div>
+                    </div>
+                    <div class="onboarding-example-row" onclick="this.classList.toggle('open')">
+                        <span class="onboarding-example-label">Set a goal → track it with milestones</span>
+                        <svg class="onboarding-example-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 6 8 10 12 6"/></svg>
+                        <div class="onboarding-example-detail">Goals can link to a specific skill or dimension. Add milestones to break them down — each one you tick off creates a timeline entry.</div>
+                    </div>
                 </div>
-                <h2 class="onboarding-heading">find your level</h2>
-                <p class="onboarding-subtitle">a short quiz to understand where you are — and where to focus next</p>
+
+                <p class="onboarding-note">The first 4–5 questions give a provisional badge. Complete the full placement for a detailed breakdown.</p>
             </div>
             <div class="onboarding-cta">
                 <div class="onboarding-dots">
@@ -125,40 +111,56 @@
                     <div class="onboarding-dot active"></div>
                     <div class="onboarding-dot"></div>
                 </div>
-                <button class="btn-large" onclick="nextOnboarding()">start the quiz</button>
+                <div class="onboarding-btn-row">
+                    <button class="btn-large" style="flex:1;" onclick="nextOnboarding()">how it works</button>
+                    <button class="btn-secondary onboarding-btn-secondary" onclick="nextOnboarding()">see examples</button>
+                </div>
                 <div class="onboarding-skip">
-                    <button onclick="skipOnboarding()" style="background: none; border: none; cursor: pointer; font-family: inherit; font-size: inherit; color: inherit; padding: 0;">skip</button>
+                    <button onclick="skipOnboarding()" style="background:none;border:none;cursor:pointer;font-family:inherit;font-size:inherit;color:inherit;padding:0;">skip</button>
                 </div>
             </div>
         </div>
 
-        <!-- Onboarding Screen 3 -->
+        <!-- Onboarding Screen 3 — End card -->
         <div class="screen onboarding-screen" id="onboarding-3">
             <div class="onboarding-logo-small">plié</div>
             <div class="onboarding-content">
                 <div class="onboarding-illustration">
                     <svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 160px; height: 160px;">
-                        <!-- Progress / growth concept -->
                         <circle cx="120" cy="120" r="110" fill="var(--accent-wash)" opacity="0.4"/>
-                        <!-- Chart area -->
-                        <line x1="60" y1="180" x2="60" y2="65" stroke="var(--border)" stroke-width="1.5" stroke-linecap="round"/>
-                        <line x1="58" y1="180" x2="185" y2="180" stroke="var(--border)" stroke-width="1.5" stroke-linecap="round"/>
-                        <!-- Progress curve -->
-                        <path d="M65 170 C85 165, 95 150, 110 138 C125 126, 135 115, 150 98 C160 86, 170 78, 180 70" stroke="var(--coral)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-                        <!-- Data points -->
-                        <circle cx="65" cy="170" r="4" fill="var(--surface)" stroke="var(--coral)" stroke-width="2"/>
-                        <circle cx="110" cy="138" r="4" fill="var(--surface)" stroke="var(--coral)" stroke-width="2"/>
-                        <circle cx="150" cy="98" r="4" fill="var(--surface)" stroke="var(--coral)" stroke-width="2"/>
-                        <circle cx="180" cy="70" r="5" fill="var(--coral)" stroke="var(--surface)" stroke-width="2"/>
-                        <!-- Star at peak -->
-                        <path d="M180 55 L182 50 L184 55 L189 57 L184 59 L182 64 L180 59 L175 57Z" fill="var(--accent)" opacity="0.7"/>
-                        <!-- Small grid lines -->
-                        <line x1="60" y1="140" x2="185" y2="140" stroke="var(--border-light)" stroke-width="1" stroke-dasharray="4 4"/>
-                        <line x1="60" y1="100" x2="185" y2="100" stroke="var(--border-light)" stroke-width="1" stroke-dasharray="4 4"/>
+                        <!-- Stylised plié position — both legs bent, grounded -->
+                        <!-- Head -->
+                        <ellipse cx="120" cy="62" rx="11" ry="13" stroke="var(--primary)" stroke-width="2" fill="none"/>
+                        <!-- Bun -->
+                        <circle cx="120" cy="50" r="7" stroke="var(--primary)" stroke-width="1.5" fill="var(--accent-wash)"/>
+                        <!-- Neck -->
+                        <line x1="120" y1="75" x2="120" y2="84" stroke="var(--primary)" stroke-width="2" stroke-linecap="round"/>
+                        <!-- Torso -->
+                        <path d="M120 84 C120 100, 120 112, 120 122" stroke="var(--primary)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                        <!-- Arms — second position -->
+                        <path d="M120 92 C108 90, 94 88, 80 90" stroke="var(--primary)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+                        <path d="M120 92 C132 90, 146 88, 160 90" stroke="var(--primary)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+                        <!-- Hands -->
+                        <circle cx="79" cy="91" r="3" fill="var(--primary)" opacity="0.4"/>
+                        <circle cx="161" cy="91" r="3" fill="var(--primary)" opacity="0.4"/>
+                        <!-- Tutu -->
+                        <path d="M104 122 C108 118, 132 118, 136 122" stroke="var(--accent)" stroke-width="1.5" fill="var(--accent-wash)" opacity="0.7" stroke-linecap="round"/>
+                        <!-- Left leg — plié, turned out -->
+                        <path d="M116 122 C110 130, 104 140, 98 155" stroke="var(--primary)" stroke-width="2" fill="none" stroke-linecap="round"/>
+                        <path d="M98 155 C94 165, 88 172, 82 178" stroke="var(--primary)" stroke-width="2" fill="none" stroke-linecap="round"/>
+                        <!-- Left foot -->
+                        <path d="M82 178 C78 178, 74 176, 72 174" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round"/>
+                        <!-- Right leg — plié, turned out -->
+                        <path d="M124 122 C130 130, 136 140, 142 155" stroke="var(--primary)" stroke-width="2" fill="none" stroke-linecap="round"/>
+                        <path d="M142 155 C146 165, 152 172, 158 178" stroke="var(--primary)" stroke-width="2" fill="none" stroke-linecap="round"/>
+                        <!-- Right foot -->
+                        <path d="M158 178 C162 178, 166 176, 168 174" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round"/>
+                        <!-- Ground line -->
+                        <line x1="65" y1="182" x2="175" y2="182" stroke="var(--border)" stroke-width="1" stroke-linecap="round"/>
                     </svg>
                 </div>
-                <h2 class="onboarding-heading">your practice, measured</h2>
-                <p class="onboarding-subtitle">log sessions, set goals, and see how far you've come</p>
+                <h2 class="onboarding-heading">your growth starts here</h2>
+                <p class="onboarding-body" style="max-width: 300px; margin: 0 auto;">The plié is at the heart of classical technique. Begin here — log your first session and start tracking your progress.</p>
             </div>
             <div class="onboarding-cta">
                 <div class="onboarding-dots">
@@ -166,9 +168,9 @@
                     <div class="onboarding-dot"></div>
                     <div class="onboarding-dot active"></div>
                 </div>
-                <button class="btn-large" onclick="completeOnboarding()">get started</button>
+                <button class="btn-large" onclick="completeOnboarding()">begin</button>
                 <div class="onboarding-skip">
-                    <button onclick="skipOnboarding()" style="background: none; border: none; cursor: pointer; font-family: inherit; font-size: inherit; color: inherit; padding: 0;">skip</button>
+                    <button onclick="skipOnboarding()" style="background:none;border:none;cursor:pointer;font-family:inherit;font-size:inherit;color:inherit;padding:0;">skip</button>
                 </div>
             </div>
         </div>

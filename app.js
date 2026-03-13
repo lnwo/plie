@@ -433,10 +433,11 @@ let appState = {
 };
 
 // ── Mock data — seeded for development/testing ──
-// Represents two logged sessions in the new normalised schema.
+// Represents two logged sessions in the normalised schema.
+// Called after loadPersistedState() so the guard works correctly.
 // Remove or gate behind a DEV flag before release.
-(function seedMockData() {
-    // Only seed if localStorage has no sessions — avoids overwriting real data on reload
+function seedMockData() {
+    // Only seed when localStorage is genuinely empty
     if (appState.sessions.length > 0) return;
 
     appState.sessions = [
@@ -549,13 +550,129 @@ let appState = {
             createdAt: 1741651260001,
         },
     ];
-})();
+}
 
 
 /* ═══════════════════════════════════════════════════════════════
    2. UTILITIES
    Shared helpers used across the app.
    ═══════════════════════════════════════════════════════════════ */
+
+/* ── Swipe helper ──────────────────────────────────────────────
+   attachSwipe(el, options)
+
+   Attaches touch + mouse swipe listeners to an element.
+   The element should have overflow:hidden and position:relative.
+   A sibling .swipe-action-left / .swipe-action-right is revealed
+   beneath it as the user drags.
+
+   Options:
+     onLeft(el)   — called when left-swipe passes threshold
+     onRight(el)  — called when right-swipe passes threshold
+     threshold    — px before action fires (default 80)
+
+   The inner content wrapper must have class 'swipe-content'.
+   Pattern in HTML:
+     <div class="swipe-row">
+       <div class="swipe-action-left">Remove</div>
+       <div class="swipe-action-right">Complete</div>
+       <div class="swipe-content">...card content...</div>
+     </div>
+────────────────────────────────────────────────────────────── */
+function attachSwipe(el, { onLeft, onRight, threshold = 80 } = {}) {
+    const content = el.querySelector('.swipe-content');
+    if (!content) return;
+
+    let startX = 0;
+    let currentX = 0;
+    let dragging = false;
+    let settled = false; // prevent multiple fires per gesture
+
+    function getClientX(e) {
+        return e.touches ? e.touches[0].clientX : e.clientX;
+    }
+
+    function onStart(e) {
+        // Don't intercept taps on interactive elements inside the card
+        if (e.target.closest('button, input, select, textarea, a')) return;
+        startX = getClientX(e);
+        currentX = 0;
+        dragging = true;
+        settled = false;
+        content.style.transition = 'none';
+    }
+
+    function onMove(e) {
+        if (!dragging || settled) return;
+        const dx = getClientX(e) - startX;
+
+        // Only allow the direction(s) that have a handler
+        if (dx < 0 && !onLeft)  { reset(); return; }
+        if (dx > 0 && !onRight) { reset(); return; }
+
+        currentX = dx;
+        // Dampen beyond threshold so it feels spring-like
+        const damped = dx > 0
+            ? Math.min(dx, threshold + (dx - threshold) * 0.2)
+            : Math.max(dx, -threshold + (dx + threshold) * 0.2);
+
+        content.style.transform = `translateX(${damped}px)`;
+
+        // Reveal action background
+        const leftEl  = el.querySelector('.swipe-action-left');
+        const rightEl = el.querySelector('.swipe-action-right');
+        if (leftEl)  leftEl.style.opacity  = dx < 0 ? Math.min(1, Math.abs(dx) / threshold) : '0';
+        if (rightEl) rightEl.style.opacity = dx > 0 ? Math.min(1, dx / threshold) : '0';
+    }
+
+    function onEnd() {
+        if (!dragging) return;
+        dragging = false;
+
+        if (Math.abs(currentX) >= threshold) {
+            settled = true;
+            if (currentX < 0 && onLeft) {
+                // Animate off left, then call handler
+                content.style.transition = 'transform 0.25s var(--ease-out)';
+                content.style.transform  = `translateX(-110%)`;
+                el.style.transition = 'max-height 0.3s var(--ease-out), opacity 0.3s ease, margin 0.3s ease';
+                setTimeout(() => {
+                    el.style.maxHeight  = el.offsetHeight + 'px'; // lock for animation
+                    requestAnimationFrame(() => {
+                        el.style.maxHeight  = '0';
+                        el.style.opacity    = '0';
+                        el.style.marginBottom = '0';
+                    });
+                    setTimeout(() => onLeft(el), 280);
+                }, 180);
+            } else if (currentX > 0 && onRight) {
+                content.style.transition = 'transform 0.25s var(--ease-out)';
+                content.style.transform  = `translateX(110%)`;
+                setTimeout(() => onRight(el), 200);
+            }
+        } else {
+            reset();
+        }
+    }
+
+    function reset() {
+        dragging = false;
+        content.style.transition = 'transform 0.3s var(--ease-out)';
+        content.style.transform  = 'translateX(0)';
+        const leftEl  = el.querySelector('.swipe-action-left');
+        const rightEl = el.querySelector('.swipe-action-right');
+        if (leftEl)  leftEl.style.opacity  = '0';
+        if (rightEl) rightEl.style.opacity = '0';
+    }
+
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove',  onMove,  { passive: true });
+    el.addEventListener('touchend',   onEnd);
+    el.addEventListener('mousedown',  onStart);
+    el.addEventListener('mousemove',  onMove);
+    el.addEventListener('mouseup',    onEnd);
+    el.addEventListener('mouseleave', onEnd);
+}
 
 function getDimensionStage(rawScore) {
     if (rawScore === null || rawScore === undefined) return null;
@@ -1680,6 +1797,16 @@ function renderBlocksOnly() {
     if (!container) return;
     const s = appState.currentSession;
     container.innerHTML = s.blocks.map((block, i) => renderBlockHtml(block, i)).join('');
+    // Attach swipe-to-remove on each block
+    container.querySelectorAll('.swipe-row[data-block-index]').forEach(row => {
+        const index = parseInt(row.dataset.blockIndex);
+        attachSwipe(row, {
+            onLeft: () => {
+                appState.currentSession.blocks.splice(index, 1);
+                setTimeout(() => renderBlocksOnly(), 320);
+            }
+        });
+    });
 }
 
 function renderBlockHtml(block, index) {
@@ -1688,67 +1815,73 @@ function renderBlockHtml(block, index) {
     const isGeneral = block.topicId === 'general';
 
     return `
-        <div class="session-block ${block.highlight ? 'highlighted' : ''}" id="block-${block.id}">
-
-            <div class="session-block-header">
-                <div class="session-block-topic-wrapper">
-                    <select class="session-block-topic-select"
-                            onchange="updateBlockTopic(${index}, this.value)">
-                        <optgroup label="General">
-                            ${topics.filter(t => t.group === 'General').map(t =>
-                                `<option value="${t.id}" ${t.id === block.topicId ? 'selected' : ''}>${t.label}</option>`
-                            ).join('')}
-                        </optgroup>
-                        <optgroup label="Category">
-                            ${topics.filter(t => t.group === 'Category').map(t =>
-                                `<option value="${t.id}" ${t.id === block.topicId ? 'selected' : ''}>${t.label}</option>`
-                            ).join('')}
-                        </optgroup>
-                        <optgroup label="Skills">
-                            ${topics.filter(t => t.group === 'Skills').map(t =>
-                                `<option value="${t.id}" ${t.id === block.topicId ? 'selected' : ''}>${t.label}</option>`
-                            ).join('')}
-                        </optgroup>
-                    </select>
-                    <svg class="session-select-chevron" style="right:8px;" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="4 6 8 10 12 6"/>
-                    </svg>
-                </div>
-                <div class="session-block-actions">
-                    ${isSkill ? `<button class="block-learn-link" onclick="openSkillFromBlock('${block.topicId}')">learn →</button>` : ''}
-                    <button class="block-highlight-btn ${block.highlight ? 'active' : ''}"
-                            onclick="toggleBlockHighlight(${index})"
-                            aria-label="Highlight this block">★</button>
-                    <button class="block-remove-btn" onclick="removeBlock(${index})" aria-label="Remove">
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                            <line x1="3" y1="3" x2="11" y2="11"/>
-                            <line x1="11" y1="3" x2="3" y2="11"/>
-                        </svg>
-                    </button>
-                </div>
+        <div class="swipe-row" data-block-index="${index}">
+            <div class="swipe-action-left swipe-action-remove">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+                remove
             </div>
+            <div class="swipe-content">
+                <div class="session-block ${block.highlight ? 'highlighted' : ''}" id="block-${block.id}">
 
-            <div class="session-block-fields">
-                <!-- Title line — bold, acts as label (Apple Notes style) -->
-                <textarea class="session-block-title-input"
-                          placeholder="${isGeneral ? 'General notes' : 'Add a title…'}"
-                          rows="1"
-                          oninput="updateBlockField(${index}, 'title', this.value); autoResizeTextarea(this);"
-                          onfocus="this.placeholder=''"
-                          onblur="this.placeholder='${isGeneral ? 'General notes' : 'Add a title…'}'"
-                          >${block.title}</textarea>
+                    <div class="session-block-header">
+                        <div class="session-block-topic-wrapper">
+                            <select class="session-block-topic-select"
+                                    onchange="updateBlockTopic(${index}, this.value)">
+                                <optgroup label="General">
+                                    ${topics.filter(t => t.group === 'General').map(t =>
+                                        `<option value="${t.id}" ${t.id === block.topicId ? 'selected' : ''}>${t.label}</option>`
+                                    ).join('')}
+                                </optgroup>
+                                <optgroup label="Category">
+                                    ${topics.filter(t => t.group === 'Category').map(t =>
+                                        `<option value="${t.id}" ${t.id === block.topicId ? 'selected' : ''}>${t.label}</option>`
+                                    ).join('')}
+                                </optgroup>
+                                <optgroup label="Skills">
+                                    ${topics.filter(t => t.group === 'Skills').map(t =>
+                                        `<option value="${t.id}" ${t.id === block.topicId ? 'selected' : ''}>${t.label}</option>`
+                                    ).join('')}
+                                </optgroup>
+                            </select>
+                            <svg class="session-select-chevron" style="right:8px;" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="4 6 8 10 12 6"/>
+                            </svg>
+                        </div>
+                        <div class="session-block-actions">
+                            <button class="block-highlight-btn ${block.highlight ? 'active' : ''}"
+                                    onclick="toggleBlockHighlight(${index})"
+                                    aria-label="Mark as praise">★</button>
+                            <button class="block-remove-btn" onclick="removeBlock(${index})" aria-label="Remove">
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                    <line x1="3" y1="3" x2="11" y2="11"/>
+                                    <line x1="11" y1="3" x2="3" y2="11"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
 
-                <textarea class="session-block-textarea"
-                          placeholder="Notes — what did you work on? how did it feel?"
-                          rows="2"
-                          oninput="updateBlockField(${index}, 'notes', this.value); autoResizeTextarea(this);"
-                          >${block.notes}</textarea>
+                    <div class="session-block-fields">
+                        <textarea class="session-block-title-input"
+                                  placeholder="${isGeneral ? 'General notes' : 'Add a title…'}"
+                                  rows="1"
+                                  oninput="updateBlockField(${index}, 'title', this.value); autoResizeTextarea(this);"
+                                  onfocus="this.placeholder=''"
+                                  onblur="this.placeholder='${isGeneral ? 'General notes' : 'Add a title…'}'"
+                                  >${block.title}</textarea>
 
-                <textarea class="session-block-textarea session-block-corrections"
-                          placeholder="Corrections — what did your teacher say?"
-                          rows="2"
-                          oninput="updateBlockField(${index}, 'corrections', this.value); autoResizeTextarea(this);"
-                          >${block.corrections}</textarea>
+                        <textarea class="session-block-textarea"
+                                  placeholder="Notes — what did you work on? how did it feel?"
+                                  rows="2"
+                                  oninput="updateBlockField(${index}, 'notes', this.value); autoResizeTextarea(this);"
+                                  >${block.notes}</textarea>
+
+                        <textarea class="session-block-textarea session-block-corrections"
+                                  placeholder="Corrections — what did your teacher say?"
+                                  rows="2"
+                                  oninput="updateBlockField(${index}, 'corrections', this.value); autoResizeTextarea(this);"
+                                  >${block.corrections}</textarea>
+                    </div>
+                </div>
             </div>
         </div>
     `;
@@ -1931,7 +2064,7 @@ function showBarreScreen() {
         activeSkillsHtml = `
             <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);">
                 <h2 class="section-title" style="padding: 0; margin-bottom: var(--sp-md);">Active skills</h2>
-                <div style="display: flex; flex-direction: column; gap: var(--sp-sm);">
+                <div style="display: flex; flex-direction: column; gap: var(--sp-sm);" id="active-skills-list">
                     ${activeSkills.map(skill => {
                         const skillCorrections = appState.corrections
                             .filter(c => c.skillId === skill.id)
@@ -1948,14 +2081,22 @@ function showBarreScreen() {
                             ? appState.sessions.find(s => s.id === lastSessionSkill.sessionId)
                             : null;
                         return `
-                        <div class="active-skill-card" onclick="alert('Skill detail page coming soon')">
-                            <div class="active-skill-info">
-                                <div class="active-skill-name">${skill.french}</div>
-                                <div class="active-skill-meta">${skill.category}${skill.flagged ? ' · In focus' : ''}</div>
-                                ${lastCorrection ? `<div class="active-skill-correction">"${lastCorrection.text}"</div>` : ''}
-                                ${lastSession ? `<div class="active-skill-date">Last worked: ${formatTimelineDate(lastSession.date)}</div>` : ''}
+                        <div class="swipe-row" data-skill-id="${skill.id}">
+                            <div class="swipe-action-left swipe-action-remove">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+                                remove
                             </div>
-                            <div class="active-skill-progress">${skill.tracked ? '✓' : '—'}</div>
+                            <div class="swipe-content">
+                                <div class="active-skill-card" onclick="alert('Skill detail page coming soon')">
+                                    <div class="active-skill-info">
+                                        <div class="active-skill-name">${skill.french}</div>
+                                        <div class="active-skill-meta">${skill.category}${skill.flagged ? ' · In focus' : ''}</div>
+                                        ${lastCorrection ? `<div class="active-skill-correction">"${lastCorrection.text}"</div>` : ''}
+                                        ${lastSession ? `<div class="active-skill-date">Last worked: ${formatTimelineDate(lastSession.date)}</div>` : ''}
+                                    </div>
+                                    <div class="active-skill-progress">${skill.tracked ? '✓' : '—'}</div>
+                                </div>
+                            </div>
                         </div>`;
                     }).join('')}
                 </div>
@@ -2003,6 +2144,23 @@ function showBarreScreen() {
         </div>
     `;
     showScreen('barre-screen');
+
+    // Attach swipe-to-remove on active skill cards
+    screen.querySelectorAll('.swipe-row[data-skill-id]').forEach(row => {
+        attachSwipe(row, {
+            onLeft: () => {
+                const skillId = row.dataset.skillId;
+                const skill = appState.skills.find(s => s.id === skillId);
+                if (skill) {
+                    skill.flagged  = false;
+                    skill.tracked  = false;
+                    persistSkillState();
+                }
+                // Re-render after animation completes
+                setTimeout(() => showBarreScreen(), 320);
+            }
+        });
+    });
 }
 
 // ── Assess ──
@@ -2131,6 +2289,21 @@ function renderGoalsScreen() {
             </button>
         </div>
     `;
+
+    // Attach swipes to goal cards
+    screen.querySelectorAll('.swipe-row[data-goal-id]').forEach(row => {
+        const goalId = Number(row.dataset.goalId);
+        attachSwipe(row, {
+            onLeft: () => {
+                appState.goals = appState.goals.filter(g => g.id !== goalId);
+                storage.save('goals', appState.goals);
+                setTimeout(() => renderGoalsScreen(), 320);
+            },
+            onRight: () => {
+                markGoalComplete(goalId);
+            }
+        });
+    });
 }
 
 function renderGoalGroup(category, goals) {
@@ -2175,16 +2348,28 @@ function renderGoalCard(goal, completed) {
     ` : '';
 
     return `
-        <div class="goal-card ${completed ? 'goal-card-completed' : ''}">
-            <div class="goal-card-title">${goal.title}</div>
-            ${goal.body ? `<div class="goal-card-body">${goal.body}</div>` : ''}
-            ${tagsHtml ? `<div class="goal-tags">${tagsHtml}</div>` : ''}
-            ${milestonesHtml}
-            ${progressBarHtml}
-            ${!completed ? `
-                <div class="goal-card-actions">
-                    <button class="goal-action-btn" onclick="markGoalComplete('${goal.id}')">mark complete</button>
-                </div>` : ''}
+        <div class="swipe-row" data-goal-id="${goal.id}">
+            <div class="swipe-action-left swipe-action-remove">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+                delete
+            </div>
+            ${!completed ? `<div class="swipe-action-right swipe-action-complete">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="2 8 6 12 14 4"/></svg>
+                done
+            </div>` : ''}
+            <div class="swipe-content">
+                <div class="goal-card ${completed ? 'goal-card-completed' : ''}">
+                    <div class="goal-card-title">${goal.title}</div>
+                    ${goal.body ? `<div class="goal-card-body">${goal.body}</div>` : ''}
+                    ${tagsHtml ? `<div class="goal-tags">${tagsHtml}</div>` : ''}
+                    ${milestonesHtml}
+                    ${progressBarHtml}
+                    ${!completed ? `
+                        <div class="goal-card-actions">
+                            <button class="goal-action-btn" onclick="markGoalComplete('${goal.id}')">mark complete</button>
+                        </div>` : ''}
+                </div>
+            </div>
         </div>
     `;
 }
@@ -3009,8 +3194,13 @@ function resetProfile() {
         appState.level      = latest.level;
         appState.dimensions = latest.dimensions;
         appState.answers    = latest.answers;
-        appState._assessmentWritten = true; // don't re-write timeline on re-render
     }
+    // Derive _assessmentWritten from stored data — not a persisted flag, so
+    // always re-derive on load to correctly handle reload-between-quiz-and-result
+    appState._assessmentWritten = placements.length > 0;
+
+    // Seed mock data only if localStorage was genuinely empty (first install)
+    seedMockData();
 })();
 
 // Service Worker

@@ -2959,3 +2959,193 @@ input[type="date"].session-input { color-scheme: light; }
 }
 
 .reset-profile-btn:hover { color: var(--error); }
+
+/* ═══════════════════════════════════════
+   ONBOARDING — UPDATED SCREENS
+   ═══════════════════════════════════════ */
+
+.onboarding-lead {
+    font-size: var(--fs-h3);
+    color: var(--primary);
+    font-weight: 500;
+    line-height: 1.45;
+    margin-bottom: var(--sp-md);
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.onboarding-body {
+    font-size: var(--fs-body);
+    color: var(--text-secondary);
+    line-height: 1.65;
+    max-width: 320px;
+    margin: 0 auto var(--sp-lg);
+}
+
+.onboarding-swipe-hint {
+    text-align: center;
+    font-size: var(--fs-caption);
+    color: var(--text-muted);
+    margin-top: var(--sp-md);
+    letter-spacing: 0.3px;
+}
+
+/* Card 2 — content scrolls on short screens */
+.onboarding-content-top {
+    justify-content: flex-start;
+    padding-top: var(--sp-lg);
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Expandable example rows */
+.onboarding-examples {
+    width: 100%;
+    margin: var(--sp-md) 0;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: var(--surface);
+}
+
+.onboarding-example-row {
+    display: grid;
+    grid-template-columns: 1fr 20px;
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 0 var(--sp-sm);
+    padding: var(--sp-md);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-light);
+    transition: background 0.15s ease;
+    user-select: none;
+}
+
+.onboarding-example-row:last-child { border-bottom: none; }
+.onboarding-example-row:hover { background: var(--accent-wash); }
+
+.onboarding-example-label {
+    font-size: var(--fs-small);
+    font-weight: 500;
+    color: var(--text);
+    grid-column: 1;
+    grid-row: 1;
+    line-height: 1.4;
+}
+
+.onboarding-example-chevron {
+    grid-column: 2;
+    grid-row: 1;
+    color: var(--text-muted);
+    transition: transform 0.25s var(--ease-out);
+    flex-shrink: 0;
+}
+
+.onboarding-example-row.open .onboarding-example-chevron {
+    transform: rotate(180deg);
+}
+
+.onboarding-example-detail {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    font-size: var(--fs-small);
+    color: var(--text-secondary);
+    line-height: 1.55;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s var(--ease-out), padding 0.3s var(--ease-out);
+    padding-top: 0;
+}
+
+.onboarding-example-row.open .onboarding-example-detail {
+    max-height: 120px;
+    padding-top: var(--sp-sm);
+}
+
+.onboarding-note {
+    font-size: var(--fs-caption);
+    color: var(--text-muted);
+    line-height: 1.5;
+    background: var(--border-light);
+    border-radius: var(--r-sm);
+    padding: var(--sp-sm) var(--sp-md);
+    margin-bottom: var(--sp-md);
+    text-align: left;
+}
+
+/* Card 2 dual-button row */
+.onboarding-btn-row {
+    display: flex;
+    gap: var(--sp-sm);
+    align-items: stretch;
+    margin-bottom: 0;
+}
+
+.onboarding-btn-secondary {
+    flex-shrink: 0;
+    padding: 16px var(--sp-lg);
+    margin-top: 0;
+    font-size: var(--fs-small);
+    white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════
+   SWIPE ROWS
+   ═══════════════════════════════════════ */
+
+.swipe-row {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--r-md);
+}
+
+/* Revealed action panels — sit behind .swipe-content */
+.swipe-action-left,
+.swipe-action-right {
+    position: absolute;
+    top: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 600;
+    padding: 0 var(--sp-lg);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s ease;
+    white-space: nowrap;
+    border-radius: var(--r-md);
+}
+
+.swipe-action-left  { right: 0; justify-content: flex-end; }
+.swipe-action-right { left: 0;  justify-content: flex-start; }
+
+.swipe-action-remove {
+    background: var(--coral);
+    color: #fff;
+}
+
+.swipe-action-complete {
+    background: var(--success);
+    color: #fff;
+}
+
+/* Content wrapper — translates on drag */
+.swipe-content {
+    position: relative;
+    z-index: 1;
+    background: var(--background); /* covers action panels during snap-back */
+    border-radius: var(--r-md);
+    will-change: transform;
+}
+
+/* Swipe hint — subtle indicator on first render */
+.swipe-hint-text {
+    font-size: var(--fs-caption);
+    color: var(--text-muted);
+    text-align: right;
+    padding: 2px var(--sp-md) var(--sp-xs);
+    opacity: 0.6;
+}
