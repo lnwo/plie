@@ -296,12 +296,12 @@ const DATA = {
     ],
 
     profileCapabilities: [
-        { icon: '📝', label: 'AFTER CLASS', title: 'Save corrections', description: 'Write down feedback from your teacher before you forget it', action: "alert('Coming soon')" },
-        { icon: '🎯', label: 'PLANNING', title: 'Set goals', description: 'Short-term and long-term targets to keep you on track', action: "alert('Coming soon')" },
-        { icon: '📊', label: 'OVER TIME', title: 'Track your skills', description: 'Monitor progress across every movement, from plié to grand jeté', action: "navigateTo('barre')" },
-        { icon: '📋', label: 'MEASURE', title: 'Reassess yourself', description: 'Retake assessments to see how you\'ve progressed', action: "navigateTo('assess')" },
-        { icon: '🎭', label: 'LEARN', title: 'Study repertoire', description: 'Explore ballets, composers, dancers, and famous variations', action: "navigateTo('learn')" },
-        { icon: '📓', label: 'REFLECT', title: 'Log sessions', description: 'Keep a record of every class — what you did, how it went', action: "openSessionLogger()" }
+        { icon: '📝', label: 'AFTER CLASS',  title: 'Save corrections',  description: 'Write down feedback from your teacher before you forget it', action: "openSessionLogger()"   },
+        { icon: '🎯', label: 'PLANNING',     title: 'Set goals',          description: 'Short-term and long-term targets to keep you on track',       action: "openGoalCreator()"    },
+        { icon: '📊', label: 'OVER TIME',    title: 'Track your skills',  description: 'Monitor progress across every movement, from plié to grand jeté', action: "navigateTo('barre')" },
+        { icon: '📋', label: 'MEASURE',      title: 'Reassess yourself',  description: 'Retake assessments to see how you\'ve progressed',            action: "navigateTo('assess')" },
+        { icon: '🎭', label: 'LEARN',        title: 'Study repertoire',   description: 'Explore ballets, composers, dancers, and famous variations',   action: "navigateTo('learn')"  },
+        { icon: '📓', label: 'REFLECT',      title: 'Log sessions',       description: 'Keep a record of every class — what you did, how it went',    action: "openSessionLogger()"  }
     ]
 };
 
@@ -324,14 +324,28 @@ const STORAGE_KEYS = {
 };
 
 const storage = {
-    // Stage 3: localStorage.setItem(STORAGE_KEYS[key], JSON.stringify(value))
-    save: (key, value) => {},
-
-    // Stage 3: try { return JSON.parse(localStorage.getItem(STORAGE_KEYS[key])) } catch { return null }
-    load: (key) => null,
-
-    // Stage 3: Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k))
-    clear: () => {}
+    save(key, value) {
+        try {
+            localStorage.setItem(STORAGE_KEYS[key] || key, JSON.stringify(value));
+        } catch (e) {
+            // QuotaExceededError or similar — fail silently, state still valid in memory
+            console.warn('plié: storage.save failed for key', key, e);
+        }
+    },
+    load(key) {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEYS[key] || key);
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            console.warn('plié: storage.load failed for key', key, e);
+            return null;
+        }
+    },
+    clear() {
+        Object.values(STORAGE_KEYS).forEach(k => {
+            try { localStorage.removeItem(k); } catch (e) {}
+        });
+    }
 };
 
 
@@ -422,7 +436,9 @@ let appState = {
 // Represents two logged sessions in the new normalised schema.
 // Remove or gate behind a DEV flag before release.
 (function seedMockData() {
-    // Sessions
+    // Only seed if localStorage has no sessions — avoids overwriting real data on reload
+    if (appState.sessions.length > 0) return;
+
     appState.sessions = [
         {
             id:              1741824000000,
@@ -672,6 +688,14 @@ function skipOnboarding() {
     document.getElementById(`onboarding-${currentOnboardingScreen}`).classList.remove('active');
     appState.level = 'not-assessed';
     appState.dimensions = null;
+    if (!appState.timeline?.length) {
+        appendTimelineEntry({
+            type:  'manual',
+            title: 'Joined plié',
+            body:  null,
+            date:  new Date().toISOString().split('T')[0],
+        });
+    }
     showScreen('profile');
     document.querySelector('.bottom-nav')?.classList.add('visible');
     document.querySelector('.fab')?.classList.add('visible');
@@ -710,6 +734,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function startPlacementQuiz() {
     appState.currentQuestion = 0;
+    appState._assessmentWritten = false; // reset so retake writes a new entry
     showScreen('assessment');
     renderQuestion();
 }
@@ -814,6 +839,14 @@ function previousQuestion() {
 function skipAssessment() {
     appState.level = 'not-assessed';
     appState.dimensions = null;
+    if (!appState.timeline?.length) {
+        appendTimelineEntry({
+            type:  'manual',
+            title: 'Joined plié',
+            body:  null,
+            date:  new Date().toISOString().split('T')[0],
+        });
+    }
     showScreen('profile');
     document.querySelector('.bottom-nav')?.classList.add('visible');
     document.querySelector('.fab')?.classList.add('visible');
@@ -822,10 +855,18 @@ function skipAssessment() {
 function exitQuiz() {
     const answered = Object.keys(appState.answers).filter(k => k !== 'goals' && appState.answers[k] !== undefined);
     if (answered.length > 0) {
-        calculateResults();
+        calculateResults(); // writes timeline entry internally
     } else {
         appState.level = 'not-assessed';
         appState.dimensions = null;
+        if (!appState.timeline?.length) {
+            appendTimelineEntry({
+                type:  'manual',
+                title: 'Joined plié',
+                body:  null,
+                date:  new Date().toISOString().split('T')[0],
+            });
+        }
     }
     showScreen('profile');
     document.querySelector('.bottom-nav')?.classList.add('visible');
@@ -900,6 +941,36 @@ function calculateResults() {
         focus = sorted.slice(-2).map(d => DATA.dimensionNames[d[0]]).join(' and ');
     }
 
+    // Store assessment object
+    const assessment = {
+        id:          Date.now(),
+        type:        'placement',
+        date:        new Date().toISOString().split('T')[0],
+        completedAt: Date.now(),
+        answers:     { ...appState.answers },
+        dimensions,
+        level,
+        levelLabel,
+        levelDescription,
+    };
+    appState.assessments = appState.assessments || [];
+    // Only push if this is a new assessment (not a re-render)
+    if (!appState._assessmentWritten) {
+        appState.assessments.push(assessment);
+        storage.save('assessments', appState.assessments);
+
+        appendTimelineEntry({
+            type:     'assessment',
+            objectId: assessment.id,
+            title:    level === 'not-assessed'
+                ? 'Completed placement quiz'
+                : `Completed placement quiz — ${levelLabel}`,
+            body:     level !== 'not-assessed' ? levelDescription : null,
+            date:     assessment.date,
+        });
+        appState._assessmentWritten = true;
+    }
+
     // Render results screen
     renderDimensionChart(dimensions, document.getElementById('dimensionBreakdown'));
     document.getElementById('resultLevel').textContent = levelLabel;
@@ -917,8 +988,16 @@ function completeAssessment() {
 }
 
 function skipToProfile() {
-    appState.answers.level = 'beginner';
-    appState.persona = 'skip';
+    // Write a manual "joined" entry if nothing exists yet
+    if (!appState.timeline?.length) {
+        appendTimelineEntry({
+            type:  'manual',
+            title: 'Joined plié',
+            body:  null,
+            date:  new Date().toISOString().split('T')[0],
+        });
+    }
+    appState.level = 'not-assessed';
     showScreen('profile');
 }
 
@@ -1711,23 +1790,41 @@ function openSkillFromBlock(topicId) {
     console.log('Navigate to skill:', skillId);
 }
 
+// ── Timeline helper — all writes go through here ──
+function appendTimelineEntry({ type, objectId = null, title, body = null, date }) {
+    const now = Date.now();
+    appState.timeline = appState.timeline || [];
+    appState.timeline.unshift({
+        id:       now,
+        type,
+        objectId,
+        title,
+        body,
+        date:     date || new Date().toISOString().split('T')[0],
+        createdAt: now,
+    });
+    storage.save('timeline', appState.timeline);
+}
+
 // ── Save ──
 function saveSession() {
     const s = appState.currentSession;
     if (!s) return;
 
     const now = Date.now();
+    let seq = 0; // monotonic sequence within this save — guarantees unique IDs
+    const nextId = () => now + (++seq);
 
     // 1. Persist the Session object (no blocks — those become SessionSkills + Corrections)
     const session = {
         id:              s.id,
         date:            s.date,
         savedAt:         now,
-        templateId:      s.templateId   || null,
-        sessionName:     s.sessionName  || null,
+        templateId:      s.templateId      || null,
+        sessionName:     s.sessionName     || null,
         sessionLocation: s.sessionLocation || null,
-        classType:       s.classType    || null,
-        notes:           s.generalNotes || null,
+        classType:       s.classType       || null,
+        notes:           s.generalNotes    || null,
     };
     appState.sessions.push(session);
     storage.save('sessions', appState.sessions);
@@ -1740,17 +1837,16 @@ function saveSession() {
         const isSkill = block.topicId?.startsWith('skill:');
         const skillId = isSkill ? block.topicId.replace('skill:', '') : null;
 
-        // Corrections from this block — one object per correction text
+        // One Correction object per correction text field
         const blockCorrectionIds = [];
-
         if (block.corrections?.trim()) {
             const correction = {
-                id:          now + Math.floor(Math.random() * 10000),
+                id:          nextId(),
                 skillId:     skillId || null,
                 text:        block.corrections.trim(),
                 createdAt:   now,
                 sessionId:   session.id,
-                source:      'teacher',   // schema-only for now; no UI field yet
+                source:      'teacher',  // schema field; no UI entry point yet
                 type:        null,
                 isRecurring: false,
             };
@@ -1759,25 +1855,24 @@ function saveSession() {
             correctionCount++;
         }
 
-        // SessionSkill join object — created for skill blocks only
+        // SessionSkill join object — only for skill-topic blocks
         if (isSkill && skillId) {
-            const skill = appState.skills.find(sk => sk.id === skillId);
-
             const sessionSkill = {
-                id:            now + Math.floor(Math.random() * 10000),
+                id:            nextId(),
                 sessionId:     session.id,
                 skillId:       skillId,
-                notes:         block.notes?.trim()     || null,
+                notes:         block.notes?.trim()  || null,
                 correctionIds: blockCorrectionIds,
                 tracked:       true,
-                flagged:       block.highlight || false,
-                blockTitle:    block.title?.trim()     || null,
-                highlight:     block.highlight || false,
+                flagged:       block.highlight      || false,
+                blockTitle:    block.title?.trim()  || null,
+                highlight:     block.highlight      || false,
             };
             appState.sessionSkills.push(sessionSkill);
             skillCount++;
 
             // Flag skill as active in The Barre
+            const skill = appState.skills.find(sk => sk.id === skillId);
             if (skill) skill.flagged = true;
         }
     });
@@ -1786,7 +1881,7 @@ function saveSession() {
     storage.save('sessionSkills', appState.sessionSkills);
     persistSkillState();
 
-    // 3. Timeline entry
+    // 3. Write timeline entry
     const template = appState.sessionTemplates.find(t => t.id === s.templateId);
     const sessionLabel = session.sessionName || template?.name || 'Session';
     const classTypeLabel = session.classType
@@ -1795,25 +1890,23 @@ function saveSession() {
 
     const bodyParts = [
         classTypeLabel,
-        skillCount      ? `${skillCount} skill${skillCount > 1 ? 's' : ''}`           : null,
-        correctionCount ? `${correctionCount} correction${correctionCount > 1 ? 's' : ''}` : null,
+        skillCount      ? `${skillCount} skill${skillCount !== 1 ? 's' : ''}`               : null,
+        correctionCount ? `${correctionCount} correction${correctionCount !== 1 ? 's' : ''}` : null,
     ].filter(Boolean);
 
-    appState.timeline.unshift({
-        id:       now + 1,
+    appendTimelineEntry({
         type:     'session',
         objectId: session.id,
         title:    sessionLabel,
         body:     bodyParts.join(' · ') || null,
         date:     session.date,
-        createdAt: now + 1,
     });
-    storage.save('timeline', appState.timeline);
 
     appState.currentSession = null;
     closeSessionLogger();
 
     if (appState.currentScreen === 'profile') initProfile();
+    if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
 }
 
 // ── The Barre ──
@@ -1946,28 +2039,453 @@ function showAssessScreen() {
 }
 
 // ── Goals ──
+// ── Goals ──
+
+const GOAL_CATEGORIES = [
+    'Class',
+    'Home practice',
+    'Rehearsal / performance',
+    'General',
+];
+
+const DIMENSION_OPTIONS = [
+    { id: 'barre',       label: 'Barre' },
+    { id: 'centre',      label: 'Centre' },
+    { id: 'turns',       label: 'Turns' },
+    { id: 'allegro',     label: 'Allegro' },
+    { id: 'flexibility', label: 'Flexibility' },
+    { id: 'pointe',      label: 'Pointe' },
+    { id: 'musicality',  label: 'Musicality' },
+    { id: 'knowledge',   label: 'Knowledge' },
+];
+
 function showGoalsScreen() {
     let screen = document.getElementById('goals-screen');
     if (!screen) {
         screen = document.createElement('div');
         screen.id = 'goals-screen';
         screen.className = 'screen';
-        screen.innerHTML = `
-            <div class="profile-header">
-                <h1>Goals</h1>
-                <p style="color: var(--text-muted); font-size: var(--fs-body); margin-top: var(--sp-xs);">Set targets and track your progress towards them</p>
-            </div>
-            <div class="barre-empty-state">
-                <div class="barre-empty-icon">🎯</div>
-                <div class="barre-empty-title">No goals set yet</div>
-                <div class="barre-empty-text">Set your first goal to start tracking progress. Goals can be linked to specific skills or dimensions.</div>
-                <button class="btn-large" onclick="alert('Coming soon')" style="max-width: 240px; margin: 0 auto;">set a goal</button>
-            </div>
-            <div style="height: 120px;"></div>
-        `;
         document.querySelector('.app-container').appendChild(screen);
     }
+    renderGoalsScreen();
     showScreen('goals-screen');
+}
+
+function renderGoalsScreen() {
+    const screen = document.getElementById('goals-screen');
+    if (!screen) return;
+
+    const goals = appState.goals || [];
+
+    // Group by category, then uncategorised last
+    const categorised = {};
+    const uncategorised = [];
+    goals.forEach(g => {
+        if (g.completedAt) return; // exclude completed for now
+        if (g.category) {
+            if (!categorised[g.category]) categorised[g.category] = [];
+            categorised[g.category].push(g);
+        } else {
+            uncategorised.push(g);
+        }
+    });
+
+    const completedGoals = goals.filter(g => g.completedAt);
+
+    let goalsHtml = '';
+
+    if (goals.length === 0) {
+        goalsHtml = `
+            <div class="barre-empty-state">
+                <div class="barre-empty-icon">🎯</div>
+                <div class="barre-empty-title">No goals yet</div>
+                <div class="barre-empty-text">Set targets and track progress. Goals can link to a specific skill or dimension.</div>
+            </div>`;
+    } else {
+        // Uncategorised first, then categories
+        if (uncategorised.length) {
+            goalsHtml += renderGoalGroup(null, uncategorised);
+        }
+        Object.entries(categorised).forEach(([cat, catGoals]) => {
+            goalsHtml += renderGoalGroup(cat, catGoals);
+        });
+        if (completedGoals.length) {
+            goalsHtml += `
+                <div class="goals-group-label" style="margin-top: var(--sp-xl);">Completed</div>
+                ${completedGoals.map(g => renderGoalCard(g, true)).join('')}`;
+        }
+    }
+
+    screen.innerHTML = `
+        <div class="profile-header">
+            <h1>Goals</h1>
+            <p style="color: var(--text-muted); font-size: var(--fs-body); margin-top: var(--sp-xs);">Track what you're working towards</p>
+        </div>
+        <div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
+            ${goalsHtml}
+            <button class="add-goal-btn" onclick="openGoalCreator()">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/>
+                </svg>
+                set a goal
+            </button>
+        </div>
+    `;
+}
+
+function renderGoalGroup(category, goals) {
+    return `
+        ${category ? `<div class="goals-group-label">${category}</div>` : ''}
+        ${goals.map(g => renderGoalCard(g, false)).join('')}
+    `;
+}
+
+function renderGoalCard(goal, completed) {
+    const skill = goal.skillId ? DATA.skills.find(s => s.id === goal.skillId) : null;
+    const dimension = goal.dimensionId ? DIMENSION_OPTIONS.find(d => d.id === goal.dimensionId) : null;
+    const milestones = goal.milestones || [];
+    const doneMilestones = milestones.filter(m => m.done).length;
+    const progress = milestones.length > 0 ? doneMilestones / milestones.length : null;
+
+    const tagsHtml = [
+        skill      ? `<span class="goal-tag goal-tag-skill">${skill.french}</span>`         : null,
+        dimension  ? `<span class="goal-tag goal-tag-dim">${dimension.label}</span>`         : null,
+        goal.dueDate ? `<span class="goal-tag">by ${formatTimelineDate(goal.dueDate)}</span>` : null,
+    ].filter(Boolean).join('');
+
+    const milestonesHtml = milestones.length > 0 ? `
+        <div class="goal-milestones">
+            ${milestones.map((m, i) => `
+                <div class="goal-milestone ${m.done ? 'done' : ''}"
+                     onclick="toggleMilestone('${goal.id}', ${i})">
+                    <div class="goal-milestone-check">
+                        ${m.done ? `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="1.5 5 4 7.5 8.5 2.5"/></svg>` : ''}
+                    </div>
+                    <span class="goal-milestone-text">${m.text}</span>
+                </div>
+            `).join('')}
+        </div>
+    ` : '';
+
+    const progressBarHtml = progress !== null ? `
+        <div class="goal-progress-bar">
+            <div class="goal-progress-fill" style="width: ${Math.round(progress * 100)}%"></div>
+        </div>
+        <div class="goal-progress-label">${doneMilestones} of ${milestones.length} milestones</div>
+    ` : '';
+
+    return `
+        <div class="goal-card ${completed ? 'goal-card-completed' : ''}">
+            <div class="goal-card-title">${goal.title}</div>
+            ${goal.body ? `<div class="goal-card-body">${goal.body}</div>` : ''}
+            ${tagsHtml ? `<div class="goal-tags">${tagsHtml}</div>` : ''}
+            ${milestonesHtml}
+            ${progressBarHtml}
+            ${!completed ? `
+                <div class="goal-card-actions">
+                    <button class="goal-action-btn" onclick="markGoalComplete('${goal.id}')">mark complete</button>
+                </div>` : ''}
+        </div>
+    `;
+}
+
+// ── Goal creator overlay ──
+
+function openGoalCreator() {
+    appState._goalDraft = {
+        title:       '',
+        body:        '',
+        dueDate:     '',
+        skillId:     null,
+        dimensionId: null,
+        category:    null,
+        milestones:  [],
+    };
+
+    let overlay = document.getElementById('goal-creator-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'goal-creator-overlay';
+        overlay.className = 'session-overlay'; // reuse sheet styles
+        document.body.appendChild(overlay);
+    }
+
+    renderGoalCreator();
+
+    document.querySelector('.fab')?.classList.remove('visible');
+    document.querySelector('.bottom-nav')?.classList.remove('visible');
+    requestAnimationFrame(() => overlay.classList.add('open'));
+}
+
+function closeGoalCreator() {
+    const overlay = document.getElementById('goal-creator-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('open');
+    const isAppScreen = !['assessment','completion','results'].includes(appState.currentScreen)
+        && !appState.currentScreen.startsWith('onboarding');
+    if (isAppScreen) {
+        document.querySelector('.fab')?.classList.add('visible');
+        document.querySelector('.bottom-nav')?.classList.add('visible');
+    }
+    overlay.addEventListener('transitionend', () => {
+        appState._goalDraft = null;
+    }, { once: true });
+}
+
+function renderGoalCreator() {
+    const overlay = document.getElementById('goal-creator-overlay');
+    if (!overlay) return;
+    const d = appState._goalDraft;
+    if (!d) return;
+
+    const skillOptions = appState.skills.map(s =>
+        `<option value="${s.id}" ${d.skillId === s.id ? 'selected' : ''}>${s.french}</option>`
+    ).join('');
+
+    const dimensionOptions = DIMENSION_OPTIONS.map(dim =>
+        `<option value="${dim.id}" ${d.dimensionId === dim.id ? 'selected' : ''}>${dim.label}</option>`
+    ).join('');
+
+    const categoryChips = GOAL_CATEGORIES.map(cat => `
+        <button class="recurrence-chip ${d.category === cat ? 'selected' : ''}"
+                onmousedown="selectGoalCategory('${cat}')">
+            ${cat}
+        </button>
+    `).join('');
+
+    const milestonesHtml = d.milestones.map((m, i) => `
+        <div class="goal-draft-milestone">
+            <input type="text" class="session-input" style="flex:1; padding: 10px var(--sp-md);"
+                   value="${m.text}"
+                   oninput="appState._goalDraft.milestones[${i}].text = this.value"
+                   placeholder="Milestone ${i + 1}" />
+            <button class="block-remove-btn" onmousedown="removeMilestoneDraft(${i})">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/>
+                </svg>
+            </button>
+        </div>
+    `).join('');
+
+    overlay.innerHTML = `
+        <div class="session-logger-sheet">
+            <div class="session-sheet-handle"></div>
+
+            <div class="session-logger-header">
+                <div>
+                    <div class="session-logger-eyebrow">New goal</div>
+                    <h2 class="session-logger-title">Set a goal</h2>
+                </div>
+                <button class="session-close-btn" onclick="closeGoalCreator()">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="session-logger-body">
+
+                <div class="session-field">
+                    <label class="session-field-label">Goal</label>
+                    <textarea class="session-block-title-input" id="goal-title-input"
+                              placeholder="What do you want to achieve?"
+                              rows="1"
+                              oninput="appState._goalDraft.title = this.value; autoResizeTextarea(this);"
+                              style="font-size: var(--fs-h3);">${d.title}</textarea>
+                    <textarea class="session-block-textarea" id="goal-body-input"
+                              placeholder="Add more detail… (optional)"
+                              rows="2"
+                              oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);"
+                              style="margin-top: var(--sp-sm);">${d.body}</textarea>
+                </div>
+
+                <div class="session-field">
+                    <label class="session-field-label">Category <span class="session-field-optional">optional</span></label>
+                    <div class="recurrence-chips" id="goal-category-chips">
+                        ${categoryChips}
+                    </div>
+                </div>
+
+                <div class="session-field">
+                    <label class="session-field-label">Link to a skill <span class="session-field-optional">optional</span></label>
+                    <div class="session-select-wrapper">
+                        <select class="session-select"
+                                onchange="appState._goalDraft.skillId = this.value || null">
+                            <option value="">— no skill —</option>
+                            ${skillOptions}
+                        </select>
+                        <svg class="session-select-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="4 6 8 10 12 6"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="session-field">
+                    <label class="session-field-label">Link to a dimension <span class="session-field-optional">optional</span></label>
+                    <div class="session-select-wrapper">
+                        <select class="session-select"
+                                onchange="appState._goalDraft.dimensionId = this.value || null">
+                            <option value="">— no dimension —</option>
+                            ${dimensionOptions}
+                        </select>
+                        <svg class="session-select-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="4 6 8 10 12 6"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="session-field">
+                    <label class="session-field-label">Due date <span class="session-field-optional">optional</span></label>
+                    <input type="date" class="session-input"
+                           value="${d.dueDate}"
+                           onchange="appState._goalDraft.dueDate = this.value" />
+                </div>
+
+                <div class="session-field">
+                    <label class="session-field-label">Milestones <span class="session-field-optional">optional</span></label>
+                    <div id="goal-milestones-list">${milestonesHtml}</div>
+                    <button class="add-block-btn" style="margin-top: var(--sp-sm);" onmousedown="addMilestoneDraft()">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/>
+                        </svg>
+                        add milestone
+                    </button>
+                </div>
+
+                <div style="height: var(--sp-3xl);"></div>
+            </div>
+
+            <div class="session-logger-footer">
+                <button class="session-discard-btn" onclick="closeGoalCreator()">discard</button>
+                <button class="btn-large session-save-btn" onclick="saveGoal()">save goal</button>
+            </div>
+        </div>
+    `;
+}
+
+function selectGoalCategory(cat) {
+    if (!appState._goalDraft) return;
+    appState._goalDraft.category = appState._goalDraft.category === cat ? null : cat;
+    document.querySelectorAll('#goal-category-chips .recurrence-chip').forEach(chip => {
+        chip.classList.toggle('selected', chip.textContent.trim() === appState._goalDraft.category);
+    });
+}
+
+function addMilestoneDraft() {
+    if (!appState._goalDraft) return;
+    appState._goalDraft.milestones.push({ id: Date.now(), text: '', done: false });
+    // Surgical re-render of just the milestones list
+    const list = document.getElementById('goal-milestones-list');
+    if (list) {
+        const d = appState._goalDraft;
+        list.innerHTML = d.milestones.map((m, i) => `
+            <div class="goal-draft-milestone">
+                <input type="text" class="session-input" style="flex:1; padding: 10px var(--sp-md);"
+                       value="${m.text}"
+                       oninput="appState._goalDraft.milestones[${i}].text = this.value"
+                       placeholder="Milestone ${i + 1}" />
+                <button class="block-remove-btn" onmousedown="removeMilestoneDraft(${i})">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/>
+                    </svg>
+                </button>
+            </div>
+        `).join('');
+        // Focus the new input
+        const inputs = list.querySelectorAll('input');
+        inputs[inputs.length - 1]?.focus();
+    }
+}
+
+function removeMilestoneDraft(index) {
+    if (!appState._goalDraft) return;
+    appState._goalDraft.milestones.splice(index, 1);
+    const list = document.getElementById('goal-milestones-list');
+    if (!list) return;
+    const d = appState._goalDraft;
+    list.innerHTML = d.milestones.map((m, i) => `
+        <div class="goal-draft-milestone">
+            <input type="text" class="session-input" style="flex:1; padding: 10px var(--sp-md);"
+                   value="${m.text}"
+                   oninput="appState._goalDraft.milestones[${i}].text = this.value"
+                   placeholder="Milestone ${i + 1}" />
+            <button class="block-remove-btn" onmousedown="removeMilestoneDraft(${i})">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/>
+                </svg>
+            </button>
+        </div>
+    `).join('');
+}
+
+function saveGoal() {
+    const d = appState._goalDraft;
+    if (!d || !d.title.trim()) {
+        const titleInput = document.getElementById('goal-title-input');
+        if (titleInput) { titleInput.focus(); titleInput.classList.add('input-error'); }
+        return;
+    }
+
+    const goal = {
+        id:          Date.now(),
+        title:       d.title.trim(),
+        body:        d.body?.trim() || null,
+        createdAt:   Date.now(),
+        dueDate:     d.dueDate || null,
+        skillId:     d.skillId     || null,
+        dimensionId: d.dimensionId || null,
+        category:    d.category    || null,
+        milestones:  d.milestones.filter(m => m.text.trim()).map(m => ({
+            id:   m.id || Date.now(),
+            text: m.text.trim(),
+            done: false,
+        })),
+        completedAt: null,
+    };
+
+    appState.goals.push(goal);
+    storage.save('goals', appState.goals);
+
+    closeGoalCreator();
+
+    if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
+    if (appState.currentScreen === 'profile') initProfile();
+}
+
+function toggleMilestone(goalId, milestoneIndex) {
+    const goal = appState.goals.find(g => g.id === Number(goalId));
+    if (!goal || !goal.milestones[milestoneIndex]) return;
+    const milestone = goal.milestones[milestoneIndex];
+    milestone.done = !milestone.done;
+    storage.save('goals', appState.goals);
+    // Write timeline entry if milestone just completed
+    if (milestone.done) {
+        appendTimelineEntry({
+            type:     'milestone',
+            objectId: milestone.id,
+            title:    'Milestone reached',
+            body:     `${milestone.text} — ${goal.title}`,
+            date:     new Date().toISOString().split('T')[0],
+        });
+    }
+    if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
+    if (appState.currentScreen === 'profile') initProfile();
+}
+
+function markGoalComplete(goalId) {
+    const goal = appState.goals.find(g => g.id === Number(goalId));
+    if (!goal) return;
+    goal.completedAt = Date.now();
+    storage.save('goals', appState.goals);
+    appendTimelineEntry({
+        type:     'milestone',
+        objectId: goal.id,
+        title:    'Goal completed',
+        body:     goal.title,
+        date:     new Date().toISOString().split('T')[0],
+    });
+    if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
+    if (appState.currentScreen === 'profile') initProfile();
 }
 
 // ── Learn ──
@@ -2085,23 +2603,44 @@ function initProfile() {
         </div>
     `;
 
-    // Goal prompt
+    // Goal card — show real goal if one exists, otherwise show suggestion
     const goalEl = document.getElementById('profileGoalCard');
-    let suggestedGoal = 'Build a consistent practice routine';
-    const goals = appState.answers?.goals || [];
-    if (goals.includes(2)) suggestedGoal = 'Work towards pointe readiness';
-    else if (goals.includes(3)) suggestedGoal = 'Improve technique in my weakest areas';
-    else if (goals.includes(4)) suggestedGoal = 'Prepare for a performance';
-    else if (goals.includes(0)) suggestedGoal = 'Get back into a regular class routine';
+    const activeGoals = (appState.goals || []).filter(g => !g.completedAt);
 
-    goalEl.innerHTML = `
-        <div class="profile-action-card" onclick="alert('Coming soon')">
-            <div class="profile-action-label">YOUR FIRST GOAL</div>
-            <div class="profile-action-title">${suggestedGoal}</div>
-            <div class="profile-action-description">Based on what you told us. Tap to confirm, edit, or set your own.</div>
-            <div class="profile-action-arrow">set this goal →</div>
-        </div>
-    `;
+    if (activeGoals.length > 0) {
+        const latest = activeGoals[activeGoals.length - 1];
+        const milestones = latest.milestones || [];
+        const done = milestones.filter(m => m.done).length;
+        const progressText = milestones.length > 0
+            ? `${done} of ${milestones.length} milestones`
+            : null;
+        goalEl.innerHTML = `
+            <div class="profile-action-card" onclick="navigateTo('goals')">
+                <div class="profile-action-label">ACTIVE GOAL</div>
+                <div class="profile-action-title">${latest.title}</div>
+                ${progressText ? `<div class="profile-action-description">${progressText}</div>` : ''}
+                <div class="profile-action-arrow">view all goals →</div>
+            </div>
+        `;
+    } else {
+        // Keyword-based suggestion from assessment answers
+        // (simple index matching — no AI)
+        let suggestedGoal = 'Build a consistent practice routine';
+        const quizGoals = appState.answers?.goals || [];
+        if (quizGoals.includes(2)) suggestedGoal = 'Work towards pointe readiness';
+        else if (quizGoals.includes(3)) suggestedGoal = 'Improve technique in my weakest areas';
+        else if (quizGoals.includes(4)) suggestedGoal = 'Prepare for a performance';
+        else if (quizGoals.includes(0)) suggestedGoal = 'Get back into a regular class routine';
+
+        goalEl.innerHTML = `
+            <div class="profile-action-card" onclick="openGoalCreator()">
+                <div class="profile-action-label">YOUR FIRST GOAL</div>
+                <div class="profile-action-title">${suggestedGoal}</div>
+                <div class="profile-action-description">Based on what you told us. Tap to set it, edit, or write your own.</div>
+                <div class="profile-action-arrow">set this goal →</div>
+            </div>
+        `;
+    }
 
     // Explore cards
     const exploreEl = document.getElementById('profileExploreCards');
@@ -2380,13 +2919,99 @@ function toggleFlag(skillId) {
 }
 
 // ── Stubs for future features ──
-function addGoal() { alert('Coming soon'); }
+function addGoal() { openGoalCreator(); }
 function addProgress() { alert('Coming soon'); }
+
+function confirmResetProfile() {
+    if (confirm('Reset all data and start from scratch? This cannot be undone.')) {
+        resetProfile();
+    }
+}
+
+function resetProfile() {
+    // Clear localStorage
+    storage.clear();
+
+    // Reset appState to initial values
+    appState.sessions         = [];
+    appState.sessionTemplates = [];
+    appState.sessionSkills    = [];
+    appState.corrections      = [];
+    appState.assessments      = [];
+    appState.goals            = [];
+    appState.timeline         = [];
+    appState.level            = null;
+    appState.dimensions       = null;
+    appState.rawDimensions    = null;
+    appState.answers          = {};
+    appState.currentQuestion  = 0;
+    appState.currentNav       = null;
+    appState._assessmentWritten = false;
+    appState._goalDraft       = null;
+
+    // Reset skill user state
+    appState.skills.forEach(s => {
+        s.tracked        = false;
+        s.flagged        = false;
+        s.phoneticVisible = false;
+    });
+
+    // Remove any dynamically created screens so they rebuild fresh
+    ['barre-screen','assess-screen','goals-screen','learn-screen']
+        .forEach(id => document.getElementById(id)?.remove());
+    document.querySelectorAll('[id^="session-detail-"]').forEach(el => el.remove());
+
+    // Remove overlays
+    document.getElementById('session-logger-overlay')?.remove();
+    document.getElementById('goal-creator-overlay')?.remove();
+
+    // Restore nav visibility state
+    document.querySelector('.bottom-nav')?.classList.remove('visible');
+    document.querySelector('.fab')?.classList.remove('visible');
+
+    // Restart from onboarding
+    currentOnboardingScreen = 1;
+    document.querySelectorAll('.onboarding-screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('onboarding-1').classList.add('active');
+    showScreen('onboarding-1');
+}
 
 
 /* ═══════════════════════════════════════════════════════════════
    8. INITIALISATION
    ═══════════════════════════════════════════════════════════════ */
+
+// ── Load persisted state on startup ──
+(function loadPersistedState() {
+    const sessions         = storage.load('sessions');
+    const sessionTemplates = storage.load('sessionTemplates');
+    const sessionSkills    = storage.load('sessionSkills');
+    const corrections      = storage.load('corrections');
+    const assessments      = storage.load('assessments');
+    const goals            = storage.load('goals');
+    const timeline         = storage.load('timeline');
+
+    if (sessions)         appState.sessions         = sessions;
+    if (sessionTemplates) appState.sessionTemplates = sessionTemplates;
+    if (sessionSkills)    appState.sessionSkills    = sessionSkills;
+    if (corrections)      appState.corrections      = corrections;
+    if (assessments)      appState.assessments      = assessments;
+    if (goals)            appState.goals            = goals;
+    if (timeline)         appState.timeline         = timeline;
+
+    // Merge persisted {id, tracked, flagged} onto DATA.skills reference objects
+    loadUserSkillState();
+
+    // Restore level + dimensions from most recent placement assessment
+    const placements = (appState.assessments || []).filter(a => a.type === 'placement');
+    const latest = placements[placements.length - 1];
+    if (latest) {
+        appState.level      = latest.level;
+        appState.dimensions = latest.dimensions;
+        appState.answers    = latest.answers;
+        appState._assessmentWritten = true; // don't re-write timeline on re-render
+    }
+})();
 
 // Service Worker
 if ('serviceWorker' in navigator) {

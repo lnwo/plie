@@ -2760,3 +2760,202 @@ input[type="date"].session-input { color-scheme: light; }
     margin-top: var(--sp-xs);
     font-weight: 500;
 }
+
+/* ═══════════════════════════════════════
+   GOALS
+   ═══════════════════════════════════════ */
+
+.add-goal-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-sm);
+    width: 100%;
+    background: none;
+    border: 1.5px dashed var(--border);
+    border-radius: var(--r-lg);
+    padding: var(--sp-md) var(--sp-lg);
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-body);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s var(--ease-out);
+    margin-top: var(--sp-md);
+    justify-content: center;
+}
+
+.add-goal-btn:hover {
+    border-color: var(--accent);
+    color: var(--primary);
+    background: var(--accent-wash);
+}
+
+.goals-group-label {
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-bottom: var(--sp-sm);
+    margin-top: var(--sp-lg);
+}
+
+.goal-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border-light);
+    border-radius: var(--r-lg);
+    padding: var(--sp-lg);
+    margin-bottom: var(--sp-sm);
+    box-shadow: var(--shadow-sm);
+}
+
+.goal-card-completed {
+    opacity: 0.55;
+}
+
+.goal-card-title {
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: var(--sp-xs);
+    line-height: 1.35;
+}
+
+.goal-card-body {
+    font-size: var(--fs-small);
+    color: var(--text-secondary);
+    line-height: 1.55;
+    margin-bottom: var(--sp-sm);
+}
+
+.goal-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: var(--sp-sm);
+}
+
+.goal-tag {
+    font-size: var(--fs-caption);
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: var(--r-full);
+    background: var(--border-light);
+    color: var(--text-secondary);
+}
+
+.goal-tag-skill { background: var(--accent-wash); color: var(--primary); }
+.goal-tag-dim   { background: var(--surface-warm); color: var(--text-secondary); border: 1px solid var(--border); }
+
+.goal-milestones {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-xs);
+    margin-bottom: var(--sp-sm);
+}
+
+.goal-milestone {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-sm);
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.goal-milestone-check {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    color: #fff;
+}
+
+.goal-milestone.done .goal-milestone-check {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.goal-milestone-text {
+    font-size: var(--fs-small);
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.goal-milestone.done .goal-milestone-text {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
+.goal-progress-bar {
+    width: 100%;
+    height: 4px;
+    background: var(--border-light);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+.goal-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.4s var(--ease-out);
+}
+
+.goal-progress-label {
+    font-size: var(--fs-caption);
+    color: var(--text-muted);
+    margin-bottom: var(--sp-sm);
+}
+
+.goal-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--sp-sm);
+    border-top: 1px solid var(--border-light);
+    padding-top: var(--sp-sm);
+}
+
+.goal-action-btn {
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.2s ease;
+}
+
+.goal-action-btn:hover { color: var(--primary); }
+
+/* Goal creator draft milestone row */
+.goal-draft-milestone {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-sm);
+    margin-bottom: var(--sp-sm);
+}
+
+/* ── Reset button (testing only) ── */
+.reset-profile-btn {
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: var(--sp-sm) 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: color 0.2s ease;
+    display: block;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.reset-profile-btn:hover { color: var(--error); }
