@@ -7,21 +7,21 @@
 
 const DATA = {
     skills: [
-        { french: 'Plié', phonetic: 'plee-AY', english: 'Bend', difficulty: 'beginner', category: 'Barre Work', tracked: false, flagged: false, phoneticVisible: false },
-        { french: 'Tendu', phonetic: 'tahn-DEW', english: 'Stretched', difficulty: 'beginner', category: 'Barre Work', tracked: false, flagged: false, phoneticVisible: false },
-        { french: 'Dégagé', phonetic: 'day-ga-ZHAY', english: 'Disengaged', difficulty: 'beginner', category: 'Barre Work', tracked: false, flagged: false, phoneticVisible: false },
-        { french: 'Rond de jambe', phonetic: 'rohn duh ZHAHMB', english: 'Circle of the leg', difficulty: 'beginner', category: 'Barre Work', tracked: false, flagged: false, phoneticVisible: false },
-        { french: 'Frappé', phonetic: 'fra-PAY', english: 'Struck', difficulty: 'improver', category: 'Barre Work', tracked: false, flagged: false, phoneticVisible: false },
-        { french: 'Fondu', phonetic: 'fohn-DEW', english: 'Melted', difficulty: 'improver', category: 'Barre Work', tracked: false, flagged: false, phoneticVisible: false },
-        { french: 'Développé', phonetic: 'dayv-law-PAY', english: 'Developed', difficulty: 'improver', category: 'Centre Work', tracked: false, flagged: false, phoneticVisible: false },
-        { french: 'Grand battement', phonetic: 'grahn bat-MAHN', english: 'Large beating', difficulty: 'improver', category: 'Barre Work', tracked: false, flagged: false, phoneticVisible: false },
-        { french: 'Pirouette', phonetic: 'peer-oo-WET', english: 'Whirl', difficulty: 'intermediate', category: 'Turns', tracked: false, flagged: false, phoneticVisible: false },
-        { french: 'Arabesque', phonetic: 'a-ra-BESK', english: 'Arabian', difficulty: 'intermediate', category: 'Centre Work', tracked: false, flagged: false, phoneticVisible: false },
-        { french: 'Attitude', phonetic: 'a-tee-TEWD', english: 'Attitude', difficulty: 'intermediate', category: 'Centre Work', tracked: false, flagged: false, phoneticVisible: false },
-        { french: 'Pas de bourrée', phonetic: 'pah duh boo-RAY', english: 'Step of bourrée', difficulty: 'intermediate', category: 'Centre Work', tracked: false, flagged: false, phoneticVisible: false },
-        { french: 'Fouetté', phonetic: 'fweh-TAY', english: 'Whipped', difficulty: 'advanced', category: 'Turns', tracked: false, flagged: false, phoneticVisible: false },
-        { french: 'Grand jeté', phonetic: 'grahn zhuh-TAY', english: 'Large throw', difficulty: 'advanced', category: 'Jumps', tracked: false, flagged: false, phoneticVisible: false },
-        { french: 'Manège', phonetic: 'ma-NEZH', english: 'Riding school', difficulty: 'advanced', category: 'Centre Work', tracked: false, flagged: false, phoneticVisible: false },
+        { id: 'plie',           french: 'Plié',           phonetic: 'plee-AY',          english: 'Bend',              difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre'       },
+        { id: 'tendu',          french: 'Tendu',          phonetic: 'tahn-DEW',          english: 'Stretched',         difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre'       },
+        { id: 'degage',         french: 'Dégagé',         phonetic: 'day-ga-ZHAY',       english: 'Disengaged',        difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre'       },
+        { id: 'rond-de-jambe',  french: 'Rond de jambe',  phonetic: 'rohn duh ZHAHMB',   english: 'Circle of the leg', difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre'       },
+        { id: 'frappe',         french: 'Frappé',         phonetic: 'fra-PAY',           english: 'Struck',            difficulty: 'improver',     category: 'Barre Work',   dimensionId: 'barre'       },
+        { id: 'fondu',          french: 'Fondu',          phonetic: 'fohn-DEW',          english: 'Melted',            difficulty: 'improver',     category: 'Barre Work',   dimensionId: 'barre'       },
+        { id: 'developpe',      french: 'Développé',      phonetic: 'dayv-law-PAY',      english: 'Developed',         difficulty: 'improver',     category: 'Centre Work',  dimensionId: 'centre'      },
+        { id: 'grand-battement',french: 'Grand battement',phonetic: 'grahn bat-MAHN',    english: 'Large beating',     difficulty: 'improver',     category: 'Barre Work',   dimensionId: 'barre'       },
+        { id: 'pirouette',      french: 'Pirouette',      phonetic: 'peer-oo-WET',       english: 'Whirl',             difficulty: 'intermediate', category: 'Turns',        dimensionId: 'turns'       },
+        { id: 'arabesque',      french: 'Arabesque',      phonetic: 'a-ra-BESK',         english: 'Arabian',           difficulty: 'intermediate', category: 'Centre Work',  dimensionId: 'centre'      },
+        { id: 'attitude',       french: 'Attitude',       phonetic: 'a-tee-TEWD',        english: 'Attitude',          difficulty: 'intermediate', category: 'Centre Work',  dimensionId: 'centre'      },
+        { id: 'pas-de-bourree', french: 'Pas de bourrée', phonetic: 'pah duh boo-RAY',   english: 'Step of bourrée',   difficulty: 'intermediate', category: 'Centre Work',  dimensionId: 'centre'      },
+        { id: 'fouette',        french: 'Fouetté',        phonetic: 'fweh-TAY',          english: 'Whipped',           difficulty: 'advanced',     category: 'Turns',        dimensionId: 'turns'       },
+        { id: 'grand-jete',     french: 'Grand jeté',     phonetic: 'grahn zhuh-TAY',    english: 'Large throw',       difficulty: 'advanced',     category: 'Jumps',        dimensionId: 'allegro'     },
+        { id: 'manege',         french: 'Manège',         phonetic: 'ma-NEZH',           english: 'Riding school',     difficulty: 'advanced',     category: 'Centre Work',  dimensionId: 'centre'      },
     ],
 
     folders: {
@@ -307,99 +307,233 @@ const DATA = {
 
 /* ═══════════════════════════════════════════════════════════════
    STORAGE ADAPTER
-   Swap out for localStorage implementation in Stage 3.
    UI never touches storage directly — always goes through here.
+   Stage 3: replace each no-op with the localStorage implementation
+   shown in the comments.
    ═══════════════════════════════════════════════════════════════ */
 
+const STORAGE_KEYS = {
+    skills:           'plie:skills',
+    corrections:      'plie:corrections',
+    sessions:         'plie:sessions',
+    sessionTemplates: 'plie:sessionTemplates',
+    sessionSkills:    'plie:sessionSkills',
+    assessments:      'plie:assessments',
+    goals:            'plie:goals',
+    timeline:         'plie:timeline',
+};
+
 const storage = {
+    // Stage 3: localStorage.setItem(STORAGE_KEYS[key], JSON.stringify(value))
     save: (key, value) => {},
+
+    // Stage 3: try { return JSON.parse(localStorage.getItem(STORAGE_KEYS[key])) } catch { return null }
     load: (key) => null,
+
+    // Stage 3: Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k))
     clear: () => {}
 };
 
 
+/* ═══════════════════════════════════════════════════════════════
+   SKILL STATE MERGE
+   Reference data (french, phonetic, difficulty etc.) lives in
+   DATA.skills and is never persisted — it ships with the app.
+   User state (tracked, flagged, phoneticVisible) is persisted
+   separately as a sparse array of { id, tracked, flagged }.
+
+   loadUserSkillState() runs once at startup (Stage 3) after
+   storage.load(). It merges persisted user state back onto the
+   runtime skill objects in appState.skills.
+
+   appState.skills is always initialised from DATA.skills first,
+   so missing persisted entries default to tracked:false, flagged:false.
+   This means new skills added to DATA.skills in future app versions
+   appear correctly with default state even for existing users.
+   ═══════════════════════════════════════════════════════════════ */
+
+function initSkills() {
+    // Build runtime skill objects from reference data, with default user state.
+    // phoneticVisible is display-only and intentionally NOT persisted.
+    return DATA.skills.map(ref => ({
+        ...ref,
+        tracked:        false,
+        flagged:        false,
+        phoneticVisible: false,
+    }));
+}
+
+function loadUserSkillState() {
+    // Stage 3: call this after storage is loaded.
+    // Persisted format: Array<{ id: string, tracked: boolean, flagged: boolean }>
+    const persisted = storage.load('skills');
+    if (!persisted || !Array.isArray(persisted)) return;
+
+    persisted.forEach(saved => {
+        const skill = appState.skills.find(s => s.id === saved.id);
+        if (!skill) return; // skill may have been removed from DATA in a newer version — ignore
+        skill.tracked = saved.tracked ?? false;
+        skill.flagged = saved.flagged ?? false;
+        // phoneticVisible deliberately not restored — always starts hidden
+    });
+}
+
+function persistSkillState() {
+    // Only persist user state fields, not reference data.
+    const toSave = appState.skills
+        .filter(s => s.tracked || s.flagged) // sparse — only persist non-default state
+        .map(s => ({ id: s.id, tracked: s.tracked, flagged: s.flagged }));
+    storage.save('skills', toSave);
+}
+
+
 // ── Central App State ──
 let appState = {
-    currentScreen: 'onboarding-1',
+    // Quiz / assessment
+    currentScreen:   'onboarding-1',
     currentQuestion: 0,
-    answers: {},
-    level: null,
-    dimensions: null,
-    rawDimensions: null,
-    skills: [...DATA.skills],
-    sessions: [
-        {
-            id: 1741824000000,
-            date: '2026-03-12',
-            sessionName: 'Wednesday RAD class',
-            templateId: null,
-            classType: 'technique',
-            blocks: [
-                {
-                    id: 1741824001000,
-                    topicId: 'general',
-                    title: 'General warm-up',
-                    notes: 'Focused on épaulement at the barre today. Felt more connected through the upper back than usual.',
-                    corrections: 'Keep shoulders down and back — teacher corrected this twice during the adagio.',
-                    highlight: true
-                },
-                {
-                    id: 1741824002000,
-                    topicId: 'skill:Pirouette',
-                    title: '',
-                    notes: 'Single turns feeling more stable. Tried a double — lost it about 70% of the time.',
-                    corrections: 'Spot earlier. Pull up through the supporting leg before initiating the turn.',
-                    highlight: false
-                }
-            ],
-            savedAt: 1741824060000
-        },
-        {
-            id: 1741651200000,
-            date: '2026-03-10',
-            sessionName: 'Monday open class',
-            templateId: null,
-            classType: 'open',
-            blocks: [
-                {
-                    id: 1741651201000,
-                    topicId: 'skill:Arabesque',
-                    title: 'Arabesque extension',
-                    notes: 'Working on getting the leg higher without losing the line through the back.',
-                    corrections: 'Don\'t tilt the pelvis — the height comes from the hip flexor, not the lower back.',
-                    highlight: true
-                }
-            ],
-            savedAt: 1741651260000
-        }
-    ],
+    answers:         {},
+    level:           null,
+    dimensions:      null,
+    rawDimensions:   null,
+
+    // Skills — runtime objects, merged from DATA + persisted user state
+    skills: initSkills(),
+
+    // Core collections
+    corrections:      [],
+    sessions:         [],
     sessionTemplates: [],
-    timeline: [
-        {
-            date: '2026-03-12',
-            type: 'session',
-            title: 'Wednesday RAD class',
-            subtitle: 'Technique class · 2 notes',
-            sessionId: 1741824000000
-        },
-        {
-            date: '2026-03-10',
-            type: 'session',
-            title: 'Monday open class',
-            subtitle: 'Open class · 1 note',
-            sessionId: 1741651200000
-        }
-    ],
-    goals: [],
-    notes: [],
-    wardrobe: [],
-    tasks: [],
-    persona: null,
+    sessionSkills:    [],
+    assessments:      [],
+    goals:            [],
+    timeline:         [],
+
+    // Misc
+    notes:      [],
+    persona:    null,
     currentNav: null,
 
-    // Active session being constructed — cleared on save or discard
+    // Active session being constructed — never persisted mid-flight
     currentSession: null
 };
+
+// ── Mock data — seeded for development/testing ──
+// Represents two logged sessions in the new normalised schema.
+// Remove or gate behind a DEV flag before release.
+(function seedMockData() {
+    // Sessions
+    appState.sessions = [
+        {
+            id:              1741824000000,
+            date:            '2026-03-12',
+            savedAt:         1741824060000,
+            templateId:      null,
+            sessionName:     'Wednesday RAD class',
+            sessionLocation: null,
+            classType:       'technique',
+            notes:           null,
+        },
+        {
+            id:              1741651200000,
+            date:            '2026-03-10',
+            savedAt:         1741651260000,
+            templateId:      null,
+            sessionName:     'Monday open class',
+            sessionLocation: null,
+            classType:       'open',
+            notes:           null,
+        },
+    ];
+
+    // Corrections — standalone objects, linked to skills
+    appState.corrections = [
+        {
+            id:          1741824001000,
+            skillId:     'pirouette',
+            text:        'Spot earlier — the head should initiate the turn, not follow it.',
+            createdAt:   1741824001000,
+            sessionId:   1741824000000,
+            source:      'teacher',
+            type:        'technical',
+            isRecurring: true,
+        },
+        {
+            id:          1741824002000,
+            skillId:     'pirouette',
+            text:        'Pull up through the supporting leg before initiating the turn.',
+            createdAt:   1741824002000,
+            sessionId:   1741824000000,
+            source:      'teacher',
+            type:        'technical',
+            isRecurring: false,
+        },
+        {
+            id:          1741651201000,
+            skillId:     'arabesque',
+            text:        'Don\'t tilt the pelvis — the height comes from the hip flexor, not the lower back.',
+            createdAt:   1741651201000,
+            sessionId:   1741651200000,
+            source:      'teacher',
+            type:        'technical',
+            isRecurring: false,
+        },
+    ];
+
+    // SessionSkills — join objects linking sessions to skills
+    appState.sessionSkills = [
+        {
+            id:            1741824010000,
+            sessionId:     1741824000000,
+            skillId:       'pirouette',
+            notes:         'Single turns feeling more stable. Tried a double — lost it about 70% of the time.',
+            correctionIds: [1741824001000, 1741824002000],
+            tracked:       true,
+            flagged:       false,
+            blockTitle:    '',
+            highlight:     false,
+        },
+        {
+            id:            1741651210000,
+            sessionId:     1741651200000,
+            skillId:       'arabesque',
+            notes:         'Working on getting the leg higher without losing the line through the back.',
+            correctionIds: [1741651201000],
+            tracked:       true,
+            flagged:       false,
+            blockTitle:    'Arabesque extension',
+            highlight:     true,
+        },
+    ];
+
+    // Flag the skills that appear in sessions as active
+    ['pirouette', 'arabesque'].forEach(id => {
+        const skill = appState.skills.find(s => s.id === id);
+        if (skill) skill.flagged = true;
+    });
+
+    // Timeline
+    appState.timeline = [
+        {
+            id:       1741824060001,
+            type:     'session',
+            objectId: 1741824000000,
+            title:    'Wednesday RAD class',
+            body:     'Technique class · 1 skill · 2 corrections',
+            date:     '2026-03-12',
+            createdAt: 1741824060001,
+        },
+        {
+            id:       1741651260001,
+            type:     'session',
+            objectId: 1741651200000,
+            title:    'Monday open class',
+            body:     'Open class · 1 skill · 1 correction',
+            date:     '2026-03-10',
+            createdAt: 1741651260001,
+        },
+    ];
+})();
 
 
 /* ═══════════════════════════════════════════════════════════════
@@ -821,23 +955,23 @@ const ALL_CLASS_TYPES = [...CLASS_TYPES_PRIMARY, ...CLASS_TYPES_SECONDARY];
 
 const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-// Block topic options — General categories + all skills
+// Block topic options — General categories + all skills (keyed by slug)
 function getBlockTopics() {
     const categories = [
-        { id: 'general',      label: 'General',     group: 'General' },
-        { id: 'musicality',   label: 'Musicality',  group: 'General' },
-        { id: 'barre',        label: 'Barre',        group: 'Category' },
-        { id: 'centre',       label: 'Centre',       group: 'Category' },
-        { id: 'turns',        label: 'Turns',        group: 'Category' },
-        { id: 'allegro',      label: 'Allegro',      group: 'Category' },
-        { id: 'pointe',       label: 'Pointe',       group: 'Category' },
-        { id: 'flexibility',  label: 'Flexibility',  group: 'Category' },
+        { id: 'general',      label: 'General',    group: 'General'   },
+        { id: 'musicality',   label: 'Musicality', group: 'General'   },
+        { id: 'barre',        label: 'Barre',       group: 'Category'  },
+        { id: 'centre',       label: 'Centre',      group: 'Category'  },
+        { id: 'turns',        label: 'Turns',       group: 'Category'  },
+        { id: 'allegro',      label: 'Allegro',     group: 'Category'  },
+        { id: 'pointe',       label: 'Pointe',      group: 'Category'  },
+        { id: 'flexibility',  label: 'Flexibility', group: 'Category'  },
     ];
     const skills = appState.skills.map(s => ({
-        id: 'skill:' + s.french,
+        id:    'skill:' + s.id,   // e.g. 'skill:pirouette'
         label: s.french,
-        sub: s.english,
-        group: 'Skills'
+        sub:   s.english,
+        group: 'Skills',
     }));
     return [...categories, ...skills];
 }
@@ -1402,12 +1536,12 @@ function saveNewTemplate() {
 
     const isRecurring = d.days?.length > 0;
     const template = {
-        id: Date.now(),
-        name: d.name.trim(),
-        location: d.location.trim(),
-        classType: d.classType,
-        days: d.days || [],
-        recurrence: isRecurring ? 'weekly' : 'one-off'
+        id:        Date.now(),
+        name:      d.name.trim(),
+        location:  d.location?.trim() || null,
+        classType: d.classType || null,
+        days:      d.days || [],
+        // recurring if days.length > 0 — no separate recurrence field needed
     };
 
     if (isRecurring) {
@@ -1571,60 +1705,114 @@ function removeBlock(index) {
 }
 
 function openSkillFromBlock(topicId) {
-    const skillName = topicId.replace('skill:', '');
+    const skillId = topicId.replace('skill:', '');
     closeSessionLogger();
-    // TODO: navigate to skill detail page once built
-    console.log('Navigate to skill:', skillName);
+    // TODO: navigate to skill detail page — skillId is now a slug e.g. 'pirouette'
+    console.log('Navigate to skill:', skillId);
 }
 
+// ── Save ──
 function saveSession() {
     const s = appState.currentSession;
     if (!s) return;
 
-    const session = { ...s, savedAt: Date.now() };
+    const now = Date.now();
+
+    // 1. Persist the Session object (no blocks — those become SessionSkills + Corrections)
+    const session = {
+        id:              s.id,
+        date:            s.date,
+        savedAt:         now,
+        templateId:      s.templateId   || null,
+        sessionName:     s.sessionName  || null,
+        sessionLocation: s.sessionLocation || null,
+        classType:       s.classType    || null,
+        notes:           s.generalNotes || null,
+    };
     appState.sessions.push(session);
     storage.save('sessions', appState.sessions);
 
-    // Surface named skills from blocks into The Barre as active,
-    // and attach the most recent correction to each skill
+    // 2. Process each block into SessionSkill + Correction objects
+    let skillCount = 0;
+    let correctionCount = 0;
+
     s.blocks.forEach(block => {
-        if (block.topicId?.startsWith('skill:')) {
-            const skillName = block.topicId.replace('skill:', '');
-            const skill = appState.skills.find(sk => sk.french === skillName);
-            if (skill) {
-                skill.flagged = true;
-                if (block.corrections?.trim()) {
-                    skill.lastCorrection = block.corrections.trim();
-                    skill.lastWorkedOn = s.date;
-                } else if (block.notes?.trim()) {
-                    skill.lastCorrection = block.notes.trim();
-                    skill.lastWorkedOn = s.date;
-                }
-            }
+        const isSkill = block.topicId?.startsWith('skill:');
+        const skillId = isSkill ? block.topicId.replace('skill:', '') : null;
+
+        // Corrections from this block — one object per correction text
+        const blockCorrectionIds = [];
+
+        if (block.corrections?.trim()) {
+            const correction = {
+                id:          now + Math.floor(Math.random() * 10000),
+                skillId:     skillId || null,
+                text:        block.corrections.trim(),
+                createdAt:   now,
+                sessionId:   session.id,
+                source:      'teacher',   // schema-only for now; no UI field yet
+                type:        null,
+                isRecurring: false,
+            };
+            appState.corrections.push(correction);
+            blockCorrectionIds.push(correction.id);
+            correctionCount++;
+        }
+
+        // SessionSkill join object — created for skill blocks only
+        if (isSkill && skillId) {
+            const skill = appState.skills.find(sk => sk.id === skillId);
+
+            const sessionSkill = {
+                id:            now + Math.floor(Math.random() * 10000),
+                sessionId:     session.id,
+                skillId:       skillId,
+                notes:         block.notes?.trim()     || null,
+                correctionIds: blockCorrectionIds,
+                tracked:       true,
+                flagged:       block.highlight || false,
+                blockTitle:    block.title?.trim()     || null,
+                highlight:     block.highlight || false,
+            };
+            appState.sessionSkills.push(sessionSkill);
+            skillCount++;
+
+            // Flag skill as active in The Barre
+            if (skill) skill.flagged = true;
         }
     });
 
-    // Add timeline entry
-    const template = appState.sessionTemplates.find(t => t.id === s.templateId);
-    const sessionLabel = template?.name || s.sessionName || 'Session';
-    const classTypeLabel = s.classType
-        ? (ALL_CLASS_TYPES.find(ct => ct.id === s.classType)?.label || s.classType)
-        : null;
-    const blockCount = s.blocks.length;
+    storage.save('corrections',   appState.corrections);
+    storage.save('sessionSkills', appState.sessionSkills);
+    persistSkillState();
 
-    appState.timeline = appState.timeline || [];
+    // 3. Timeline entry
+    const template = appState.sessionTemplates.find(t => t.id === s.templateId);
+    const sessionLabel = session.sessionName || template?.name || 'Session';
+    const classTypeLabel = session.classType
+        ? (ALL_CLASS_TYPES.find(ct => ct.id === session.classType)?.label || session.classType)
+        : null;
+
+    const bodyParts = [
+        classTypeLabel,
+        skillCount      ? `${skillCount} skill${skillCount > 1 ? 's' : ''}`           : null,
+        correctionCount ? `${correctionCount} correction${correctionCount > 1 ? 's' : ''}` : null,
+    ].filter(Boolean);
+
     appState.timeline.unshift({
-        date: s.date,
-        type: 'session',
-        title: sessionLabel,
-        subtitle: [classTypeLabel, blockCount ? `${blockCount} note${blockCount > 1 ? 's' : ''}` : null].filter(Boolean).join(' · '),
-        sessionId: session.id
+        id:       now + 1,
+        type:     'session',
+        objectId: session.id,
+        title:    sessionLabel,
+        body:     bodyParts.join(' · ') || null,
+        date:     session.date,
+        createdAt: now + 1,
     });
+    storage.save('timeline', appState.timeline);
 
     appState.currentSession = null;
     closeSessionLogger();
 
-    // Re-render profile timeline if it's visible
     if (appState.currentScreen === 'profile') initProfile();
 }
 
@@ -1651,17 +1839,32 @@ function showBarreScreen() {
             <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);">
                 <h2 class="section-title" style="padding: 0; margin-bottom: var(--sp-md);">Active skills</h2>
                 <div style="display: flex; flex-direction: column; gap: var(--sp-sm);">
-                    ${activeSkills.map(skill => `
+                    ${activeSkills.map(skill => {
+                        const skillCorrections = appState.corrections
+                            .filter(c => c.skillId === skill.id)
+                            .sort((a, b) => b.createdAt - a.createdAt);
+                        const lastCorrection = skillCorrections[0] || null;
+                        const lastSessionSkill = appState.sessionSkills
+                            .filter(ss => ss.skillId === skill.id)
+                            .sort((a, b) => {
+                                const sa = appState.sessions.find(s => s.id === a.sessionId);
+                                const sb = appState.sessions.find(s => s.id === b.sessionId);
+                                return (sb?.date || '').localeCompare(sa?.date || '');
+                            })[0];
+                        const lastSession = lastSessionSkill
+                            ? appState.sessions.find(s => s.id === lastSessionSkill.sessionId)
+                            : null;
+                        return `
                         <div class="active-skill-card" onclick="alert('Skill detail page coming soon')">
                             <div class="active-skill-info">
                                 <div class="active-skill-name">${skill.french}</div>
                                 <div class="active-skill-meta">${skill.category}${skill.flagged ? ' · In focus' : ''}</div>
-                                ${skill.lastCorrection ? `<div class="active-skill-correction">"${skill.lastCorrection}"</div>` : ''}
-                                ${skill.lastWorkedOn ? `<div class="active-skill-date">Last worked: ${formatTimelineDate(skill.lastWorkedOn)}</div>` : ''}
+                                ${lastCorrection ? `<div class="active-skill-correction">"${lastCorrection.text}"</div>` : ''}
+                                ${lastSession ? `<div class="active-skill-date">Last worked: ${formatTimelineDate(lastSession.date)}</div>` : ''}
                             </div>
                             <div class="active-skill-progress">${skill.tracked ? '✓' : '—'}</div>
-                        </div>
-                    `).join('')}
+                        </div>`;
+                    }).join('')}
                 </div>
             </div>
         `;
@@ -1918,18 +2121,20 @@ function initProfile() {
             ? 'Joined plié'
             : `Completed placement quiz — ${(DATA.levelLabels[level] || 'BEGINNER').charAt(0) + (DATA.levelLabels[level] || 'BEGINNER').slice(1).toLowerCase()}`;
 
-        const sessionEntries = (appState.timeline || []).map(entry => `
-            <div class="timeline-item ${entry.sessionId ? 'timeline-item-tappable' : ''}"
-                 ${entry.sessionId ? `onclick="showSessionDetail(${entry.sessionId})"` : ''}>
+        const sessionEntries = (appState.timeline || []).map(entry => {
+            const isTappable = entry.type === 'session' && entry.objectId;
+            return `
+            <div class="timeline-item ${isTappable ? 'timeline-item-tappable' : ''}"
+                 ${isTappable ? `onclick="showSessionDetail(${entry.objectId})"` : ''}>
                 <div class="timeline-dot ${entry.type === 'session' ? 'timeline-dot-session' : ''}"></div>
                 <div class="timeline-content">
                     <div class="timeline-date">${formatTimelineDate(entry.date)}</div>
                     <div class="timeline-title">${entry.title}</div>
-                    ${entry.subtitle ? `<div class="timeline-subtitle">${entry.subtitle}</div>` : ''}
-                    ${entry.sessionId ? `<div class="timeline-tap-hint">tap to review →</div>` : ''}
+                    ${entry.body ? `<div class="timeline-subtitle">${entry.body}</div>` : ''}
+                    ${isTappable ? `<div class="timeline-tap-hint">tap to review →</div>` : ''}
                 </div>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
 
         timelineEl.innerHTML = `
             ${sessionEntries}
@@ -1984,39 +2189,49 @@ function showSessionDetail(sessionId) {
     const sessionTitle = session.sessionName || template?.name || 'Session';
     const location = template?.location || session.sessionLocation || null;
 
-    // Meta line: date · class type
-    const datePart = new Date(session.date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const datePart = new Date(session.date).toLocaleDateString('en-GB', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    });
     const metaParts = [datePart, classTypeLabel].filter(Boolean);
 
-    // Linked skills (blocks that reference a skill)
-    const linkedSkills = session.blocks
-        .filter(b => b.topicId?.startsWith('skill:'))
-        .map(b => b.topicId.replace('skill:', ''));
-    const uniqueSkills = [...new Set(linkedSkills)];
+    // Get SessionSkills for this session
+    const sessionSkillRecords = appState.sessionSkills.filter(ss => ss.sessionId === sessionId);
 
-    // Render blocks
-    const blocksHtml = session.blocks.length > 0
-        ? session.blocks.map(block => renderDetailBlockHtml(block)).join('')
+    // Get unique linked skills for the chips section
+    const uniqueSkillIds = [...new Set(sessionSkillRecords.map(ss => ss.skillId))];
+
+    // Render blocks from SessionSkill records
+    const blocksHtml = sessionSkillRecords.length > 0
+        ? sessionSkillRecords.map(ss => renderDetailBlockHtml(ss)).join('')
         : `<div class="session-detail-empty">No notes recorded for this session.</div>`;
 
+    // Session-level notes block (if any)
+    const sessionNotesHtml = session.notes ? `
+        <div class="detail-block">
+            <div class="detail-block-header">
+                <span class="detail-block-topic">General</span>
+            </div>
+            <div class="detail-block-notes">${session.notes}</div>
+        </div>
+    ` : '';
+
     // Linked skills chips
-    const skillChipsHtml = uniqueSkills.length > 0 ? `
+    const skillChipsHtml = uniqueSkillIds.length > 0 ? `
         <div class="session-detail-section">
             <div class="session-detail-section-label">Linked skills</div>
             <div class="session-detail-skill-chips">
-                ${uniqueSkills.map(skill => `
-                    <button class="session-skill-chip" onclick="alert('Skill detail coming soon')">
-                        ${skill}
-                    </button>
-                `).join('')}
+                ${uniqueSkillIds.map(skillId => {
+                    const skill = DATA.skills.find(sk => sk.id === skillId);
+                    return `<button class="session-skill-chip" onclick="alert('Skill detail coming soon')">
+                        ${skill ? skill.french : skillId}
+                    </button>`;
+                }).join('')}
             </div>
         </div>
     ` : '';
 
     screen.innerHTML = `
         <div class="session-detail-view">
-
-            <!-- Header -->
             <div class="session-detail-header">
                 <button class="session-detail-back" onclick="closeSessionDetail(${sessionId}, '${returnTo}')">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2027,7 +2242,6 @@ function showSessionDetail(sessionId) {
                 <button class="session-detail-edit" onclick="alert('Edit coming soon')">edit</button>
             </div>
 
-            <!-- Session identity -->
             <div class="session-detail-hero">
                 <h1 class="session-detail-title">${sessionTitle}</h1>
                 <div class="session-detail-meta">${metaParts.join(' · ')}</div>
@@ -2039,10 +2253,10 @@ function showSessionDetail(sessionId) {
                 </div>` : ''}
             </div>
 
-            <!-- Notes & corrections -->
             <div class="session-detail-section">
                 <div class="session-detail-section-label">Notes &amp; corrections</div>
                 <div class="session-detail-blocks">
+                    ${sessionNotesHtml}
                     ${blocksHtml}
                 </div>
             </div>
@@ -2069,31 +2283,35 @@ function closeSessionDetail(sessionId, returnTo) {
     }
 }
 
-function renderDetailBlockHtml(block) {
-    const topics = getBlockTopics();
-    const topic = topics.find(t => t.id === block.topicId);
-    const topicLabel = topic?.label || 'General';
-    const isSkill = block.topicId?.startsWith('skill:');
-    const skillName = isSkill ? block.topicId.replace('skill:', '') : null;
+function renderDetailBlockHtml(sessionSkill) {
+    const skill = DATA.skills.find(s => s.id === sessionSkill.skillId);
+    const topicLabel = skill ? skill.french : sessionSkill.skillId;
 
-    const hasContent = block.title || block.notes || block.corrections;
+    // Resolve corrections from the collection
+    const corrections = (sessionSkill.correctionIds || [])
+        .map(id => appState.corrections.find(c => c.id === id))
+        .filter(Boolean);
+
+    const hasContent = sessionSkill.blockTitle || sessionSkill.notes || corrections.length > 0;
     if (!hasContent) return '';
 
+    const correctionsHtml = corrections.map(c => `
+        <div class="detail-block-corrections">
+            <span class="detail-block-corrections-label">correction${c.isRecurring ? ' · recurring' : ''}</span>
+            ${c.text}
+        </div>
+    `).join('');
+
     return `
-        <div class="detail-block ${block.highlight ? 'detail-block-highlighted' : ''}">
+        <div class="detail-block ${sessionSkill.highlight ? 'detail-block-highlighted' : ''}">
             <div class="detail-block-header">
                 <span class="detail-block-topic">${topicLabel}</span>
-                ${isSkill ? `<button class="detail-block-skill-link" onclick="alert('Skill detail coming soon')">learn more →</button>` : ''}
-                ${block.highlight ? '<span class="detail-block-star">★</span>' : ''}
+                <button class="detail-block-skill-link" onclick="alert('Skill detail coming soon')">learn more →</button>
+                ${sessionSkill.highlight ? '<span class="detail-block-star">★</span>' : ''}
             </div>
-            ${block.title ? `<div class="detail-block-title">${block.title}</div>` : ''}
-            ${block.notes ? `<div class="detail-block-notes">${block.notes}</div>` : ''}
-            ${block.corrections ? `
-                <div class="detail-block-corrections">
-                    <span class="detail-block-corrections-label">correction</span>
-                    ${block.corrections}
-                </div>
-            ` : ''}
+            ${sessionSkill.blockTitle ? `<div class="detail-block-title">${sessionSkill.blockTitle}</div>` : ''}
+            ${sessionSkill.notes     ? `<div class="detail-block-notes">${sessionSkill.notes}</div>`     : ''}
+            ${correctionsHtml}
         </div>
     `;
 }
@@ -2107,11 +2325,11 @@ function renderDetailBlockHtml(block) {
 function renderSkills(filter = 'all') {
     const tbody = document.getElementById('skillsTableBody');
     if (!tbody) return;
-    let filtered = appState.skills;
-    if (filter !== 'all') filtered = appState.skills.filter(s => s.difficulty === filter);
+    const filtered = filter === 'all'
+        ? appState.skills
+        : appState.skills.filter(s => s.difficulty === filter);
 
-    tbody.innerHTML = filtered.map((skill) => {
-        const actualIndex = appState.skills.indexOf(skill);
+    tbody.innerHTML = filtered.map(skill => {
         const phoneticHidden = skill.phoneticVisible ? '' : 'hidden';
         return `
         <tr>
@@ -2120,7 +2338,7 @@ function renderSkills(filter = 'all') {
                     <div class="skill-name">
                         <div class="skill-french">
                             ${skill.french}
-                            <button class="phonetic-toggle" onclick="togglePhonetic(${actualIndex})">
+                            <button class="phonetic-toggle" onclick="togglePhonetic('${skill.id}')">
                                 ${skill.phoneticVisible ? 'hide' : 'show'} pronunciation
                             </button>
                         </div>
@@ -2131,14 +2349,8 @@ function renderSkills(filter = 'all') {
             <td>${skill.category}</td>
             <td><span class="difficulty-badge difficulty-${skill.difficulty}">${skill.difficulty}</span></td>
             <td>
-                <div class="skill-progress">
-                    <div class="skill-progress-fill" style="width: ${skill.progress || 0}%"></div>
-                </div>
-            </td>
-            <td><span class="skill-percentage">${skill.progress || 0}%</span></td>
-            <td>
                 <button class="skill-flag ${skill.flagged ? 'flagged' : ''}"
-                        onclick="toggleFlag(${actualIndex})">
+                        onclick="toggleFlag('${skill.id}')">
                     ${skill.flagged ? '🚩' : '⚐'}
                 </button>
             </td>
@@ -2152,13 +2364,18 @@ function filterSkills(difficulty, event) {
     renderSkills(difficulty);
 }
 
-function togglePhonetic(idx) {
-    appState.skills[idx].phoneticVisible = !appState.skills[idx].phoneticVisible;
+function togglePhonetic(skillId) {
+    const skill = appState.skills.find(s => s.id === skillId);
+    if (!skill) return;
+    skill.phoneticVisible = !skill.phoneticVisible;
     renderSkills();
 }
 
-function toggleFlag(idx) {
-    appState.skills[idx].flagged = !appState.skills[idx].flagged;
+function toggleFlag(skillId) {
+    const skill = appState.skills.find(s => s.id === skillId);
+    if (!skill) return;
+    skill.flagged = !skill.flagged;
+    persistSkillState();
     renderSkills();
 }
 
