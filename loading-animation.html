@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plié Loading Animation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Handlee&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #5C4F49;
+            --accent: #C4A882;
+            --accent-wash: #F0E6D8;
+            --background: #FAF7F4;
+            --text-muted: #A39790;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .dancer-stage {
+            width: 200px;
+            height: 260px;
+        }
+        .position-label {
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            text-align: center;
+            transition: opacity 0.35s ease;
+            height: 16px;
+        }
+        .logo-loading {
+            font-family: 'Handlee', cursive;
+            font-size: 28px;
+            color: var(--primary);
+            opacity: 0.6;
+            margin-top: 8px;
+        }
+        .loading-dots {
+            display: flex;
+            gap: 5px;
+        }
+        .loading-dot {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: dotPulse 1.8s ease-in-out infinite;
+        }
+        .loading-dot:nth-child(2) { animation-delay: 0.25s; }
+        .loading-dot:nth-child(3) { animation-delay: 0.5s; }
+        @keyframes dotPulse {
+            0%, 100% { opacity: 0.2; transform: scale(0.8); }
+            50% { opacity: 0.7; transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-container">
+        <div class="dancer-stage">
+            <canvas id="dancer" width="400" height="520" style="width: 200px; height: 260px;"></canvas>
+        </div>
+        <div class="position-label" id="posLabel">bras bas</div>
+        <div class="logo-loading">plié</div>
+        <div class="loading-dots">
+            <div class="loading-dot"></div>
+            <div class="loading-dot"></div>
+            <div class="loading-dot"></div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('dancer');
+        const ctx = canvas.getContext('2d');
+        const W = 400, H = 520;
+        const label = document.getElementById('posLabel');
+
+        // Dancer structure — all coordinates at 2x for retina
+        // Arms defined as: shoulder, controlPoint1, controlPoint2, hand
+        const positions = {
+            brasBas: {
+                name: 'bras bas',
+                leftArm: { s: [200, 176], c1: [170, 200], c2: [148, 232], h: [142, 260] },
+                rightArm: { s: [200, 176], c1: [230, 200], c2: [252, 232], h: [258, 260] },
+                // Subtle body tilt
+                headY: 116, shoulderY: 176
+            },
+            first: {
+                name: 'first position',
+                leftArm: { s: [200, 176], c1: [168, 180], c2: [142, 192], h: [136, 214] },
+                rightArm: { s: [200, 176], c1: [232, 180], c2: [258, 192], h: [264, 214] },
+                headY: 114, shoulderY: 176
+            },
+            fifth: {
+                name: 'fifth en haut',
+                leftArm: { s: [200, 176], c1: [182, 150], c2: [174, 114], h: [180, 92] },
+                rightArm: { s: [200, 176], c1: [218, 150], c2: [226, 114], h: [220, 92] },
+                headY: 112, shoulderY: 176
+            },
+            second: {
+                name: 'second position',
+                leftArm: { s: [200, 176], c1: [158, 166], c2: [108, 164], h: [68, 174] },
+                rightArm: { s: [200, 176], c1: [242, 166], c2: [292, 164], h: [332, 174] },
+                headY: 116, shoulderY: 176
+            }
+        };
+
+        const sequence = ['brasBas', 'first', 'fifth', 'second'];
+        let currentIdx = 0;
+        let animProgress = 1; // 0 to 1
+        let fromPos = positions.brasBas;
+        let toPos = positions.brasBas;
+        let isTransitioning = false;
+
+        function lerp(a, b, t) {
+            return a + (b - a) * t;
+        }
+
+        function lerpArm(from, to, t) {
+            return {
+                s: [lerp(from.s[0], to.s[0], t), lerp(from.s[1], to.s[1], t)],
+                c1: [lerp(from.c1[0], to.c1[0], t), lerp(from.c1[1], to.c1[1], t)],
+                c2: [lerp(from.c2[0], to.c2[0], t), lerp(from.c2[1], to.c2[1], t)],
+                h: [lerp(from.h[0], to.h[0], t), lerp(from.h[1], to.h[1], t)]
+            };
+        }
+
+        // Easing — smooth ballet-like motion
+        function easeInOutQuart(t) {
+            return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
+        }
+
+        function drawDancer(t) {
+            ctx.clearRect(0, 0, W, H);
+
+            const eased = easeInOutQuart(t);
+            const left = lerpArm(fromPos.leftArm, toPos.leftArm, eased);
+            const right = lerpArm(fromPos.rightArm, toPos.rightArm, eased);
+            const headY = lerp(fromPos.headY, toPos.headY, eased);
+
+            // Breathing effect
+            const breathe = Math.sin(Date.now() / 1200) * 1.5;
+
+            // Background glow
+            ctx.beginPath();
+            ctx.arc(200, 260, 140 + breathe * 2, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(240, 230, 216, 0.35)';
+            ctx.fill();
+
+            const col = '#5C4F49';
+            const colLight = '#7A6D66';
+
+            // ── Tutu hint ──
+            ctx.beginPath();
+            ctx.ellipse(200, 260 + breathe, 36, 8, 0, 0, Math.PI * 2);
+            ctx.strokeStyle = '#C4A882';
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = 0.4;
+            ctx.fillStyle = 'rgba(240, 230, 216, 0.5)';
+            ctx.fill();
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+
+            // ── Legs ──
+            ctx.lineWidth = 3.2;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = col;
+
+            // Left leg
+            ctx.beginPath();
+            ctx.moveTo(200, 260 + breathe);
+            ctx.bezierCurveTo(196, 300, 190, 350, 186, 390 + breathe);
+            ctx.stroke();
+
+            // Right leg
+            ctx.beginPath();
+            ctx.moveTo(200, 260 + breathe);
+            ctx.bezierCurveTo(204, 300, 210, 350, 214, 390 + breathe);
+            ctx.stroke();
+
+            // Feet
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(186, 390 + breathe);
+            ctx.bezierCurveTo(184, 396, 178, 400, 174, 400);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(214, 390 + breathe);
+            ctx.bezierCurveTo(216, 396, 222, 400, 226, 400);
+            ctx.stroke();
+
+            // ── Torso ──
+            ctx.lineWidth = 3.2;
+            ctx.beginPath();
+            ctx.moveTo(200, 260 + breathe);
+            ctx.bezierCurveTo(200, 240, 200, 200, 200, 176 + breathe * 0.5);
+            ctx.stroke();
+
+            // ── Arms ──
+            ctx.lineWidth = 2.8;
+            ctx.strokeStyle = col;
+
+            // Left arm
+            ctx.beginPath();
+            ctx.moveTo(left.s[0], left.s[1] + breathe * 0.5);
+            ctx.bezierCurveTo(
+                left.c1[0], left.c1[1] + breathe * 0.3,
+                left.c2[0], left.c2[1] + breathe * 0.2,
+                left.h[0], left.h[1] + breathe * 0.1
+            );
+            ctx.stroke();
+
+            // Right arm
+            ctx.beginPath();
+            ctx.moveTo(right.s[0], right.s[1] + breathe * 0.5);
+            ctx.bezierCurveTo(
+                right.c1[0], right.c1[1] + breathe * 0.3,
+                right.c2[0], right.c2[1] + breathe * 0.2,
+                right.h[0], right.h[1] + breathe * 0.1
+            );
+            ctx.stroke();
+
+            // Hands — small circles
+            ctx.fillStyle = col;
+            ctx.globalAlpha = 0.4;
+            ctx.beginPath();
+            ctx.arc(left.h[0], left.h[1] + breathe * 0.1, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(right.h[0], right.h[1] + breathe * 0.1, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            // ── Neck ──
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = col;
+            ctx.beginPath();
+            ctx.moveTo(200, 176 + breathe * 0.5);
+            ctx.lineTo(200, 160 + breathe * 0.3);
+            ctx.stroke();
+
+            // ── Head ──
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.ellipse(200, headY + breathe * 0.2, 18, 22, 0, 0, Math.PI * 2);
+            ctx.strokeStyle = col;
+            ctx.stroke();
+
+            // Bun
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(200, headY - 20 + breathe * 0.1, 10, 0, Math.PI * 2);
+            ctx.strokeStyle = col;
+            ctx.fillStyle = 'rgba(240, 230, 216, 0.6)';
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        // Animation loop
+        let lastTransitionTime = 0;
+        const HOLD_TIME = 1800; // ms to hold each position
+        const TRANSITION_TIME = 1400; // ms to transition between positions
+
+        function animate(timestamp) {
+            if (!lastTransitionTime) lastTransitionTime = timestamp;
+
+            const elapsed = timestamp - lastTransitionTime;
+
+            if (!isTransitioning) {
+                // Holding current position
+                drawDancer(1);
+
+                if (elapsed > HOLD_TIME) {
+                    // Start transition to next
+                    isTransitioning = true;
+                    lastTransitionTime = timestamp;
+                    fromPos = positions[sequence[currentIdx]];
+                    currentIdx = (currentIdx + 1) % sequence.length;
+                    toPos = positions[sequence[currentIdx]];
+
+                    // Fade label
+                    label.style.opacity = '0';
+                    setTimeout(() => {
+                        label.textContent = toPos.name;
+                        label.style.opacity = '1';
+                    }, 400);
+                }
+            } else {
+                // Transitioning
+                const progress = Math.min(1, elapsed / TRANSITION_TIME);
+                drawDancer(progress);
+
+                if (progress >= 1) {
+                    isTransitioning = false;
+                    lastTransitionTime = timestamp;
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // Start
+        drawDancer(1);
+        requestAnimationFrame(animate);
+    </script>
+</body>
+</html>
