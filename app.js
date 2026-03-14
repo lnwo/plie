@@ -1187,13 +1187,26 @@ function getBlockTopics() {
 
 function openSessionLogger() {
     const today = new Date().toISOString().split('T')[0];
+    const todayDow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
+
+    // Day-of-week session prediction
+    const predictedTemplate = appState.sessionTemplates.find(t =>
+        t.days && t.days.includes(todayDow)
+    ) || null;
+
     appState.currentSession = {
-        id: Date.now(),
-        date: today,
-        templateId: null,
-        classType: null,
-        blocks: []
+        id:              Date.now(),
+        date:            today,
+        templateId:      predictedTemplate?.id || null,
+        sessionName:     predictedTemplate?.name || null,
+        sessionLocation: predictedTemplate?.location || null,
+        classType:       predictedTemplate?.classType || null,
+        blocks:          [],
+        _predicted:      predictedTemplate ? true : false,
     };
+
+    // Auto-create first block and focus its title
+    addBlock(true);
 
     let overlay = document.getElementById('session-logger-overlay');
     if (!overlay) {
@@ -1795,18 +1808,29 @@ function cancelNewSession() {
 
 // ── Notes & corrections blocks ──
 
-function addBlock() {
+// Block modes
+const BLOCK_MODES = ['correction', 'praise', 'reflection'];
+
+function addBlock(focusTitle = false) {
     const block = {
-        id:       Date.now(),
-        topicId:  'general',
-        title:    '',
-        notes:    '',
-        corrections: '',
-        isPraise: false,   // ★ — marks a compliment from teacher
+        id:          Date.now(),
+        topicId:     'general',
+        title:       '',
+        notes:       '',
+        notesOpen:   false,
+        mode:        'correction',   // 'correction' | 'praise' | 'reflection'
+        corrections: [],             // string[] — each entry → separate Correction object on save
     };
     appState.currentSession.blocks.push(block);
     sortBlocks();
     renderBlocksOnly();
+    if (focusTitle) {
+        requestAnimationFrame(() => {
+            const blocks = document.querySelectorAll('.session-block-title-input');
+            const last = blocks[blocks.length - 1];
+            last?.focus();
+        });
+    }
 }
 
 function sortBlocks() {
@@ -1837,8 +1861,86 @@ function renderBlocksOnly() {
 
 function renderBlockHtml(block, index) {
     const topics = getBlockTopics();
-    const isSkill = block.topicId?.startsWith('skill:');
     const isGeneral = block.topicId === 'general';
+    const mode = block.mode || 'correction';
+
+    // Corrections bullet list (mode === 'correction')
+    const corrList = Array.isArray(block.corrections) ? block.corrections : [];
+    const corrBulletsHtml = corrList.map((text, ci) => `
+        <div class="correction-bullet" data-block="${index}" data-ci="${ci}">
+            <span class="correction-bullet-dash">—</span>
+            <div class="correction-bullet-input-wrapper">
+                <div class="correction-bullet-input"
+                     contenteditable="true"
+                     data-block="${index}"
+                     data-ci="${ci}"
+                     oninput="updateCorrectionBullet(${index}, ${ci}, this.innerText)"
+                     onkeydown="handleCorrectionBulletKey(event, ${index}, ${ci})"
+                     >${text}</div>
+            </div>
+            <button class="correction-bullet-delete"
+                    onmousedown="deleteCorrectionBullet(${index}, ${ci})"
+                    aria-label="Delete">×</button>
+        </div>
+    `).join('');
+
+    const corrFieldHtml = `
+        <div class="correction-bullets-container" id="correction-bullets-${block.id}">
+            ${corrBulletsHtml}
+            <div class="correction-bullet correction-bullet-new" data-block="${index}">
+                <span class="correction-bullet-dash">—</span>
+                <div class="correction-bullet-input-wrapper">
+                    <div class="correction-bullet-input correction-bullet-placeholder"
+                         contenteditable="true"
+                         data-block="${index}"
+                         data-ci="${corrList.length}"
+                         oninput="handleNewCorrectionBulletInput(event, ${index})"
+                         onkeydown="handleCorrectionBulletKey(event, ${index}, ${corrList.length})"
+                         ></div>
+                </div>
+            </div>
+        </div>
+        <p class="correction-bullets-hint">Enter to add · Shift+Enter for new line</p>
+    `;
+
+    // Reflection field (mode === 'reflection')
+    const reflectionHtml = `
+        <textarea class="session-block-textarea session-block-capped"
+                  placeholder="What stood out to you today?"
+                  oninput="updateBlockField(${index}, 'reflectionText', this.value); autoResizeCapped(this);"
+                  >${block.reflectionText || ''}</textarea>
+    `;
+
+    // Notes section (collapsible)
+    const notesHtml = block.notesOpen ? `
+        <textarea class="session-block-textarea session-block-capped"
+                  placeholder="Notes — context, rehearsal, how it felt…"
+                  oninput="updateBlockField(${index}, 'notes', this.value); autoResizeCapped(this);"
+                  >${block.notes || ''}</textarea>
+        <button class="block-notes-toggle block-notes-toggle-open"
+                onclick="toggleBlockNotes(${index})">hide notes</button>
+    ` : `
+        <button class="block-notes-toggle"
+                onclick="toggleBlockNotes(${index})">
+            ${block.notes ? '✎ notes' : '+ add notes'}
+        </button>
+    `;
+
+    // Mode toggle
+    const modeToggleHtml = `
+        <div class="block-mode-toggle">
+            <button class="block-mode-btn ${mode === 'correction' ? 'active' : ''}"
+                    onmousedown="setBlockMode(${index}, 'correction')">Correction</button>
+            <button class="block-mode-btn ${mode === 'praise' ? 'active' : ''}"
+                    onmousedown="setBlockMode(${index}, 'praise')">Praise</button>
+            <button class="block-mode-btn ${mode === 'reflection' ? 'active' : ''}"
+                    onmousedown="setBlockMode(${index}, 'reflection')">Reflection</button>
+        </div>
+    `;
+
+    const modeClass = mode === 'praise' ? 'block-mode-praise'
+                    : mode === 'reflection' ? 'block-mode-reflection'
+                    : '';
 
     return `
         <div class="swipe-row" data-block-index="${index}">
@@ -1847,7 +1949,7 @@ function renderBlockHtml(block, index) {
                 remove
             </div>
             <div class="swipe-content">
-                <div class="session-block ${block.isPraise ? 'is-praise' : ''}" id="block-${block.id}">
+                <div class="session-block ${modeClass}" id="block-${block.id}">
 
                     <div class="session-block-header">
                         <div class="session-block-topic-wrapper">
@@ -1873,39 +1975,29 @@ function renderBlockHtml(block, index) {
                                 <polyline points="4 6 8 10 12 6"/>
                             </svg>
                         </div>
-                        <div class="session-block-actions">
-                            <button class="block-praise-btn ${block.isPraise ? 'active' : ''}"
-                                    onclick="toggleBlockPraise(${index})"
-                                    title="Mark as praise from teacher">★</button>
-                            <button class="block-remove-btn" onclick="removeBlock(${index})" aria-label="Remove">
-                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                                    <line x1="3" y1="3" x2="11" y2="11"/>
-                                    <line x1="11" y1="3" x2="3" y2="11"/>
-                                </svg>
-                            </button>
-                        </div>
+                        <button class="block-remove-btn" onclick="removeBlock(${index})" aria-label="Remove">
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                <line x1="3" y1="3" x2="11" y2="11"/>
+                                <line x1="11" y1="3" x2="3" y2="11"/>
+                            </svg>
+                        </button>
                     </div>
 
                     <div class="session-block-fields">
                         <textarea class="session-block-title-input"
-                                  placeholder="${isGeneral ? 'General notes' : 'Add a title…'}"
+                                  placeholder="${isGeneral ? 'Topic or title…' : 'Add a title…'}"
                                   rows="1"
-                                  oninput="updateBlockField(${index}, 'title', this.value); autoResizeTextarea(this);"
+                                  oninput="updateBlockField(${index}, 'title', this.value); autoResizeCapped(this);"
                                   onfocus="this.placeholder=''"
-                                  onblur="this.placeholder='${isGeneral ? 'General notes' : 'Add a title…'}'"
+                                  onblur="this.placeholder='${isGeneral ? 'Topic or title…' : 'Add a title…'}'"
                                   >${block.title}</textarea>
 
-                        <textarea class="session-block-textarea"
-                                  placeholder="Notes — what did you work on? how did it feel?"
-                                  rows="2"
-                                  oninput="updateBlockField(${index}, 'notes', this.value); autoResizeTextarea(this);"
-                                  >${block.notes}</textarea>
+                        ${modeToggleHtml}
 
-                        <textarea class="session-block-textarea session-block-corrections"
-                                  placeholder="Corrections — what did your teacher say?"
-                                  rows="2"
-                                  oninput="updateBlockField(${index}, 'corrections', this.value); autoResizeTextarea(this);"
-                                  >${block.corrections}</textarea>
+                        ${mode === 'correction' ? corrFieldHtml : ''}
+                        ${mode === 'reflection' ? reflectionHtml : ''}
+
+                        ${notesHtml}
                     </div>
                 </div>
             </div>
@@ -1920,10 +2012,146 @@ function updateBlockTopic(index, topicId) {
     renderBlocksOnly();
 }
 
-function toggleBlockPraise(index) {
+function setBlockMode(index, mode) {
     if (!appState.currentSession?.blocks[index]) return;
-    appState.currentSession.blocks[index].isPraise = !appState.currentSession.blocks[index].isPraise;
+    appState.currentSession.blocks[index].mode = mode;
     renderBlocksOnly();
+}
+
+function toggleBlockNotes(index) {
+    if (!appState.currentSession?.blocks[index]) return;
+    const block = appState.currentSession.blocks[index];
+    block.notesOpen = !block.notesOpen;
+    // Surgical re-render of just this block's notes area
+    const blockEl = document.getElementById(`block-${block.id}`);
+    if (blockEl) {
+        const notesArea = blockEl.querySelector('.block-notes-area');
+        if (notesArea) {
+            notesArea.innerHTML = block.notesOpen ? `
+                <textarea class="session-block-textarea session-block-capped"
+                          placeholder="Notes — context, rehearsal, how it felt…"
+                          oninput="updateBlockField(${index}, 'notes', this.value); autoResizeCapped(this);"
+                          >${block.notes || ''}</textarea>
+                <button class="block-notes-toggle block-notes-toggle-open"
+                        onclick="toggleBlockNotes(${index})">hide notes</button>
+            ` : `
+                <button class="block-notes-toggle"
+                        onclick="toggleBlockNotes(${index})">
+                    ${block.notes ? '✎ notes' : '+ add notes'}
+                </button>
+            `;
+            if (block.notesOpen) {
+                const ta = notesArea.querySelector('textarea');
+                ta?.focus();
+            }
+        }
+    }
+}
+
+// ── Correction bullet handlers ──
+
+function updateCorrectionBullet(blockIndex, ci, text) {
+    const block = appState.currentSession?.blocks[blockIndex];
+    if (!block) return;
+    if (!Array.isArray(block.corrections)) block.corrections = [];
+    block.corrections[ci] = text;
+}
+
+function handleNewCorrectionBulletInput(event, blockIndex) {
+    const text = event.target.innerText;
+    if (!text.trim()) return;
+    // This is the new-entry row — update state but don't commit yet
+    // commitNewBullet is called on Enter
+}
+
+function handleCorrectionBulletKey(event, blockIndex, ci) {
+    const block = appState.currentSession?.blocks[blockIndex];
+    if (!block) return;
+
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        const el = event.target;
+        const text = el.innerText.trim();
+
+        if (!Array.isArray(block.corrections)) block.corrections = [];
+        const isNewRow = ci >= block.corrections.length;
+
+        if (text) {
+            if (isNewRow) {
+                // Commit the new bullet
+                block.corrections.push(text);
+            } else {
+                block.corrections[ci] = text;
+            }
+            // Re-render to show the new bullet and fresh empty row
+            renderBlockBulletsInPlace(block, blockIndex);
+            // Focus the new empty row
+            requestAnimationFrame(() => {
+                const container = document.getElementById(`correction-bullets-${block.id}`);
+                const newRow = container?.querySelector('.correction-bullet-new .correction-bullet-input');
+                newRow?.focus();
+            });
+        }
+        // If empty new row and Enter pressed, do nothing (don't add empty bullet)
+    }
+    // Shift+Enter: default behaviour (new line within same bullet)
+}
+
+function deleteCorrectionBullet(blockIndex, ci) {
+    const block = appState.currentSession?.blocks[blockIndex];
+    if (!block || !Array.isArray(block.corrections)) return;
+    block.corrections.splice(ci, 1);
+    renderBlockBulletsInPlace(block, blockIndex);
+}
+
+function renderBlockBulletsInPlace(block, blockIndex) {
+    const container = document.getElementById(`correction-bullets-${block.id}`);
+    if (!container) return;
+    const corrList = block.corrections || [];
+
+    container.innerHTML = corrList.map((text, ci) => `
+        <div class="correction-bullet">
+            <span class="correction-bullet-dash">—</span>
+            <div class="correction-bullet-input-wrapper">
+                <div class="correction-bullet-input"
+                     contenteditable="true"
+                     data-block="${blockIndex}"
+                     data-ci="${ci}"
+                     oninput="updateCorrectionBullet(${blockIndex}, ${ci}, this.innerText)"
+                     onkeydown="handleCorrectionBulletKey(event, ${blockIndex}, ${ci})"
+                     >${text}</div>
+            </div>
+            <button class="correction-bullet-delete"
+                    onmousedown="deleteCorrectionBullet(${blockIndex}, ${ci})"
+                    aria-label="Delete">×</button>
+        </div>
+    `).join('') + `
+        <div class="correction-bullet correction-bullet-new">
+            <span class="correction-bullet-dash">—</span>
+            <div class="correction-bullet-input-wrapper">
+                <div class="correction-bullet-input correction-bullet-placeholder"
+                     contenteditable="true"
+                     data-block="${blockIndex}"
+                     data-ci="${corrList.length}"
+                     oninput="handleNewCorrectionBulletInput(event, ${blockIndex})"
+                     onkeydown="handleCorrectionBulletKey(event, ${blockIndex}, ${corrList.length})"
+                     ></div>
+            </div>
+        </div>
+    `;
+}
+
+function autoResizeCapped(el) {
+    el.style.height = 'auto';
+    const lineHeight = 22; // px, matches font-size * line-height
+    const maxHeight = lineHeight * 3 + 20; // ~3 lines + padding
+    el.style.height = Math.min(el.scrollHeight, maxHeight) + 'px';
+    el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden';
+}
+
+function toggleBlockPraise(index) {
+    // kept for backward compat — now handled by setBlockMode
+    setBlockMode(index, 'praise');
 }
 
 function autoResizeTextarea(el) {
@@ -1934,7 +2162,6 @@ function autoResizeTextarea(el) {
 function updateBlockField(index, field, value) {
     if (!appState.currentSession?.blocks[index]) return;
     appState.currentSession.blocks[index][field] = value;
-    // No re-render — just update state, textarea manages its own value
 }
 
 function removeBlock(index) {
@@ -1966,8 +2193,9 @@ function openSessionEditor(sessionId) {
             topicId:     'skill:' + ss.skillId,
             title:       ss.blockTitle || '',
             notes:       ss.notes || '',
-            corrections: corrections.map(c => c.text).join('\n'),
-            isPraise:    ss.isPraise || false,
+            notesOpen:   ss.notes ? true : false,
+            mode:        ss.mode || (corrections.some(c => c.type === 'praise') ? 'praise' : 'correction'),
+            corrections: corrections.map(c => c.text),
         };
     });
 
@@ -2058,27 +2286,50 @@ function saveSession() {
     // 2. Process each block into SessionSkill + Correction objects
     let skillCount = 0;
     let correctionCount = 0;
+    // Track skills with corrections for post-save promotion prompt
+    const skillsWithCorrections = [];
 
     s.blocks.forEach(block => {
         const isSkill = block.topicId?.startsWith('skill:');
         const skillId = isSkill ? block.topicId.replace('skill:', '') : null;
+        const mode = block.mode || 'correction';
 
-        // One Correction object per correction text field
+        // Each non-empty bullet in corrections[] → one Correction object
         const blockCorrectionIds = [];
-        if (block.corrections?.trim()) {
-            const correction = {
-                id:          nextId(),
-                skillId:     skillId || null,
-                text:        block.corrections.trim(),
-                createdAt:   now,
-                sessionId:   session.id,
-                source:      'teacher',  // schema field; no UI entry point yet
-                type:        null,
-                isRecurring: false,
-            };
-            appState.corrections.push(correction);
-            blockCorrectionIds.push(correction.id);
-            correctionCount++;
+        const corrBullets = Array.isArray(block.corrections)
+            ? block.corrections
+            : (block.corrections ? [block.corrections] : []); // backward compat with old string format
+
+        if (mode === 'correction' || mode === 'praise') {
+            corrBullets.filter(t => t?.trim()).forEach(text => {
+                const correction = {
+                    id:          nextId(),
+                    skillId:     skillId || null,
+                    text:        text.trim(),
+                    createdAt:   now,
+                    sessionId:   session.id,
+                    source:      mode === 'praise' ? 'praise' : 'teacher',
+                    type:        mode === 'praise' ? 'praise' : null,
+                    isRecurring: false,
+                };
+                appState.corrections.push(correction);
+                blockCorrectionIds.push(correction.id);
+                correctionCount++;
+            });
+        }
+
+        // Reflection blocks store text as a note
+        if (mode === 'reflection' && block.reflectionText?.trim()) {
+            appState.skillNotes = appState.skillNotes || [];
+            appState.skillNotes.push({
+                id:        nextId(),
+                skillId:   skillId || null,
+                text:      block.reflectionText.trim(),
+                date:      session.date,
+                createdAt: now,
+                isReflection: true,
+            });
+            storage.save('skillNotes', appState.skillNotes);
         }
 
         // SessionSkill join object — only for skill-topic blocks
@@ -2087,17 +2338,19 @@ function saveSession() {
                 id:            nextId(),
                 sessionId:     session.id,
                 skillId:       skillId,
-                notes:         block.notes?.trim()  || null,
+                notes:         block.notes?.trim()       || null,
                 correctionIds: blockCorrectionIds,
                 tracked:       true,
-                flagged:       block.isPraise       || false,
-                blockTitle:    block.title?.trim()  || null,
-                isPraise:      block.isPraise       || false,
+                blockTitle:    block.title?.trim()        || null,
+                mode:          mode,
             };
             appState.sessionSkills.push(sessionSkill);
             skillCount++;
 
-            // Flag skill as active in The Barre
+            if (blockCorrectionIds.length > 0) {
+                skillsWithCorrections.push(skillId);
+            }
+
             const skill = appState.skills.find(sk => sk.id === skillId);
             if (skill) skill.flagged = true;
         }
@@ -2135,11 +2388,68 @@ function saveSession() {
 
     if (appState.currentScreen === 'profile') initProfile();
     if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
-    // If we just edited a session and the detail screen is showing, refresh it
     if (appState.currentScreen?.startsWith('session-detail-')) {
         showSessionDetail(session.id);
     }
+
+    // Post-save promotion prompt — non-blocking, shown after logger closes
+    const uniqueSkillsWithCorrections = [...new Set(skillsWithCorrections)];
+    if (!s._isEdit && uniqueSkillsWithCorrections.length > 0) {
+        // Check if any of these skills have 3+ corrections (recurring pattern)
+        const frequentSkills = uniqueSkillsWithCorrections.filter(skillId => {
+            const count = appState.corrections.filter(c => c.skillId === skillId).length;
+            return count >= 3;
+        });
+        const promptSkills = frequentSkills.length > 0 ? frequentSkills : uniqueSkillsWithCorrections;
+        setTimeout(() => showPostSavePrompt(session.id, promptSkills, frequentSkills.length > 0), 400);
+    }
 }
+
+function showPostSavePrompt(sessionId, skillIds, isRecurring) {
+    if (!skillIds.length) return;
+
+    const skillNames = skillIds
+        .map(id => DATA.skills.find(s => s.id === id)?.french)
+        .filter(Boolean);
+
+    const existingPrompt = document.getElementById('post-save-prompt');
+    if (existingPrompt) existingPrompt.remove();
+
+    const prompt = document.createElement('div');
+    prompt.id = 'post-save-prompt';
+    prompt.className = 'post-save-prompt';
+
+    const bodyText = isRecurring
+        ? `You've logged corrections for <strong>${skillNames[0]}</strong> several times. Want to set a goal?`
+        : `You logged corrections for:<br>${skillNames.map(n => `<strong>${n}</strong>`).join(', ')}`;
+
+    prompt.innerHTML = `
+        <div class="post-save-prompt-inner">
+            <button class="post-save-dismiss" onclick="document.getElementById('post-save-prompt').remove()">×</button>
+            <div class="post-save-body">Session saved. ${bodyText}</div>
+            <div class="post-save-actions">
+                <button class="post-save-btn" onclick="openGoalFromPrompt(${JSON.stringify(skillIds)}); document.getElementById('post-save-prompt').remove();">
+                    add to goals
+                </button>
+                <button class="post-save-btn post-save-btn-muted" onclick="document.getElementById('post-save-prompt').remove()">
+                    not now
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(prompt);
+
+    // Auto-dismiss after 8 seconds
+    setTimeout(() => prompt.remove(), 8000);
+}
+
+function openGoalFromPrompt(skillIds) {
+    // Open goal creator pre-linked to the first skill with corrections
+    const skillId = skillIds[0];
+    openGoalCreatorForSkill(skillId);
+}
+
 
 // ── The Barre ──
 function showBarreScreen() {
@@ -2446,6 +2756,19 @@ function renderGoalCard(goal, completed) {
         <div class="goal-progress-label">${doneMilestones} of ${milestones.length} milestones</div>
     ` : '';
 
+    // Linked corrections
+    const linkedCorrs = (goal.correctionIds || [])
+        .map(id => appState.corrections.find(c => c.id === id))
+        .filter(Boolean);
+    const linkedCorrectionsHtml = linkedCorrs.length > 0 ? `
+        <div class="goal-linked-corrections-display ${completed ? 'goal-corrections-complete' : ''}">
+            ${linkedCorrs.map(c => `
+                <div class="goal-linked-corr-row">
+                    <span class="goal-linked-corr-dash">—</span>
+                    <span class="goal-linked-corr-text">${c.text}</span>
+                </div>`).join('')}
+        </div>` : '';
+
     return `
         <div class="swipe-row" data-goal-id="${goal.id}">
             <div class="swipe-action-left swipe-action-remove">
@@ -2461,6 +2784,7 @@ function renderGoalCard(goal, completed) {
                     <div class="goal-card-title">${goal.title}</div>
                     ${goal.body ? `<div class="goal-card-body">${goal.body}</div>` : ''}
                     ${tagsHtml ? `<div class="goal-tags">${tagsHtml}</div>` : ''}
+                    ${linkedCorrectionsHtml}
                     ${milestonesHtml}
                     ${progressBarHtml}
                     ${!completed ? `
@@ -2480,13 +2804,14 @@ function renderGoalCard(goal, completed) {
 
 function openGoalCreator() {
     appState._goalDraft = {
-        title:       '',
-        body:        '',
-        dueDate:     '',
-        skillId:     null,
-        dimensionId: null,
-        category:    null,
-        milestones:  [],
+        title:         '',
+        body:          '',
+        dueDate:       '',
+        skillId:       null,
+        dimensionId:   null,
+        category:      null,
+        milestones:    [],
+        correctionIds: [],   // linked correction IDs
     };
 
     let overlay = document.getElementById('goal-creator-overlay');
@@ -2577,14 +2902,25 @@ function renderGoalCreator() {
                     <textarea class="session-block-title-input" id="goal-title-input"
                               placeholder="What do you want to achieve?"
                               rows="1"
-                              oninput="appState._goalDraft.title = this.value; autoResizeTextarea(this);"
+                              oninput="appState._goalDraft.title = this.value; autoResizeTextarea(this); searchGoalCorrections(this.value);"
                               style="font-size: var(--fs-h3);">${d.title}</textarea>
                     <textarea class="session-block-textarea" id="goal-body-input"
                               placeholder="Add more detail… (optional)"
                               rows="2"
                               oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);"
                               style="margin-top: var(--sp-sm);">${d.body}</textarea>
+                    <!-- Correction search results -->
+                    <div id="goal-correction-search-results"></div>
                 </div>
+
+                <!-- Linked corrections -->
+                ${(d.correctionIds || []).length > 0 ? `
+                <div class="session-field">
+                    <label class="session-field-label">Linked corrections</label>
+                    <div id="goal-linked-corrections">
+                        ${renderLinkedCorrectionsHtml(d.correctionIds)}
+                    </div>
+                </div>` : '<div id="goal-linked-corrections-wrapper"></div>'}
 
                 <div class="session-field">
                     <label class="session-field-label">Category <span class="session-field-optional">optional</span></label>
@@ -2705,6 +3041,114 @@ function removeMilestoneDraft(index) {
     `).join('');
 }
 
+function searchGoalCorrections(query) {
+    const resultsEl = document.getElementById('goal-correction-search-results');
+    if (!resultsEl) return;
+
+    const q = query.trim().toLowerCase();
+    if (q.length < 3) {
+        resultsEl.innerHTML = '';
+        return;
+    }
+
+    const d = appState._goalDraft;
+    const linked = d?.correctionIds || [];
+
+    const matches = appState.corrections
+        .filter(c => c.text.toLowerCase().includes(q) && !linked.includes(c.id))
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, 5);
+
+    if (matches.length === 0) {
+        resultsEl.innerHTML = '';
+        return;
+    }
+
+    resultsEl.innerHTML = `
+        <div class="goal-correction-suggestions">
+            <div class="goal-correction-suggestions-label">Relevant corrections — tap to link</div>
+            ${matches.map(c => {
+                const skill = DATA.skills.find(s => s.id === c.skillId);
+                const date = formatTimelineDate(new Date(c.createdAt).toISOString().split('T')[0]);
+                return `
+                    <div class="goal-correction-suggestion" onmousedown="linkCorrectionToGoal(${c.id})">
+                        <div class="goal-correction-suggestion-text">${c.text}</div>
+                        <div class="goal-correction-suggestion-meta">${[skill?.french, date].filter(Boolean).join(' · ')}</div>
+                    </div>`;
+            }).join('')}
+        </div>`;
+}
+
+function renderLinkedCorrectionsHtml(correctionIds) {
+    return (correctionIds || []).map(id => {
+        const c = appState.corrections.find(c => c.id === id);
+        if (!c) return '';
+        const skill = DATA.skills.find(s => s.id === c.skillId);
+        const date = formatTimelineDate(new Date(c.createdAt).toISOString().split('T')[0]);
+        return `
+            <div class="goal-linked-correction">
+                <div class="goal-linked-correction-text">${c.text}</div>
+                <div class="goal-linked-correction-meta">${[skill?.french, date].filter(Boolean).join(' · ')}</div>
+                <button class="goal-unlink-correction" onmousedown="unlinkCorrectionFromGoal(${id})">unlink</button>
+            </div>`;
+    }).join('');
+}
+
+function linkCorrectionToGoal(correctionId) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.correctionIds = d.correctionIds || [];
+    if (!d.correctionIds.includes(correctionId)) {
+        d.correctionIds.push(correctionId);
+    }
+    // Re-render linked section and clear this correction from suggestions
+    renderGoalLinkedCorrectionsInPlace();
+    // Re-run search to remove this correction from suggestions
+    const titleInput = document.getElementById('goal-title-input');
+    if (titleInput) searchGoalCorrections(titleInput.value);
+}
+
+function unlinkCorrectionFromGoal(correctionId) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.correctionIds = (d.correctionIds || []).filter(id => id !== correctionId);
+    renderGoalLinkedCorrectionsInPlace();
+}
+
+function renderGoalLinkedCorrectionsInPlace() {
+    const d = appState._goalDraft;
+    if (!d) return;
+    const ids = d.correctionIds || [];
+
+    // Update or create the linked corrections section
+    let wrapper = document.getElementById('goal-linked-corrections-wrapper');
+    let section = document.getElementById('goal-linked-corrections');
+
+    if (ids.length > 0) {
+        if (section) {
+            section.innerHTML = renderLinkedCorrectionsHtml(ids);
+        } else if (wrapper) {
+            wrapper.outerHTML = `
+                <div class="session-field">
+                    <label class="session-field-label">Linked corrections</label>
+                    <div id="goal-linked-corrections">
+                        ${renderLinkedCorrectionsHtml(ids)}
+                    </div>
+                </div>`;
+        }
+    } else if (section) {
+        // All unlinked — hide section
+        section.closest('.session-field')?.remove();
+        // Re-insert empty wrapper for future linking
+        const bodyField = document.getElementById('goal-body-input')?.closest('.session-field');
+        if (bodyField) {
+            const empty = document.createElement('div');
+            empty.id = 'goal-linked-corrections-wrapper';
+            bodyField.after(empty);
+        }
+    }
+}
+
 function saveGoal() {
     const d = appState._goalDraft;
     if (!d || !d.title.trim()) {
@@ -2714,15 +3158,16 @@ function saveGoal() {
     }
 
     const goal = {
-        id:          Date.now(),
-        title:       d.title.trim(),
-        body:        d.body?.trim() || null,
-        createdAt:   Date.now(),
-        dueDate:     d.dueDate || null,
-        skillId:     d.skillId     || null,
-        dimensionId: d.dimensionId || null,
-        category:    d.category    || null,
-        milestones:  d.milestones.filter(m => m.text.trim()).map(m => ({
+        id:            Date.now(),
+        title:         d.title.trim(),
+        body:          d.body?.trim()    || null,
+        createdAt:     Date.now(),
+        dueDate:       d.dueDate         || null,
+        skillId:       d.skillId         || null,
+        dimensionId:   d.dimensionId     || null,
+        category:      d.category        || null,
+        correctionIds: d.correctionIds   || [],
+        milestones:    d.milestones.filter(m => m.text.trim()).map(m => ({
             id:   m.id || Date.now(),
             text: m.text.trim(),
             done: false,
@@ -2732,7 +3177,6 @@ function saveGoal() {
 
     appState.goals.push(goal);
     storage.save('goals', appState.goals);
-
     closeGoalCreator();
 
     if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
@@ -2782,6 +3226,48 @@ function reopenGoal(goalId) {
     storage.save('goals', appState.goals);
     if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
     if (appState.currentScreen === 'profile') initProfile();
+}
+
+function deleteSession(sessionId, returnTo) {
+    if (!confirm('Delete this session? This cannot be undone.')) return;
+
+    // Remove session
+    appState.sessions = appState.sessions.filter(s => s.id !== sessionId);
+
+    // Remove SessionSkills and their Corrections
+    const sessionSkillIds = appState.sessionSkills
+        .filter(ss => ss.sessionId === sessionId)
+        .flatMap(ss => ss.correctionIds || []);
+    appState.corrections  = appState.corrections.filter(c =>
+        !(c.sessionId === sessionId && sessionSkillIds.includes(c.id)));
+    appState.sessionSkills = appState.sessionSkills.filter(ss => ss.sessionId !== sessionId);
+
+    // Remove timeline entry
+    appState.timeline = appState.timeline.filter(e => e.objectId !== sessionId);
+
+    storage.save('sessions', appState.sessions);
+    storage.save('sessionSkills', appState.sessionSkills);
+    storage.save('corrections', appState.corrections);
+    storage.save('timeline', appState.timeline);
+
+    // Remove detail screen DOM
+    document.getElementById(`session-detail-${sessionId}`)?.remove();
+
+    closeSessionDetail(sessionId, returnTo);
+}
+
+function deleteSkillNote(noteId, skillId) {
+    appState.skillNotes = (appState.skillNotes || []).filter(n => n.id !== noteId);
+    storage.save('skillNotes', appState.skillNotes);
+    const sectionEl = document.getElementById(`skill-notes-section-${skillId}`);
+    if (sectionEl) renderSkillNotesSectionInPlace(skillId, sectionEl);
+}
+
+function deleteSessionTemplate(templateId) {
+    if (!confirm('Remove this saved session?')) return;
+    appState.sessionTemplates = appState.sessionTemplates.filter(t => t.id !== templateId);
+    storage.save('sessionTemplates', appState.sessionTemplates);
+    renderSessionLogger(); // refresh the logger combobox
 }
 
 // ── Learn ──
@@ -3074,7 +3560,11 @@ function showSessionDetail(sessionId) {
                     </svg>
                     back
                 </button>
-                <button class="session-detail-edit" onclick="openSessionEditor(${sessionId})">edit</button>
+                <div style="display:flex;gap:var(--sp-sm);">
+                    <button class="session-detail-edit" onclick="openSessionEditor(${sessionId})">edit</button>
+                    <button class="session-detail-edit" style="color:var(--error);border-color:var(--coral-soft);"
+                            onclick="deleteSession(${sessionId}, '${returnTo}')">delete</button>
+                </div>
             </div>
 
             <div class="session-detail-hero">
@@ -3121,27 +3611,36 @@ function closeSessionDetail(sessionId, returnTo) {
 function renderDetailBlockHtml(sessionSkill) {
     const skill = DATA.skills.find(s => s.id === sessionSkill.skillId);
     const topicLabel = skill ? skill.french : sessionSkill.skillId;
-
     const corrections = (sessionSkill.correctionIds || [])
         .map(id => appState.corrections.find(c => c.id === id))
         .filter(Boolean);
-
-    const hasContent = sessionSkill.blockTitle || sessionSkill.notes || corrections.length > 0 || sessionSkill.isPraise;
+    const mode = sessionSkill.mode || 'correction';
+    const isPraise = mode === 'praise' || corrections.some(c => c.type === 'praise');
+    const hasContent = sessionSkill.blockTitle || sessionSkill.notes || corrections.length > 0;
     if (!hasContent) return '';
 
-    const correctionsHtml = corrections.map(c => `
+    const correctionsHtml = corrections.length > 0 ? `
         <div class="detail-block-corrections">
-            <span class="detail-block-corrections-label">correction${c.isRecurring ? ' · recurring' : ''}</span>
-            ${c.text}
+            <span class="detail-block-corrections-label">
+                ${isPraise ? '★ praise' : `correction${corrections.length > 1 ? 's' : ''}`}
+            </span>
+            <ul class="detail-block-correction-list">
+                ${corrections.map(c => `
+                    <li class="${c.isRecurring ? 'is-recurring' : ''}">
+                        ${c.text}
+                        ${c.isRecurring ? '<span class="correction-recurring-badge">recurring</span>' : ''}
+                    </li>
+                `).join('')}
+            </ul>
         </div>
-    `).join('');
+    ` : '';
 
     return `
-        <div class="detail-block ${sessionSkill.isPraise ? 'detail-block-praise' : ''}">
+        <div class="detail-block ${isPraise ? 'detail-block-praise' : ''} ${mode === 'reflection' ? 'detail-block-reflection' : ''}">
             <div class="detail-block-header">
                 <span class="detail-block-topic">${topicLabel}</span>
-                ${sessionSkill.isPraise ? '<span class="detail-block-praise-badge">★ praise</span>' : ''}
-                <button class="detail-block-skill-link" onclick="showSkillDetail('${sessionSkill.skillId}', appState.currentScreen)">view skill →</button>
+                ${skill ? `<button class="detail-block-skill-link" onclick="showSkillDetail('${sessionSkill.skillId}', appState.currentScreen)">view skill →</button>` : ''}
+                ${isPraise ? '<span class="detail-block-praise-badge">★ praise</span>' : ''}
             </div>
             ${sessionSkill.blockTitle ? `<div class="detail-block-title">${sessionSkill.blockTitle}</div>` : ''}
             ${sessionSkill.notes     ? `<div class="detail-block-notes">${sessionSkill.notes}</div>`     : ''}
@@ -3210,7 +3709,10 @@ function showSkillDetail(skillId, returnTo) {
         <div id="skill-notes-list">
             ${visibleNotes.map(n => `
                 <div class="skill-note-entry">
-                    <div class="skill-note-date">${formatTimelineDate(n.date)}</div>
+                    <div class="skill-note-header">
+                        <div class="skill-note-date">${formatTimelineDate(n.date)}</div>
+                        <button class="skill-note-delete" onclick="deleteSkillNote(${n.id}, '${skillId}')">×</button>
+                    </div>
                     <div class="skill-note-text">${n.text}</div>
                 </div>
             `).join('')}
@@ -3253,7 +3755,42 @@ function showSkillDetail(skillId, returnTo) {
         ? appState.sessions.find(s => s.id === skillSessionSkills[0].sessionId)
         : null;
 
-    // ── Photo placeholder grid ──
+    // ── Progression summary ──
+    const activeGoal = (appState.goals || []).find(g => g.skillId === skillId && !g.completedAt);
+    const progressionHtml = `
+        <div class="skill-progression-summary">
+            <div class="skill-progression-stat">
+                <div class="skill-progression-value">${lastSession ? formatTimelineDate(lastSession.date) : '—'}</div>
+                <div class="skill-progression-label">last worked on</div>
+            </div>
+            <div class="skill-progression-stat">
+                <div class="skill-progression-value">${allCorrections.length}</div>
+                <div class="skill-progression-label">corrections logged</div>
+            </div>
+            <div class="skill-progression-stat">
+                <div class="skill-progression-value">${sessionCount}</div>
+                <div class="skill-progression-label">sessions</div>
+            </div>
+        </div>
+        ${activeGoal ? `
+        <div class="skill-active-goal" onclick="navigateTo('goals')">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="6" r="5"/><circle cx="6" cy="6" r="2.5"/></svg>
+            <span>Active goal: ${activeGoal.title}</span>
+        </div>` : ''}
+    `;
+
+    // ── Correction filters ──
+    const corrFilterHtml = allCorrections.length > 1 ? `
+        <div class="skill-correction-filters" id="skill-corr-filters">
+            <button class="skill-corr-filter active" data-filter="all"
+                    onclick="filterSkillCorrections('${skillId}', 'all', this)">All</button>
+            ${allCorrections.some(c => c.isRecurring) ? `
+            <button class="skill-corr-filter" data-filter="recurring"
+                    onclick="filterSkillCorrections('${skillId}', 'recurring', this)">Recurring</button>` : ''}
+            ${(appState.goals || []).some(g => (g.correctionIds || []).some(id => allCorrections.find(c => c.id === id))) ? `
+            <button class="skill-corr-filter" data-filter="goals"
+                    onclick="filterSkillCorrections('${skillId}', 'goals', this)">Linked to goals</button>` : ''}
+        </div>` : '';
     const photosHtml = `
         <div class="skill-photos-grid">
             <div class="skill-photo-placeholder">
@@ -3300,13 +3837,21 @@ function showSkillDetail(skillId, returnTo) {
                 </button>
             </div>
 
+            <!-- Progression summary -->
+            <div class="skill-detail-section" style="padding-top: 0;">
+                ${progressionHtml}
+            </div>
+
             <!-- Corrections -->
             <div class="skill-detail-section">
                 <div class="skill-detail-section-header">
                     <div class="skill-detail-section-label">Corrections</div>
                     <span class="skill-detail-section-count">${allCorrections.length}</span>
                 </div>
-                ${correctionsHtml}
+                ${corrFilterHtml}
+                <div id="skill-corrections-display">
+                    ${correctionsHtml}
+                </div>
             </div>
 
             <!-- Notes -->
@@ -3415,6 +3960,70 @@ function saveSkillNote(skillId) {
     }
 }
 
+function filterSkillCorrections(skillId, filter, btn) {
+    document.querySelectorAll('.skill-corr-filter').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const all = appState.corrections
+        .filter(c => c.skillId === skillId)
+        .sort((a, b) => b.createdAt - a.createdAt);
+
+    let filtered;
+    if (filter === 'recurring') {
+        filtered = all.filter(c => c.isRecurring);
+    } else if (filter === 'goals') {
+        const goalLinkedIds = new Set(
+            (appState.goals || []).flatMap(g => g.correctionIds || [])
+        );
+        filtered = all.filter(c => goalLinkedIds.has(c.id));
+    } else {
+        filtered = all;
+    }
+
+    const display = document.getElementById('skill-corrections-display');
+    if (!display) return;
+
+    const PREVIEW = 3;
+    const hasMore = filtered.length > PREVIEW;
+
+    if (filtered.length === 0) {
+        display.innerHTML = `<div class="skill-detail-empty-state">No corrections match this filter.</div>`;
+        return;
+    }
+
+    display.innerHTML = `
+        <div id="skill-corr-list">${filtered.slice(0, PREVIEW).map(c => renderSkillCorrectionRow(c)).join('')}</div>
+        ${hasMore ? `<button class="skill-see-more-btn"
+            onclick="expandFilteredCorrections('${skillId}', '${filter}')">
+            see all ${filtered.length} corrections
+        </button>` : ''}
+    `;
+}
+
+function expandFilteredCorrections(skillId, filter) {
+    const all = appState.corrections
+        .filter(c => c.skillId === skillId)
+        .sort((a, b) => b.createdAt - a.createdAt);
+
+    let filtered;
+    if (filter === 'recurring') {
+        filtered = all.filter(c => c.isRecurring);
+    } else if (filter === 'goals') {
+        const goalLinkedIds = new Set(
+            (appState.goals || []).flatMap(g => g.correctionIds || [])
+        );
+        filtered = all.filter(c => goalLinkedIds.has(c.id));
+    } else {
+        filtered = all;
+    }
+
+    const list = document.getElementById('skill-corr-list');
+    if (list) list.innerHTML = filtered.map(c => renderSkillCorrectionRow(c)).join('');
+    // Remove see-more button
+    const btn = document.querySelector('#skill-corrections-display .skill-see-more-btn');
+    if (btn) btn.remove();
+}
+
 function renderSkillNotesSectionInPlace(skillId, sectionEl) {
     const skillNotes = (appState.skillNotes || [])
         .filter(n => n.skillId === skillId)
@@ -3428,7 +4037,10 @@ function renderSkillNotesSectionInPlace(skillId, sectionEl) {
         <div id="skill-notes-list">
             ${visibleNotes.map(n => `
                 <div class="skill-note-entry">
-                    <div class="skill-note-date">${formatTimelineDate(n.date)}</div>
+                    <div class="skill-note-header">
+                        <div class="skill-note-date">${formatTimelineDate(n.date)}</div>
+                        <button class="skill-note-delete" onclick="deleteSkillNote(${n.id}, '${skillId}')">×</button>
+                    </div>
                     <div class="skill-note-text">${n.text}</div>
                 </div>
             `).join('')}
@@ -3531,16 +4143,80 @@ function showLearnSkillLibrary() {
     showScreen('skill-library-screen');
 }
 
-function renderSkillLibrary(query, activeTab) {
-    const screen = document.getElementById('skill-library-screen');
-    if (!screen) return;
+function showLearnSkillLibrary() {
+    let screen = document.getElementById('skill-library-screen');
+    if (!screen) {
+        screen = document.createElement('div');
+        screen.className = 'screen skill-library-screen';
+        screen.id = 'skill-library-screen';
+        document.querySelector('.app-container').appendChild(screen);
+    }
+    // Build the shell once — search input is never destroyed after this
+    screen.innerHTML = `
+        <div class="skill-library-view">
+            <div class="skill-detail-header">
+                <button class="session-detail-back" onclick="navigateTo('learn')">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="13 4 7 10 13 16"/>
+                    </svg>
+                    learn
+                </button>
+                <span class="skill-lib-count">${DATA.skills.length} skills</span>
+            </div>
+            <div class="skill-lib-sticky">
+                <div class="skill-lib-search-wrapper">
+                    <svg class="skill-lib-search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                        <circle cx="7" cy="7" r="5"/><line x1="11" y1="11" x2="14" y2="14"/>
+                    </svg>
+                    <input type="text"
+                           class="skill-lib-search"
+                           id="skill-lib-search-input"
+                           placeholder="Search skills…"
+                           autocomplete="off"
+                           oninput="updateSkillLibResults()" />
+                    <button class="skill-lib-search-clear" id="skill-lib-clear"
+                            style="display:none"
+                            onclick="document.getElementById('skill-lib-search-input').value=''; updateSkillLibResults();">×</button>
+                </div>
+                <div class="skill-lib-tabs">
+                    <button class="skill-lib-tab active" data-tab="all"
+                            onclick="setSkillLibTab(this, 'all')">All skills</button>
+                    <button class="skill-lib-tab" data-tab="my"
+                            onclick="setSkillLibTab(this, 'my')">My skills</button>
+                </div>
+            </div>
+            <div class="skill-lib-body" id="skill-lib-body"></div>
+            <div style="height: 120px;"></div>
+        </div>
+    `;
+    updateSkillLibResults();
+    showScreen('skill-library-screen');
+}
 
+// Tracks current tab without touching the DOM
+let _skillLibTab = 'all';
+
+function setSkillLibTab(btn, tab) {
+    _skillLibTab = tab;
+    document.querySelectorAll('.skill-lib-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    updateSkillLibResults();
+}
+
+function updateSkillLibResults() {
+    const input = document.getElementById('skill-lib-search-input');
+    const body  = document.getElementById('skill-lib-body');
+    const clearBtn = document.getElementById('skill-lib-clear');
+    if (!body) return;
+
+    const query = input?.value || '';
     const q = query.trim().toLowerCase();
-    const userSkills = appState.skills;
 
-    // Filter
+    if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
+
+    const userSkills = appState.skills;
     let filtered = DATA.skills.filter(ref => {
-        if (activeTab === 'my') {
+        if (_skillLibTab === 'my') {
             const user = userSkills.find(s => s.id === ref.id);
             return user?.flagged || user?.tracked;
         }
@@ -3552,14 +4228,12 @@ function renderSkillLibrary(query, activeTab) {
         );
     });
 
-    // Sort: difficulty first, then alpha within difficulty
     filtered = [...filtered].sort((a, b) => {
         const dDiff = (DIFFICULTY_ORDER[a.difficulty] || 0) - (DIFFICULTY_ORDER[b.difficulty] || 0);
         if (dDiff !== 0) return dDiff;
         return a.french.localeCompare(b.french);
     });
 
-    // Group by category
     const categories = {};
     filtered.forEach(ref => {
         if (!categories[ref.category]) categories[ref.category] = [];
@@ -3576,73 +4250,28 @@ function renderSkillLibrary(query, activeTab) {
         return ai - bi;
     });
 
-    const emptyHtml = `
-        <div class="barre-empty-state">
+    if (sortedCategories.length === 0) {
+        body.innerHTML = `<div class="barre-empty-state">
             <div class="barre-empty-title">No skills found</div>
             <div class="barre-empty-text">Try a different search term.</div>
         </div>`;
+        return;
+    }
 
-    const categoriesHtml = sortedCategories.length === 0 ? emptyHtml :
-        sortedCategories.map(cat => `
-            <div class="skill-lib-category">
-                <h2 class="skill-lib-category-title">${cat}</h2>
-                <div class="skill-lib-cards">
-                    ${categories[cat].map(ref => renderSkillLibCard(ref, q)).join('')}
-                </div>
+    body.innerHTML = sortedCategories.map(cat => `
+        <div class="skill-lib-category">
+            <h2 class="skill-lib-category-title">${cat}</h2>
+            <div class="skill-lib-cards">
+                ${categories[cat].map(ref => renderSkillLibCard(ref, q)).join('')}
             </div>
-        `).join('');
-
-    screen.innerHTML = `
-        <div class="skill-library-view">
-
-            <!-- Header -->
-            <div class="skill-detail-header">
-                <button class="session-detail-back" onclick="navigateTo('learn')">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="13 4 7 10 13 16"/>
-                    </svg>
-                    learn
-                </button>
-                <span class="skill-lib-count">${DATA.skills.length} skills</span>
-            </div>
-
-            <div class="skill-lib-sticky">
-                <!-- Search -->
-                <div class="skill-lib-search-wrapper">
-                    <svg class="skill-lib-search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-                        <circle cx="7" cy="7" r="5"/><line x1="11" y1="11" x2="14" y2="14"/>
-                    </svg>
-                    <input type="text"
-                           class="skill-lib-search"
-                           id="skill-lib-search-input"
-                           placeholder="Search skills…"
-                           value="${query}"
-                           oninput="renderSkillLibrary(this.value, document.querySelector('.skill-lib-tab.active')?.dataset.tab || 'all')"
-                           autocomplete="off" />
-                    ${query ? `<button class="skill-lib-search-clear" onclick="document.getElementById('skill-lib-search-input').value=''; renderSkillLibrary('', document.querySelector('.skill-lib-tab.active')?.dataset.tab || 'all')">×</button>` : ''}
-                </div>
-
-                <!-- Tabs -->
-                <div class="skill-lib-tabs">
-                    <button class="skill-lib-tab ${activeTab === 'all' ? 'active' : ''}" data-tab="all"
-                            onclick="renderSkillLibrary(document.getElementById('skill-lib-search-input')?.value || '', 'all')">
-                        All skills
-                    </button>
-                    <button class="skill-lib-tab ${activeTab === 'my' ? 'active' : ''}" data-tab="my"
-                            onclick="renderSkillLibrary(document.getElementById('skill-lib-search-input')?.value || '', 'my')">
-                        My skills
-                    </button>
-                </div>
-            </div>
-
-            <!-- Skill list -->
-            <div class="skill-lib-body" id="skill-lib-body">
-                ${categoriesHtml}
-            </div>
-
-            <div style="height: 120px;"></div>
         </div>
-    `;
+    `).join('');
+}
+
+function renderSkillLibrary(query, activeTab) {
+    // Legacy compatibility shim — redirects to new approach
+    _skillLibTab = activeTab || 'all';
+    updateSkillLibResults();
 }
 
 function renderSkillLibCard(ref, query) {
