@@ -313,15 +313,16 @@ const DATA = {
    ═══════════════════════════════════════════════════════════════ */
 
 const STORAGE_KEYS = {
-    skills:           'plie:skills',
-    corrections:      'plie:corrections',
-    sessions:         'plie:sessions',
-    sessionTemplates: 'plie:sessionTemplates',
-    sessionSkills:    'plie:sessionSkills',
-    assessments:      'plie:assessments',
-    goals:            'plie:goals',
-    timeline:         'plie:timeline',
-    skillNotes:       'plie:skillNotes',
+    skills:             'plie:skills',
+    corrections:        'plie:corrections',
+    sessions:           'plie:sessions',
+    sessionTemplates:   'plie:sessionTemplates',
+    sessionSkills:      'plie:sessionSkills',
+    assessments:        'plie:assessments',
+    goals:              'plie:goals',
+    timeline:           'plie:timeline',
+    skillNotes:         'plie:skillNotes',
+    onboardingComplete: 'plie:onboardingComplete',
 };
 
 const storage = {
@@ -798,6 +799,7 @@ function nextOnboarding() {
 
 function completeOnboarding() {
     document.getElementById(`onboarding-${currentOnboardingScreen}`).classList.remove('active');
+    storage.save('onboardingComplete', true);
     appState.currentQuestion = 0;
     showScreen('assessment');
     renderQuestion();
@@ -805,8 +807,12 @@ function completeOnboarding() {
 
 function skipOnboarding() {
     document.getElementById(`onboarding-${currentOnboardingScreen}`).classList.remove('active');
-    appState.level = 'not-assessed';
-    appState.dimensions = null;
+    storage.save('onboardingComplete', true);
+    // Only set not-assessed if no level has been established yet
+    if (!appState.level) {
+        appState.level = 'not-assessed';
+        appState.dimensions = null;
+    }
     if (!appState.timeline?.length) {
         appendTimelineEntry({
             type:  'manual',
@@ -843,6 +849,23 @@ document.addEventListener('DOMContentLoaded', () => {
         screen.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, false);
         screen.addEventListener('touchend', e => { touchEndX = e.changedTouches[0].screenX; handleOnboardingSwipe(); }, false);
     });
+
+    // Route to correct initial screen.
+    // A returning user is identified by: onboardingComplete flag OR any existing data.
+    // This prevents a failed localStorage write from trapping users in onboarding.
+    const onboardingDone = storage.load('onboardingComplete');
+    const hasData = (appState.sessions.length > 0) ||
+                    (appState.assessments.length > 0) ||
+                    (appState.timeline.length > 0);
+
+    if (onboardingDone || hasData) {
+        // Never overwrite a real level with not-assessed
+        if (!appState.level) appState.level = 'not-assessed';
+        showScreen('profile');
+        document.querySelector('.bottom-nav')?.classList.add('visible');
+        document.querySelector('.fab')?.classList.add('visible');
+    }
+    // else: stay on onboarding-1 (already active in HTML)
 });
 
 
@@ -907,6 +930,7 @@ function renderQuestion() {
         question.options.forEach((option, idx) => {
             const btn = document.createElement('button');
             btn.className = 'assessment-option';
+            btn.dataset.idx = idx;
             btn.textContent = option;
             if (appState.answers[question.key] === idx) btn.classList.add('selected');
             btn.onclick = () => selectOption(question.key, idx);
@@ -917,6 +941,7 @@ function renderQuestion() {
         question.options.forEach((option, idx) => {
             const btn = document.createElement('button');
             btn.className = 'assessment-option';
+            btn.dataset.idx = idx;
             btn.textContent = option;
             if (appState.answers[question.key].includes(idx)) btn.classList.add('selected');
             btn.onclick = () => toggleMultiSelect(question.key, idx);
@@ -944,7 +969,8 @@ function renderQuestion() {
 
 function selectOption(key, value) {
     appState.answers[key] = value;
-    renderQuestion();
+    document.querySelectorAll('#assessmentOptions .assessment-option, #assessmentOptions .persona-card')
+        .forEach(btn => btn.classList.toggle('selected', parseInt(btn.dataset.idx) === value));
 }
 
 function toggleMultiSelect(key, value) {
@@ -952,7 +978,8 @@ function toggleMultiSelect(key, value) {
     const index = appState.answers[key].indexOf(value);
     if (index > -1) { appState.answers[key].splice(index, 1); }
     else { appState.answers[key].push(value); }
-    renderQuestion();
+    document.querySelectorAll('#assessmentOptions .assessment-option')
+        .forEach(btn => btn.classList.toggle('selected', appState.answers[key].includes(parseInt(btn.dataset.idx))));
 }
 
 function updateSlider(key, value) {
@@ -2332,6 +2359,21 @@ function saveSession() {
             storage.save('skillNotes', appState.skillNotes);
         }
 
+        // Praise blocks with a title → write a timeline milestone entry
+        if (mode === 'praise' && (block.title?.trim() || corrBullets.some(t => t?.trim()))) {
+            const praiseText = block.title?.trim()
+                || corrBullets.find(t => t?.trim())?.trim()
+                || 'Achievement';
+            const skillRef = skillId ? DATA.skills.find(sk => sk.id === skillId) : null;
+            appendTimelineEntry({
+                type:     'milestone',
+                objectId: session.id,
+                title:    praiseText,
+                body:     skillRef ? skillRef.french : null,
+                date:     session.date,
+            });
+        }
+
         // SessionSkill join object — only for skill-topic blocks
         if (isSkill && skillId) {
             const sessionSkill = {
@@ -2392,16 +2434,24 @@ function saveSession() {
         showSessionDetail(session.id);
     }
 
-    // Post-save promotion prompt — non-blocking, shown after logger closes
+    // Post-save prompts — non-blocking, shown after logger closes
     const uniqueSkillsWithCorrections = [...new Set(skillsWithCorrections)];
-    if (!s._isEdit && uniqueSkillsWithCorrections.length > 0) {
-        // Check if any of these skills have 3+ corrections (recurring pattern)
-        const frequentSkills = uniqueSkillsWithCorrections.filter(skillId => {
-            const count = appState.corrections.filter(c => c.skillId === skillId).length;
-            return count >= 3;
-        });
-        const promptSkills = frequentSkills.length > 0 ? frequentSkills : uniqueSkillsWithCorrections;
-        setTimeout(() => showPostSavePrompt(session.id, promptSkills, frequentSkills.length > 0), 400);
+    if (!s._isEdit) {
+        if (uniqueSkillsWithCorrections.length > 0) {
+            // Correction promotion prompt takes priority
+            const frequentSkills = uniqueSkillsWithCorrections.filter(skillId => {
+                const count = appState.corrections.filter(c => c.skillId === skillId).length;
+                return count >= 3;
+            });
+            const promptSkills = frequentSkills.length > 0 ? frequentSkills : uniqueSkillsWithCorrections;
+            setTimeout(() => showPostSavePrompt(session.id, promptSkills, frequentSkills.length > 0), 400);
+        } else {
+            // No corrections — check if this is a ~5-session milestone for reflection prompt
+            const sessionCount = appState.sessions.length;
+            if (sessionCount > 1 && sessionCount % 5 === 0) {
+                setTimeout(() => showReflectionPrompt(), 400);
+            }
+        }
     }
 }
 
@@ -2445,9 +2495,116 @@ function showPostSavePrompt(sessionId, skillIds, isRecurring) {
 }
 
 function openGoalFromPrompt(skillIds) {
-    // Open goal creator pre-linked to the first skill with corrections
     const skillId = skillIds[0];
     openGoalCreatorForSkill(skillId);
+}
+
+function showReflectionPrompt() {
+    // Don't show if another prompt is already visible
+    if (document.getElementById('post-save-prompt')) return;
+
+    const existing = document.getElementById('reflection-prompt');
+    if (existing) existing.remove();
+
+    const prompt = document.createElement('div');
+    prompt.id = 'reflection-prompt';
+    prompt.className = 'post-save-prompt';
+
+    prompt.innerHTML = `
+        <div class="post-save-prompt-inner">
+            <button class="post-save-dismiss" onclick="document.getElementById('reflection-prompt').remove()">×</button>
+            <div class="post-save-body">Session saved. Want to capture a thought?</div>
+            <div class="post-save-actions">
+                <button class="post-save-btn" onclick="document.getElementById('reflection-prompt').remove(); showReflectionOverlay();">
+                    add a reflection
+                </button>
+                <button class="post-save-btn post-save-btn-muted" onclick="document.getElementById('reflection-prompt').remove()">
+                    not now
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(prompt);
+    setTimeout(() => prompt?.remove(), 8000);
+}
+
+function showReflectionOverlay() {
+    const existing = document.getElementById('reflection-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'reflection-overlay';
+    overlay.className = 'session-overlay';
+    overlay.innerHTML = `
+        <div class="session-logger-sheet">
+            <div class="session-sheet-handle"></div>
+
+            <div class="session-logger-header">
+                <div>
+                    <div class="session-logger-eyebrow">Reflection</div>
+                    <h2 class="session-logger-title">What stood out today?</h2>
+                </div>
+                <button class="session-close-btn" onclick="closeReflectionOverlay()">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="session-logger-body">
+                <div class="session-field">
+                    <textarea class="session-block-textarea session-block-capped"
+                              id="reflection-textarea"
+                              placeholder="e.g. Ballet is so hard today · I felt like I was flying · Pirouettes suddenly clicked"
+                              rows="4"
+                              oninput="autoResizeCapped(this)"
+                              style="min-height: 120px;"></textarea>
+                    <p class="session-field-hint" style="margin-top: var(--sp-sm);">
+                        Saved as a personal note — just for you.
+                    </p>
+                </div>
+            </div>
+
+            <div class="session-logger-footer">
+                <button class="btn-large session-save-btn" onclick="saveReflection()">save reflection</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('open'));
+
+    // Focus the textarea after animation
+    setTimeout(() => document.getElementById('reflection-textarea')?.focus(), 300);
+}
+
+function closeReflectionOverlay() {
+    const overlay = document.getElementById('reflection-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('open');
+    overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+}
+
+function saveReflection() {
+    const text = document.getElementById('reflection-textarea')?.value?.trim();
+    if (!text) {
+        closeReflectionOverlay();
+        return;
+    }
+
+    appState.skillNotes = appState.skillNotes || [];
+    appState.skillNotes.push({
+        id:           Date.now(),
+        skillId:      null,          // session-level reflection, not skill-specific
+        text,
+        date:         new Date().toISOString().split('T')[0],
+        createdAt:    Date.now(),
+        isReflection: true,
+    });
+    storage.save('skillNotes', appState.skillNotes);
+
+    closeReflectionOverlay();
 }
 
 
@@ -2472,7 +2629,7 @@ function showBarreScreen() {
     if (activeSkills.length > 0) {
         activeSkillsHtml = `
             <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);">
-                <h2 class="section-title" style="padding: 0; margin-bottom: var(--sp-md);">Active skills</h2>
+                <h2 class="section-title" style="padding: 0; margin-bottom: var(--sp-md);">Skills in focus</h2>
                 <div style="display: flex; flex-direction: column; gap: var(--sp-sm);" id="active-skills-list">
                     ${activeSkills.map(skill => {
                         const skillCorrections = appState.corrections
@@ -2644,11 +2801,14 @@ function renderGoalsScreen() {
 
     const goals = appState.goals || [];
 
+    // Sort newest first within each group
+    const sorted = [...goals].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
     // Group by category, then uncategorised last
     const categorised = {};
     const uncategorised = [];
-    goals.forEach(g => {
-        if (g.completedAt) return; // exclude completed for now
+    sorted.forEach(g => {
+        if (g.completedAt) return;
         if (g.category) {
             if (!categorised[g.category]) categorised[g.category] = [];
             categorised[g.category].push(g);
@@ -2657,7 +2817,7 @@ function renderGoalsScreen() {
         }
     });
 
-    const completedGoals = goals.filter(g => g.completedAt);
+    const completedGoals = sorted.filter(g => g.completedAt);
 
     let goalsHtml = '';
 
@@ -2702,14 +2862,21 @@ function renderGoalsScreen() {
     // Attach swipes to goal cards
     screen.querySelectorAll('.swipe-row[data-goal-id]').forEach(row => {
         const goalId = Number(row.dataset.goalId);
+        const isCompleted = !!(appState.goals.find(g => g.id === goalId)?.completedAt);
         attachSwipe(row, {
             onLeft: () => {
+                if (!confirm('Delete this goal?')) return;
                 appState.goals = appState.goals.filter(g => g.id !== goalId);
                 storage.save('goals', appState.goals);
                 setTimeout(() => renderGoalsScreen(), 320);
             },
             onRight: () => {
-                markGoalComplete(goalId);
+                if (isCompleted) {
+                    reopenGoal(goalId);
+                } else {
+                    markGoalComplete(goalId);
+                    showGoalCompleteMessage();
+                }
             }
         });
     });
@@ -2775,25 +2942,30 @@ function renderGoalCard(goal, completed) {
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
                 delete
             </div>
-            ${!completed ? `<div class="swipe-action-right swipe-action-complete">
+            ${!completed ? `
+            <div class="swipe-action-right swipe-action-complete">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="2 8 6 12 14 4"/></svg>
                 done
-            </div>` : ''}
+            </div>` : `
+            <div class="swipe-action-right swipe-action-reopen">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 8 8 4 12 8"/><line x1="8" y1="4" x2="8" y2="13"/></svg>
+                reopen
+            </div>`}
             <div class="swipe-content">
                 <div class="goal-card ${completed ? 'goal-card-completed' : ''}">
+                    ${completed ? `<div class="goal-card-complete-banner">✓ Completed ${formatTimelineDate(new Date(goal.completedAt).toISOString().split('T')[0])}</div>` : ''}
                     <div class="goal-card-title">${goal.title}</div>
                     ${goal.body ? `<div class="goal-card-body">${goal.body}</div>` : ''}
                     ${tagsHtml ? `<div class="goal-tags">${tagsHtml}</div>` : ''}
                     ${linkedCorrectionsHtml}
                     ${milestonesHtml}
                     ${progressBarHtml}
-                    ${!completed ? `
-                        <div class="goal-card-actions">
-                            <button class="goal-action-btn" onclick="markGoalComplete('${goal.id}')">mark complete</button>
-                        </div>` : `
-                        <div class="goal-card-actions">
-                            <button class="goal-action-btn" onclick="reopenGoal('${goal.id}')">reopen</button>
-                        </div>`}
+                    <div class="goal-card-footer">
+                        <span class="goal-card-date">${goal.createdAt ? formatTimelineDate(new Date(goal.createdAt).toISOString().split('T')[0]) : ''}</span>
+                        ${!completed
+                            ? `<span class="goal-swipe-hint">swipe to complete →</span>`
+                            : `<span class="goal-swipe-hint">swipe to reopen →</span>`}
+                    </div>
                 </div>
             </div>
         </div>
@@ -2858,18 +3030,12 @@ function renderGoalCreator() {
         `<option value="${dim.id}" ${d.dimensionId === dim.id ? 'selected' : ''}>${dim.label}</option>`
     ).join('');
 
-    const categoryChips = GOAL_CATEGORIES.map(cat => `
-        <button class="recurrence-chip ${d.category === cat ? 'selected' : ''}"
-                onmousedown="selectGoalCategory('${cat}')">
-            ${cat}
-        </button>
-    `).join('');
-
     const milestonesHtml = d.milestones.map((m, i) => `
         <div class="goal-draft-milestone">
             <input type="text" class="session-input" style="flex:1; padding: 10px var(--sp-md);"
                    value="${m.text}"
                    oninput="appState._goalDraft.milestones[${i}].text = this.value"
+                   onkeydown="handleMilestoneKeydown(event, ${i})"
                    placeholder="Milestone ${i + 1}" />
             <button class="block-remove-btn" onmousedown="removeMilestoneDraft(${i})">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -2924,8 +3090,16 @@ function renderGoalCreator() {
 
                 <div class="session-field">
                     <label class="session-field-label">Category <span class="session-field-optional">optional</span></label>
-                    <div class="recurrence-chips" id="goal-category-chips">
-                        ${categoryChips}
+                    <div id="goal-category-field">
+                        ${d.category
+                            ? `<div class="goal-category-set">
+                                   <span class="recurrence-chip selected">${d.category}</span>
+                                   <button class="goal-category-clear" onmousedown="clearGoalCategory()">×</button>
+                               </div>`
+                            : `<button class="goal-category-add-btn" onmousedown="openGoalCategoryInput()">
+                                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>
+                                   add category
+                               </button>`}
                     </div>
                 </div>
 
@@ -2988,41 +3162,80 @@ function renderGoalCreator() {
 
 function selectGoalCategory(cat) {
     if (!appState._goalDraft) return;
-    appState._goalDraft.category = appState._goalDraft.category === cat ? null : cat;
-    document.querySelectorAll('#goal-category-chips .recurrence-chip').forEach(chip => {
-        chip.classList.toggle('selected', chip.textContent.trim() === appState._goalDraft.category);
-    });
+    appState._goalDraft.category = cat;
+    const field = document.getElementById('goal-category-field');
+    if (field) {
+        field.innerHTML = `
+            <div class="goal-category-set">
+                <span class="recurrence-chip selected">${cat}</span>
+                <button class="goal-category-clear" onmousedown="clearGoalCategory()">×</button>
+            </div>`;
+    }
+}
+
+function clearGoalCategory() {
+    if (!appState._goalDraft) return;
+    appState._goalDraft.category = null;
+    const field = document.getElementById('goal-category-field');
+    if (field) {
+        field.innerHTML = `<button class="goal-category-add-btn" onmousedown="openGoalCategoryInput()">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>
+            add category
+        </button>`;
+    }
+}
+
+function openGoalCategoryInput() {
+    const field = document.getElementById('goal-category-field');
+    if (!field) return;
+    const priorCats = [...new Set((appState.goals || []).map(g => g.category).filter(Boolean))];
+    const suggestions = [...new Set([...priorCats, ...GOAL_CATEGORIES])];
+    field.innerHTML = `
+        <div class="goal-category-input-wrap">
+            <input type="text" class="session-input goal-category-input"
+                   id="goal-category-input"
+                   placeholder="e.g. Rehearsal, Class, Home practice…"
+                   autocomplete="off"
+                   oninput="filterGoalCategorySuggestions(this.value)"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();commitGoalCategory(this.value);}" />
+            <div class="goal-category-suggestions" id="goal-category-suggestions">
+                ${suggestions.map(s => `
+                    <button class="goal-category-suggestion" onmousedown="commitGoalCategory('${s}')">${s}</button>
+                `).join('')}
+            </div>
+        </div>`;
+    requestAnimationFrame(() => document.getElementById('goal-category-input')?.focus());
+}
+
+function filterGoalCategorySuggestions(val) {
+    const container = document.getElementById('goal-category-suggestions');
+    if (!container) return;
+    const q = val.toLowerCase();
+    const priorCats = [...new Set((appState.goals || []).map(g => g.category).filter(Boolean))];
+    const all = [...new Set([...priorCats, ...GOAL_CATEGORIES])];
+    const filtered = q ? all.filter(s => s.toLowerCase().includes(q)) : all;
+    container.innerHTML = filtered.map(s => `
+        <button class="goal-category-suggestion" onmousedown="commitGoalCategory('${s}')">${s}</button>
+    `).join('');
+}
+
+function commitGoalCategory(cat) {
+    const val = cat?.trim() || document.getElementById('goal-category-input')?.value?.trim();
+    if (val) selectGoalCategory(val);
 }
 
 function addMilestoneDraft() {
     if (!appState._goalDraft) return;
     appState._goalDraft.milestones.push({ id: Date.now(), text: '', done: false });
-    // Surgical re-render of just the milestones list
+    renderMilestoneDraftList();
     const list = document.getElementById('goal-milestones-list');
     if (list) {
-        const d = appState._goalDraft;
-        list.innerHTML = d.milestones.map((m, i) => `
-            <div class="goal-draft-milestone">
-                <input type="text" class="session-input" style="flex:1; padding: 10px var(--sp-md);"
-                       value="${m.text}"
-                       oninput="appState._goalDraft.milestones[${i}].text = this.value"
-                       placeholder="Milestone ${i + 1}" />
-                <button class="block-remove-btn" onmousedown="removeMilestoneDraft(${i})">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                        <line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/>
-                    </svg>
-                </button>
-            </div>
-        `).join('');
-        // Focus the new input
         const inputs = list.querySelectorAll('input');
         inputs[inputs.length - 1]?.focus();
     }
 }
 
-function removeMilestoneDraft(index) {
-    if (!appState._goalDraft) return;
-    appState._goalDraft.milestones.splice(index, 1);
+function renderMilestoneDraftList() {
     const list = document.getElementById('goal-milestones-list');
     if (!list) return;
     const d = appState._goalDraft;
@@ -3031,6 +3244,7 @@ function removeMilestoneDraft(index) {
             <input type="text" class="session-input" style="flex:1; padding: 10px var(--sp-md);"
                    value="${m.text}"
                    oninput="appState._goalDraft.milestones[${i}].text = this.value"
+                   onkeydown="handleMilestoneKeydown(event, ${i})"
                    placeholder="Milestone ${i + 1}" />
             <button class="block-remove-btn" onmousedown="removeMilestoneDraft(${i})">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -3041,11 +3255,35 @@ function removeMilestoneDraft(index) {
     `).join('');
 }
 
+function handleMilestoneKeydown(event, index) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        // Save current value
+        const input = event.target;
+        if (appState._goalDraft?.milestones[index]) {
+            appState._goalDraft.milestones[index].text = input.value;
+        }
+        // Add next milestone and focus it
+        addMilestoneDraft();
+    }
+}
+
+function removeMilestoneDraft(index) {
+    if (!appState._goalDraft) return;
+    appState._goalDraft.milestones.splice(index, 1);
+    renderMilestoneDraftList();
+}
+
+// Strips accents and lowercases for fuzzy matching (handles fouetté → fouette etc)
+function normaliseStr(str) {
+    return (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 function searchGoalCorrections(query) {
     const resultsEl = document.getElementById('goal-correction-search-results');
     if (!resultsEl) return;
 
-    const q = query.trim().toLowerCase();
+    const q = normaliseStr(query.trim());
     if (q.length < 3) {
         resultsEl.innerHTML = '';
         return;
@@ -3055,7 +3293,7 @@ function searchGoalCorrections(query) {
     const linked = d?.correctionIds || [];
 
     const matches = appState.corrections
-        .filter(c => c.text.toLowerCase().includes(q) && !linked.includes(c.id))
+        .filter(c => normaliseStr(c.text).includes(q) && !linked.includes(c.id))
         .sort((a, b) => b.createdAt - a.createdAt)
         .slice(0, 5);
 
@@ -3181,6 +3419,23 @@ function saveGoal() {
 
     if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
     if (appState.currentScreen === 'profile') initProfile();
+
+    // Refresh skill detail linked goals if we're on a skill detail screen
+    if (appState.currentScreen?.startsWith('skill-detail-')) {
+        const skillId = appState.currentScreen.replace('skill-detail-', '');
+        // Re-render just the linked goals section
+        const linkedSection = document.querySelector(`#skill-detail-${skillId} .skill-linked-goals`);
+        if (linkedSection) {
+            const linkedGoals = (appState.goals || []).filter(g => g.skillId === skillId && !g.completedAt);
+            linkedSection.innerHTML = linkedGoals.length > 0
+                ? linkedGoals.map(g => `
+                    <div class="skill-linked-goal" onclick="navigateTo('goals')">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="6" r="5"/><circle cx="6" cy="6" r="2.5"/></svg>
+                        <span>${g.title}</span>
+                    </div>`).join('')
+                : `<div class="skill-detail-empty-state">No goals linked to this skill.</div>`;
+        }
+    }
 }
 
 function toggleMilestone(goalId, milestoneIndex) {
@@ -3217,6 +3472,21 @@ function markGoalComplete(goalId) {
     });
     if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
     if (appState.currentScreen === 'profile') initProfile();
+}
+
+function showGoalCompleteMessage() {
+    const existing = document.getElementById('goal-complete-toast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.id = 'goal-complete-toast';
+    toast.className = 'goal-complete-toast';
+    toast.textContent = '✓ Goal complete';
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('visible'));
+    setTimeout(() => {
+        toast.classList.remove('visible');
+        setTimeout(() => toast.remove(), 300);
+    }, 2000);
 }
 
 function reopenGoal(goalId) {
@@ -3435,14 +3705,40 @@ function initProfile() {
         </div>
     `).join('');
 
-    // Timeline — render from appState.timeline, with the quiz/join entry at the bottom
+    // Timeline — merge stored entries with reflection notes, sort by date desc
     const timelineEl = document.getElementById('timeline');
     if (timelineEl) {
         const firstEntryText = (level === 'not-assessed' || !appState.level)
             ? 'Joined plié'
             : `Completed placement quiz — ${(DATA.levelLabels[level] || 'BEGINNER').charAt(0) + (DATA.levelLabels[level] || 'BEGINNER').slice(1).toLowerCase()}`;
 
-        const sessionEntries = (appState.timeline || []).map(entry => {
+        // Build unified entries array: stored timeline + reflections
+        const reflectionEntries = (appState.skillNotes || [])
+            .filter(n => n.isReflection)
+            .map(n => ({
+                _isReflection: true,
+                id:        n.id,
+                date:      n.date,
+                createdAt: n.createdAt,
+                text:      n.text,
+            }));
+
+        const allEntries = [
+            ...(appState.timeline || []).map(e => ({ ...e, _isReflection: false })),
+            ...reflectionEntries,
+        ].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+        const sessionEntries = allEntries.map(entry => {
+            if (entry._isReflection) {
+                return `
+                <div class="timeline-item timeline-item-reflection">
+                    <div class="timeline-dot timeline-dot-reflection"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-date">${formatTimelineDate(entry.date)}</div>
+                        <div class="timeline-title timeline-reflection-text">"${entry.text}"</div>
+                    </div>
+                </div>`;
+            }
             const isTappable = entry.type === 'session' && entry.objectId;
             return `
             <div class="timeline-item ${isTappable ? 'timeline-item-tappable' : ''}"
@@ -4182,7 +4478,7 @@ function showLearnSkillLibrary() {
                     <button class="skill-lib-tab active" data-tab="all"
                             onclick="setSkillLibTab(this, 'all')">All skills</button>
                     <button class="skill-lib-tab" data-tab="my"
-                            onclick="setSkillLibTab(this, 'my')">My skills</button>
+                            onclick="setSkillLibTab(this, 'my')">Skills I've recorded</button>
                 </div>
             </div>
             <div class="skill-lib-body" id="skill-lib-body"></div>
@@ -4210,7 +4506,7 @@ function updateSkillLibResults() {
     if (!body) return;
 
     const query = input?.value || '';
-    const q = query.trim().toLowerCase();
+    const q = normaliseStr(query.trim());
 
     if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
 
@@ -4222,9 +4518,9 @@ function updateSkillLibResults() {
         }
         if (!q) return true;
         return (
-            ref.french.toLowerCase().includes(q) ||
-            ref.english.toLowerCase().includes(q) ||
-            (ref.aliases || []).some(a => a.toLowerCase().includes(q))
+            normaliseStr(ref.french).includes(q) ||
+            normaliseStr(ref.english).includes(q) ||
+            (ref.aliases || []).some(a => normaliseStr(a).includes(q))
         );
     });
 
@@ -4289,7 +4585,7 @@ function renderSkillLibCard(ref, query) {
         <div class="skill-lib-card" onclick="showSkillKnowledgePage('${ref.id}', 'skill-library-screen')">
             <div class="skill-lib-card-main">
                 <div class="skill-lib-card-name">${displayName}</div>
-                <div class="skill-lib-card-english">${displayEnglish}</div>
+                ${q && displayEnglish !== ref.english ? `<div class="skill-lib-card-english">${displayEnglish}</div>` : ''}
             </div>
             <div class="skill-lib-card-meta">
                 <span class="difficulty-badge difficulty-${ref.difficulty}">${ref.difficulty}</span>
@@ -4695,6 +4991,9 @@ function resetProfile() {
     // Remove overlays
     document.getElementById('session-logger-overlay')?.remove();
     document.getElementById('goal-creator-overlay')?.remove();
+    document.getElementById('reflection-overlay')?.remove();
+    document.getElementById('reflection-prompt')?.remove();
+    document.getElementById('post-save-prompt')?.remove();
 
     // Restore nav visibility state
     document.querySelector('.bottom-nav')?.classList.remove('visible');
