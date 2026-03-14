@@ -142,15 +142,15 @@ const DATA = {
         },
         {
             category: "Centre",
-            question: "How far have you got with centre work?",
-            subtext: "Away from the barre — what can you do in the middle of the room?",
+            question: "In your most recent classes, how comfortable have you felt working in the centre?",
+            subtext: "Think about how it feels away from the barre — not just what you can do, but how settled and musical you feel",
             type: "multiple-choice",
             options: [
-                "I haven't done centre work yet",
-                "Basic steps — tendus, simple port de bras",
-                "Adagio and simple combinations",
-                "Most centre work including turns and small jumps",
-                "Complex combinations, grand allegro, and longer enchaînements"
+                "I haven't done centre work yet, or I avoid it",
+                "I can get through it but I feel unsteady and rely on watching others",
+                "I feel okay in centre — I can follow combinations but lose confidence in harder moments",
+                "I feel comfortable most of the time and can hold my own in turns and adagio",
+                "I feel confident and musical in centre — I can focus on quality, not just survival"
             ],
             key: "centre"
         },
@@ -288,21 +288,61 @@ const DATA = {
     ],
 
     learnSections: [
-        { icon: '🩰', name: 'Skill library', desc: 'Every ballet movement — browse, search, and learn', count: '80+ skills', action: "showLearnSkillLibrary()" },
-        { icon: '🎭', name: 'Famous ballets', desc: 'Iconic productions and the dancers who defined them', count: '18 ballets', action: "openFolder('ballets')" },
-        { icon: '🎵', name: 'Composers', desc: 'From Tchaikovsky to Prokofiev and beyond', count: '12 composers', action: "alert('Coming soon')" },
-        { icon: '🌟', name: 'Variations', desc: 'Classical variations to study and learn', count: '25 variations', action: "alert('Coming soon')" },
-        { icon: '💃', name: 'Legendary dancers', desc: 'From Plisetskaya to Acosta — the greats', count: '15 dancers', action: "alert('Coming soon')" }
+        { name: 'Skill library',     desc: 'Every ballet movement — browse, search, and learn',       count: '80+ skills',   action: "showLearnSkillLibrary()" },
+        { name: 'Glossary',          desc: 'Key terms, musicality concepts, and ballet vocabulary',    count: 'coming soon',  action: "showGlossary()" },
+        { name: 'Famous ballets',    desc: 'Iconic productions and the dancers who defined them',      count: '18 ballets',   action: "openFolder('ballets')" },
+        { name: 'Composers',         desc: 'From Tchaikovsky to Prokofiev and beyond',                 count: '12 composers', action: "alert('Coming soon')" },
+        { name: 'Variations',        desc: 'Classical variations to study and learn',                  count: '25 variations',action: "alert('Coming soon')" },
+        { name: 'Legendary dancers', desc: 'From Plisetskaya to Acosta — the greats',                 count: '15 dancers',   action: "alert('Coming soon')" }
     ],
 
     profileCapabilities: [
-        { icon: '📝', label: 'AFTER CLASS',  title: 'Save corrections',  description: 'Write down feedback from your teacher before you forget it', action: "openSessionLogger()"   },
-        { icon: '🎯', label: 'PLANNING',     title: 'Set goals',          description: 'Short-term and long-term targets to keep you on track',       action: "openGoalCreator()"    },
-        { icon: '📊', label: 'OVER TIME',    title: 'Track your skills',  description: 'Monitor progress across every movement, from plié to grand jeté', action: "navigateTo('barre')" },
-        { icon: '📋', label: 'MEASURE',      title: 'Reassess yourself',  description: 'Retake assessments to see how you\'ve progressed',            action: "navigateTo('assess')" },
-        { icon: '🎭', label: 'LEARN',        title: 'Study repertoire',   description: 'Explore ballets, composers, dancers, and famous variations',   action: "navigateTo('learn')"  },
-        { icon: '📓', label: 'REFLECT',      title: 'Log sessions',       description: 'Keep a record of every class — what you did, how it went',    action: "openSessionLogger()"  }
-    ]
+        {
+            id: 'log-session',
+            label: 'AFTER CLASS',
+            title: 'Log a session',
+            description: 'Record what you worked on and save corrections while they\'re fresh.',
+            doneMessage: 'You\'ve logged your first session!',
+            action: "openSessionLogger()",
+            isDone: () => appState.sessions.length > 0,
+        },
+        {
+            id: 'save-correction',
+            label: 'FEEDBACK',
+            title: 'Save a correction',
+            description: 'Write down what your teacher said — log a session and add a correction block.',
+            doneMessage: 'You\'ve saved your first correction!',
+            action: "openSessionLogger()",
+            isDone: () => appState.corrections.filter(c => c.source === 'teacher').length > 0,
+        },
+        {
+            id: 'set-goal',
+            label: 'PLANNING',
+            title: 'Set a goal',
+            description: 'Give your practice a target. Goals can link to a skill or dimension.',
+            doneMessage: 'You\'ve set your first goal!',
+            action: "openGoalCreator()",
+            isDone: () => appState.goals.length > 0,
+        },
+        {
+            id: 'track-skill',
+            label: 'SKILLS',
+            title: 'Track a skill',
+            description: 'Flag a skill as in focus from The Barre to start building your personal record.',
+            doneMessage: 'You\'re tracking your first skill!',
+            action: "navigateTo('barre')",
+            isDone: () => appState.skills.some(s => s.flagged),
+        },
+        {
+            id: 'study-repertoire',
+            label: 'LEARN',
+            title: 'Study repertoire',
+            description: 'Explore the skill library, knowledge pages, and repertoire in Learn.',
+            doneMessage: 'You\'ve explored the library!',
+            action: "navigateTo('learn')",
+            isDone: () => !!storage.load('hasVisitedLearn'),
+        },
+    ],
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -323,6 +363,7 @@ const STORAGE_KEYS = {
     timeline:           'plie:timeline',
     skillNotes:         'plie:skillNotes',
     onboardingComplete: 'plie:onboardingComplete',
+    hasVisitedLearn:    'plie:hasVisitedLearn',
 };
 
 const storage = {
@@ -582,23 +623,25 @@ function seedMockData() {
        <div class="swipe-content">...card content...</div>
      </div>
 ────────────────────────────────────────────────────────────── */
-function attachSwipe(el, { onLeft, onRight, threshold = 80 } = {}) {
+function attachSwipe(el, { onLeft, onRight, threshold = 100 } = {}) {
     const content = el.querySelector('.swipe-content');
     if (!content) return;
 
     let startX = 0;
+    let startTime = 0;
     let currentX = 0;
     let dragging = false;
-    let settled = false; // prevent multiple fires per gesture
+    let settled = false;
+    const MIN_DURATION_MS = 120; // must drag for at least 120ms — prevents accidental swipe
 
     function getClientX(e) {
         return e.touches ? e.touches[0].clientX : e.clientX;
     }
 
     function onStart(e) {
-        // Don't intercept taps on interactive elements inside the card
-        if (e.target.closest('button, input, select, textarea, a')) return;
+        if (e.target.closest('button, input, select, textarea, a, [contenteditable]')) return;
         startX = getClientX(e);
+        startTime = Date.now();
         currentX = 0;
         dragging = true;
         settled = false;
@@ -609,19 +652,19 @@ function attachSwipe(el, { onLeft, onRight, threshold = 80 } = {}) {
         if (!dragging || settled) return;
         const dx = getClientX(e) - startX;
 
-        // Only allow the direction(s) that have a handler
         if (dx < 0 && !onLeft)  { reset(); return; }
         if (dx > 0 && !onRight) { reset(); return; }
 
+        // Only start moving after 8px to distinguish from taps
+        if (Math.abs(dx) < 8) return;
+
         currentX = dx;
-        // Dampen beyond threshold so it feels spring-like
         const damped = dx > 0
-            ? Math.min(dx, threshold + (dx - threshold) * 0.2)
-            : Math.max(dx, -threshold + (dx + threshold) * 0.2);
+            ? Math.min(dx, threshold + (dx - threshold) * 0.15)
+            : Math.max(dx, -threshold + (dx + threshold) * 0.15);
 
         content.style.transform = `translateX(${damped}px)`;
 
-        // Reveal action background
         const leftEl  = el.querySelector('.swipe-action-left');
         const rightEl = el.querySelector('.swipe-action-right');
         if (leftEl)  leftEl.style.opacity  = dx < 0 ? Math.min(1, Math.abs(dx) / threshold) : '0';
@@ -632,18 +675,20 @@ function attachSwipe(el, { onLeft, onRight, threshold = 80 } = {}) {
         if (!dragging) return;
         dragging = false;
 
-        if (Math.abs(currentX) >= threshold) {
+        const elapsed = Date.now() - startTime;
+        const committed = Math.abs(currentX) >= threshold && elapsed >= MIN_DURATION_MS;
+
+        if (committed) {
             settled = true;
             if (currentX < 0 && onLeft) {
-                // Animate off left, then call handler
                 content.style.transition = 'transform 0.25s var(--ease-out)';
                 content.style.transform  = `translateX(-110%)`;
                 el.style.transition = 'max-height 0.3s var(--ease-out), opacity 0.3s ease, margin 0.3s ease';
                 setTimeout(() => {
-                    el.style.maxHeight  = el.offsetHeight + 'px'; // lock for animation
+                    el.style.maxHeight  = el.offsetHeight + 'px';
                     requestAnimationFrame(() => {
-                        el.style.maxHeight  = '0';
-                        el.style.opacity    = '0';
+                        el.style.maxHeight    = '0';
+                        el.style.opacity      = '0';
                         el.style.marginBottom = '0';
                     });
                     setTimeout(() => onLeft(el), 280);
@@ -1840,13 +1885,15 @@ const BLOCK_MODES = ['correction', 'praise', 'reflection'];
 
 function addBlock(focusTitle = false) {
     const block = {
-        id:          Date.now(),
-        topicId:     'general',
-        title:       '',
-        notes:       '',
-        notesOpen:   false,
-        mode:        'correction',   // 'correction' | 'praise' | 'reflection'
-        corrections: [],             // string[] — each entry → separate Correction object on save
+        id:             Date.now(),
+        topicId:        'general',
+        title:          '',
+        notes:          '',
+        notesOpen:      false,
+        mode:           'correction',
+        corrections:    [],
+        praiseText:     '',
+        reflectionText: '',
     };
     appState.currentSession.blocks.push(block);
     sortBlocks();
@@ -1938,19 +1985,31 @@ function renderBlockHtml(block, index) {
                   >${block.reflectionText || ''}</textarea>
     `;
 
-    // Notes section (collapsible)
-    const notesHtml = block.notesOpen ? `
+    // Notes section (collapsible) — wrapped in .block-notes-area for surgical updates
+    const notesHtml = `
+        <div class="block-notes-area">
+            ${block.notesOpen || block.notes ? `
+                <textarea class="session-block-textarea session-block-capped"
+                          placeholder="Notes — context, rehearsal, how it felt…"
+                          oninput="updateBlockField(${index}, 'notes', this.value); autoResizeCapped(this);"
+                          >${block.notes || ''}</textarea>
+                <button class="block-notes-toggle block-notes-toggle-open"
+                        onmousedown="toggleBlockNotes(${index})">hide notes</button>
+            ` : `
+                <button class="block-notes-toggle"
+                        onmousedown="toggleBlockNotes(${index})">
+                    ${block.notes ? '✎ notes' : '+ add notes'}
+                </button>
+            `}
+        </div>
+    `;
+
+    // Praise content — free text for what was praised
+    const praiseHtml = `
         <textarea class="session-block-textarea session-block-capped"
-                  placeholder="Notes — context, rehearsal, how it felt…"
-                  oninput="updateBlockField(${index}, 'notes', this.value); autoResizeCapped(this);"
-                  >${block.notes || ''}</textarea>
-        <button class="block-notes-toggle block-notes-toggle-open"
-                onclick="toggleBlockNotes(${index})">hide notes</button>
-    ` : `
-        <button class="block-notes-toggle"
-                onclick="toggleBlockNotes(${index})">
-            ${block.notes ? '✎ notes' : '+ add notes'}
-        </button>
+                  placeholder="What were you praised for? e.g. your arabesque line, timing…"
+                  oninput="updateBlockField(${index}, 'praiseText', this.value); autoResizeCapped(this);"
+                  >${block.praiseText || ''}</textarea>
     `;
 
     // Mode toggle
@@ -2022,6 +2081,7 @@ function renderBlockHtml(block, index) {
                         ${modeToggleHtml}
 
                         ${mode === 'correction' ? corrFieldHtml : ''}
+                        ${mode === 'praise'     ? praiseHtml    : ''}
                         ${mode === 'reflection' ? reflectionHtml : ''}
 
                         ${notesHtml}
@@ -2049,29 +2109,26 @@ function toggleBlockNotes(index) {
     if (!appState.currentSession?.blocks[index]) return;
     const block = appState.currentSession.blocks[index];
     block.notesOpen = !block.notesOpen;
-    // Surgical re-render of just this block's notes area
     const blockEl = document.getElementById(`block-${block.id}`);
-    if (blockEl) {
-        const notesArea = blockEl.querySelector('.block-notes-area');
-        if (notesArea) {
-            notesArea.innerHTML = block.notesOpen ? `
-                <textarea class="session-block-textarea session-block-capped"
-                          placeholder="Notes — context, rehearsal, how it felt…"
-                          oninput="updateBlockField(${index}, 'notes', this.value); autoResizeCapped(this);"
-                          >${block.notes || ''}</textarea>
-                <button class="block-notes-toggle block-notes-toggle-open"
-                        onclick="toggleBlockNotes(${index})">hide notes</button>
-            ` : `
-                <button class="block-notes-toggle"
-                        onclick="toggleBlockNotes(${index})">
-                    ${block.notes ? '✎ notes' : '+ add notes'}
-                </button>
-            `;
-            if (block.notesOpen) {
-                const ta = notesArea.querySelector('textarea');
-                ta?.focus();
-            }
-        }
+    if (!blockEl) return;
+    const notesArea = blockEl.querySelector('.block-notes-area');
+    if (!notesArea) return;
+    notesArea.innerHTML = block.notesOpen || block.notes ? `
+        <textarea class="session-block-textarea session-block-capped"
+                  placeholder="Notes — context, rehearsal, how it felt…"
+                  oninput="updateBlockField(${index}, 'notes', this.value); autoResizeCapped(this);"
+                  >${block.notes || ''}</textarea>
+        <button class="block-notes-toggle block-notes-toggle-open"
+                onmousedown="toggleBlockNotes(${index})">hide notes</button>
+    ` : `
+        <button class="block-notes-toggle"
+                onmousedown="toggleBlockNotes(${index})">
+            ${block.notes ? '✎ notes' : '+ add notes'}
+        </button>
+    `;
+    if (block.notesOpen) {
+        const ta = notesArea.querySelector('textarea');
+        ta?.focus();
     }
 }
 
@@ -2327,7 +2384,7 @@ function saveSession() {
             ? block.corrections
             : (block.corrections ? [block.corrections] : []); // backward compat with old string format
 
-        if (mode === 'correction' || mode === 'praise') {
+        if (mode === 'correction') {
             corrBullets.filter(t => t?.trim()).forEach(text => {
                 const correction = {
                     id:          nextId(),
@@ -2335,8 +2392,8 @@ function saveSession() {
                     text:        text.trim(),
                     createdAt:   now,
                     sessionId:   session.id,
-                    source:      mode === 'praise' ? 'praise' : 'teacher',
-                    type:        mode === 'praise' ? 'praise' : null,
+                    source:      'teacher',
+                    type:        null,
                     isRecurring: false,
                 };
                 appState.corrections.push(correction);
@@ -2345,33 +2402,45 @@ function saveSession() {
             });
         }
 
-        // Reflection blocks store text as a note
+        // Praise blocks — save praiseText as a skill note, write timeline entry
+        if (mode === 'praise') {
+            const praiseContent = block.praiseText?.trim() || block.title?.trim();
+            if (praiseContent) {
+                appState.skillNotes = appState.skillNotes || [];
+                appState.skillNotes.push({
+                    id:        nextId(),
+                    skillId:   skillId || null,
+                    text:      praiseContent,
+                    date:      session.date,
+                    createdAt: now,
+                    isPraise:  true,
+                });
+                storage.save('skillNotes', appState.skillNotes);
+
+                const skillRef = skillId ? DATA.skills.find(sk => sk.id === skillId) : null;
+                appendTimelineEntry({
+                    type:     'milestone',
+                    objectId: session.id,
+                    title:    praiseContent,
+                    body:     skillRef ? skillRef.french : null,
+                    date:     session.date,
+                    isPraise: true,
+                });
+            }
+        }
+
+        // Reflection blocks — save as a skill note
         if (mode === 'reflection' && block.reflectionText?.trim()) {
             appState.skillNotes = appState.skillNotes || [];
             appState.skillNotes.push({
-                id:        nextId(),
-                skillId:   skillId || null,
-                text:      block.reflectionText.trim(),
-                date:      session.date,
-                createdAt: now,
+                id:           nextId(),
+                skillId:      skillId || null,
+                text:         block.reflectionText.trim(),
+                date:         session.date,
+                createdAt:    now,
                 isReflection: true,
             });
             storage.save('skillNotes', appState.skillNotes);
-        }
-
-        // Praise blocks with a title → write a timeline milestone entry
-        if (mode === 'praise' && (block.title?.trim() || corrBullets.some(t => t?.trim()))) {
-            const praiseText = block.title?.trim()
-                || corrBullets.find(t => t?.trim())?.trim()
-                || 'Achievement';
-            const skillRef = skillId ? DATA.skills.find(sk => sk.id === skillId) : null;
-            appendTimelineEntry({
-                type:     'milestone',
-                objectId: session.id,
-                title:    praiseText,
-                body:     skillRef ? skillRef.french : null,
-                date:     session.date,
-            });
         }
 
         // SessionSkill join object — only for skill-topic blocks
@@ -2497,6 +2566,22 @@ function showPostSavePrompt(sessionId, skillIds, isRecurring) {
 function openGoalFromPrompt(skillIds) {
     const skillId = skillIds[0];
     openGoalCreatorForSkill(skillId);
+}
+
+function openFabActionSheet() {
+    const sheet = document.getElementById('fab-action-sheet');
+    if (!sheet) return;
+    sheet.style.display = 'flex';
+    requestAnimationFrame(() => sheet.classList.add('open'));
+}
+
+function closeFabActionSheet() {
+    const sheet = document.getElementById('fab-action-sheet');
+    if (!sheet) return;
+    sheet.classList.remove('open');
+    sheet.addEventListener('transitionend', () => {
+        sheet.style.display = 'none';
+    }, { once: true });
 }
 
 function showReflectionPrompt() {
@@ -2837,9 +2922,24 @@ function renderGoalsScreen() {
             goalsHtml += renderGoalGroup(cat, catGoals);
         });
         if (completedGoals.length) {
+            const COMPLETED_PREVIEW = 2;
+            const visibleCompleted = completedGoals.slice(0, COMPLETED_PREVIEW);
+            const hiddenCount = completedGoals.length - COMPLETED_PREVIEW;
             goalsHtml += `
-                <div class="goals-group-label" style="margin-top: var(--sp-xl);">Completed</div>
-                ${completedGoals.map(g => renderGoalCard(g, true)).join('')}`;
+                <div class="goals-group-label goals-completed-label" style="margin-top: var(--sp-xl);">
+                    Completed
+                    <span class="goals-completed-count">${completedGoals.length}</span>
+                </div>
+                ${visibleCompleted.map(g => renderGoalCard(g, true)).join('')}
+                ${hiddenCount > 0 ? `
+                <div id="goals-completed-hidden" style="display:none;">
+                    ${completedGoals.slice(COMPLETED_PREVIEW).map(g => renderGoalCard(g, true)).join('')}
+                </div>
+                <button class="goals-see-all-btn" onclick="
+                    document.getElementById('goals-completed-hidden').style.display='block';
+                    this.remove();">
+                    see all ${completedGoals.length} completed
+                </button>` : ''}`;
         }
     }
 
@@ -2875,7 +2975,6 @@ function renderGoalsScreen() {
                     reopenGoal(goalId);
                 } else {
                     markGoalComplete(goalId);
-                    showGoalCompleteMessage();
                 }
             }
         });
@@ -2902,8 +3001,9 @@ function renderGoalCard(goal, completed) {
         goal.dueDate ? `<span class="goal-tag">by ${formatTimelineDate(goal.dueDate)}</span>` : null,
     ].filter(Boolean).join('');
 
+    const MILESTONE_CAP = 4;
     const milestonesHtml = milestones.length > 0 ? `
-        <div class="goal-milestones">
+        <div class="goal-milestones ${milestones.length > MILESTONE_CAP ? 'goal-milestones-scrollable' : ''}">
             ${milestones.map((m, i) => `
                 <div class="goal-milestone ${m.done ? 'done' : ''}"
                      onclick="toggleMilestone('${goal.id}', ${i})">
@@ -2914,6 +3014,7 @@ function renderGoalCard(goal, completed) {
                 </div>
             `).join('')}
         </div>
+        ${milestones.length > MILESTONE_CAP ? `<div class="goal-milestones-scroll-hint">${milestones.length} milestones · scroll to see all</div>` : ''}
     ` : '';
 
     const progressBarHtml = progress !== null ? `
@@ -2961,10 +3062,13 @@ function renderGoalCard(goal, completed) {
                     ${milestonesHtml}
                     ${progressBarHtml}
                     <div class="goal-card-footer">
-                        <span class="goal-card-date">${goal.createdAt ? formatTimelineDate(new Date(goal.createdAt).toISOString().split('T')[0]) : ''}</span>
-                        ${!completed
-                            ? `<span class="goal-swipe-hint">swipe to complete →</span>`
-                            : `<span class="goal-swipe-hint">swipe to reopen →</span>`}
+                        <span class="goal-card-date">created ${formatTimelineDate(new Date(goal.createdAt).toISOString().split('T')[0])}</span>
+                        <div style="display:flex;gap:var(--sp-sm);align-items:center;">
+                            ${!completed ? `<button class="goal-edit-btn" onclick="openGoalEditor(${goal.id})">edit</button>` : ''}
+                            ${!completed
+                                ? `<span class="goal-swipe-hint">swipe to complete →</span>`
+                                : `<span class="goal-swipe-hint">swipe to reopen →</span>`}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2983,7 +3087,8 @@ function openGoalCreator() {
         dimensionId:   null,
         category:      null,
         milestones:    [],
-        correctionIds: [],   // linked correction IDs
+        correctionIds: [],
+        _editId:       null,
     };
 
     let overlay = document.getElementById('goal-creator-overlay');
@@ -2996,6 +3101,34 @@ function openGoalCreator() {
 
     renderGoalCreator();
 
+    document.querySelector('.fab')?.classList.remove('visible');
+    document.querySelector('.bottom-nav')?.classList.remove('visible');
+    requestAnimationFrame(() => overlay.classList.add('open'));
+}
+
+function openGoalEditor(goalId) {
+    const goal = appState.goals.find(g => g.id === Number(goalId));
+    if (!goal) return;
+    appState._goalDraft = {
+        _editId:       goal.id,
+        title:         goal.title || '',
+        body:          goal.body  || '',
+        dueDate:       goal.dueDate || '',
+        skillId:       goal.skillId     || null,
+        dimensionId:   goal.dimensionId || null,
+        category:      goal.category    || null,
+        correctionIds: [...(goal.correctionIds || [])],
+        milestones:    goal.milestones.map(m => ({ ...m })),
+    };
+
+    let overlay = document.getElementById('goal-creator-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'goal-creator-overlay';
+        overlay.className = 'session-overlay';
+        document.body.appendChild(overlay);
+    }
+    renderGoalCreator();
     document.querySelector('.fab')?.classList.remove('visible');
     document.querySelector('.bottom-nav')?.classList.remove('visible');
     requestAnimationFrame(() => overlay.classList.add('open'));
@@ -3051,8 +3184,8 @@ function renderGoalCreator() {
 
             <div class="session-logger-header">
                 <div>
-                    <div class="session-logger-eyebrow">New goal</div>
-                    <h2 class="session-logger-title">Set a goal</h2>
+                    <div class="session-logger-eyebrow">${d._editId ? 'Edit goal' : 'New goal'}</div>
+                    <h2 class="session-logger-title">${d._editId ? 'Update your goal' : 'Set a goal'}</h2>
                 </div>
                 <button class="session-close-btn" onclick="closeGoalCreator()">
                     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -3395,25 +3528,33 @@ function saveGoal() {
         return;
     }
 
+    const isEdit = !!d._editId;
+    const existingGoal = isEdit ? appState.goals.find(g => g.id === d._editId) : null;
+
     const goal = {
-        id:            Date.now(),
+        id:            isEdit ? d._editId : Date.now(),
         title:         d.title.trim(),
-        body:          d.body?.trim()    || null,
-        createdAt:     Date.now(),
-        dueDate:       d.dueDate         || null,
-        skillId:       d.skillId         || null,
-        dimensionId:   d.dimensionId     || null,
-        category:      d.category        || null,
-        correctionIds: d.correctionIds   || [],
+        body:          d.body?.trim()  || null,
+        createdAt:     existingGoal?.createdAt || Date.now(),
+        dueDate:       d.dueDate       || null,
+        skillId:       d.skillId       || null,
+        dimensionId:   d.dimensionId   || null,
+        category:      d.category      || null,
+        correctionIds: d.correctionIds || [],
         milestones:    d.milestones.filter(m => m.text.trim()).map(m => ({
             id:   m.id || Date.now(),
             text: m.text.trim(),
-            done: false,
+            done: m.done || false,
         })),
-        completedAt: null,
+        completedAt: existingGoal?.completedAt || null,
     };
 
-    appState.goals.push(goal);
+    if (isEdit) {
+        const idx = appState.goals.findIndex(g => g.id === d._editId);
+        if (idx > -1) appState.goals[idx] = goal;
+    } else {
+        appState.goals.unshift(goal); // newest first
+    }
     storage.save('goals', appState.goals);
     closeGoalCreator();
 
@@ -3470,23 +3611,27 @@ function markGoalComplete(goalId) {
         body:     goal.title,
         date:     new Date().toISOString().split('T')[0],
     });
+    showGoalCompleteMessage(goal.title);
     if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
     if (appState.currentScreen === 'profile') initProfile();
 }
 
-function showGoalCompleteMessage() {
+function showGoalCompleteMessage(title) {
     const existing = document.getElementById('goal-complete-toast');
     if (existing) existing.remove();
     const toast = document.createElement('div');
     toast.id = 'goal-complete-toast';
     toast.className = 'goal-complete-toast';
-    toast.textContent = '✓ Goal complete';
+    toast.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="2 8 6 12 14 4"/></svg>
+        <span>Goal complete${title ? ` — ${title}` : ''}</span>
+    `;
     document.body.appendChild(toast);
     requestAnimationFrame(() => toast.classList.add('visible'));
     setTimeout(() => {
         toast.classList.remove('visible');
         setTimeout(() => toast.remove(), 300);
-    }, 2000);
+    }, 2500);
 }
 
 function reopenGoal(goalId) {
@@ -3542,6 +3687,7 @@ function deleteSessionTemplate(templateId) {
 
 // ── Learn ──
 function showLearnScreen() {
+    storage.save('hasVisitedLearn', true);
     let screen = document.getElementById('learn-screen');
     if (!screen) {
         screen = document.createElement('div');
@@ -3696,70 +3842,139 @@ function initProfile() {
 
     // Explore cards
     const exploreEl = document.getElementById('profileExploreCards');
-    exploreEl.innerHTML = DATA.profileCapabilities.map(cap => `
-        <div class="scroll-card" onclick="${cap.action}" style="flex: 0 0 200px;">
-            <div class="scroll-card-icon">${cap.icon}</div>
-            <div class="scroll-card-category">${cap.label}</div>
-            <div class="scroll-card-title" style="font-size: var(--fs-body);">${cap.title}</div>
-            <div class="scroll-card-description">${cap.description}</div>
-        </div>
-    `).join('');
+    const caps = DATA.profileCapabilities;
+    const allDone = caps.every(c => c.isDone());
 
-    // Timeline — merge stored entries with reflection notes, sort by date desc
+    if (allDone) {
+        exploreEl.innerHTML = ''; // section disappears once all complete
+    } else {
+        exploreEl.innerHTML = caps.map(cap => {
+            const done = cap.isDone();
+            return `
+            <div class="scroll-card scroll-card-capability ${done ? 'scroll-card-done' : ''}"
+                 onclick="${done ? '' : cap.action}"
+                 style="flex: 0 0 200px; ${done ? 'cursor:default;' : ''}">
+                <div class="scroll-card-capability-status">
+                    ${done
+                        ? `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--success)" stroke-width="2.5" stroke-linecap="round"><polyline points="2 7 5.5 10.5 12 4"/></svg>`
+                        : `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="5.5"/></svg>`
+                    }
+                </div>
+                <div class="scroll-card-category">${cap.label}</div>
+                <div class="scroll-card-title" style="font-size: var(--fs-body);">${done ? cap.doneMessage : cap.title}</div>
+                <div class="scroll-card-description">${done ? '' : cap.description}</div>
+            </div>`;
+        }).join('');
+    }
+
+    // Timeline — merge stored entries with praise + reflection notes, sort by date desc
     const timelineEl = document.getElementById('timeline');
     if (timelineEl) {
         const firstEntryText = (level === 'not-assessed' || !appState.level)
             ? 'Joined plié'
             : `Completed placement quiz — ${(DATA.levelLabels[level] || 'BEGINNER').charAt(0) + (DATA.levelLabels[level] || 'BEGINNER').slice(1).toLowerCase()}`;
 
-        // Build unified entries array: stored timeline + reflections
-        const reflectionEntries = (appState.skillNotes || [])
-            .filter(n => n.isReflection)
+        // SVG icons per entry type
+        const TIMELINE_ICONS = {
+            session:    `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="2" width="10" height="10" rx="1.5"/><line x1="5" y1="5" x2="9" y2="5"/><line x1="5" y1="7.5" x2="9" y2="7.5"/><line x1="5" y1="10" x2="7" y2="10"/></svg>`,
+            milestone:  `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polygon points="7,1.5 8.8,5.2 13,5.7 10,8.6 10.7,12.8 7,10.8 3.3,12.8 4,8.6 1,5.7 5.2,5.2"/></svg>`,
+            assessment: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="2,10 5,6 8,8 12,3"/><line x1="2" y1="12" x2="12" y2="12"/></svg>`,
+            reflection: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 3c0-.6.4-1 1-1h8c.6 0 1 .4 1 1v5c0 .6-.4 1-1 1H6l-3 2.5V9H3c-.6 0-1-.4-1-1V3z"/><line x1="4.5" y1="5.5" x2="9.5" y2="5.5"/></svg>`,
+            praise:     `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polygon points="7,1.5 8.8,5.2 13,5.7 10,8.6 10.7,12.8 7,10.8 3.3,12.8 4,8.6 1,5.7 5.2,5.2"/></svg>`,
+            manual:     `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none"/></svg>`,
+        };
+
+        // Build unified entries: timeline + praise notes + reflection notes
+        const noteEntries = (appState.skillNotes || [])
+            .filter(n => n.isReflection || n.isPraise)
             .map(n => ({
-                _isReflection: true,
-                id:        n.id,
-                date:      n.date,
-                createdAt: n.createdAt,
-                text:      n.text,
+                _noteEntry: true,
+                _type:      n.isPraise ? 'praise' : 'reflection',
+                id:         n.id,
+                date:       n.date,
+                createdAt:  n.createdAt,
+                text:       n.text,
+                skillId:    n.skillId,
             }));
 
         const allEntries = [
-            ...(appState.timeline || []).map(e => ({ ...e, _isReflection: false })),
-            ...reflectionEntries,
+            ...(appState.timeline || []).map(e => ({ ...e, _noteEntry: false })),
+            ...noteEntries,
         ].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
-        const sessionEntries = allEntries.map(entry => {
-            if (entry._isReflection) {
+        // Date grouping helpers
+        const now = new Date();
+        const startOfToday    = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const startOfWeek     = new Date(startOfToday); startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
+        const startOfMonth    = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+        function getGroup(dateStr) {
+            const d = new Date(dateStr);
+            if (d >= startOfToday)     return 'Today';
+            if (d >= startOfWeek)      return 'This week';
+            if (d >= startOfMonth)     return 'This month';
+            if (d >= startOfLastMonth) return 'Last month';
+            return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+        }
+
+        // Group entries, preserving order
+        const groups = [];
+        let currentGroup = null;
+        allEntries.forEach(entry => {
+            const g = getGroup(entry.date || new Date(entry.createdAt || 0).toISOString().split('T')[0]);
+            if (g !== currentGroup) {
+                currentGroup = g;
+                groups.push({ label: g, entries: [] });
+            }
+            groups[groups.length - 1].entries.push(entry);
+        });
+
+        function renderTimelineEntry(entry) {
+            if (entry._noteEntry) {
+                const icon = TIMELINE_ICONS[entry._type] || TIMELINE_ICONS.manual;
+                const skillRef = entry.skillId ? DATA.skills.find(s => s.id === entry.skillId) : null;
+                const isReflection = entry._type === 'reflection';
                 return `
-                <div class="timeline-item timeline-item-reflection">
-                    <div class="timeline-dot timeline-dot-reflection"></div>
+                <div class="timeline-item timeline-item-${entry._type}">
+                    <div class="timeline-icon-wrap timeline-icon-${entry._type}">${icon}</div>
                     <div class="timeline-content">
-                        <div class="timeline-date">${formatTimelineDate(entry.date)}</div>
-                        <div class="timeline-title timeline-reflection-text">"${entry.text}"</div>
+                        <div class="timeline-entry-text ${isReflection ? 'timeline-reflection-text' : 'timeline-praise-text'}">${isReflection ? `"${entry.text}"` : entry.text}</div>
+                        ${skillRef ? `<div class="timeline-subtitle">${skillRef.french}</div>` : ''}
                     </div>
                 </div>`;
             }
-            const isTappable = entry.type === 'session' && entry.objectId;
+            const isPraise     = entry.isPraise;
+            const isTappable   = entry.type === 'session' && entry.objectId;
+            const iconType     = isPraise ? 'praise' : (entry.type || 'manual');
+            const icon         = TIMELINE_ICONS[iconType] || TIMELINE_ICONS.manual;
             return `
-            <div class="timeline-item ${isTappable ? 'timeline-item-tappable' : ''}"
+            <div class="timeline-item ${isTappable ? 'timeline-item-tappable' : ''} timeline-item-${entry.type || 'manual'}"
                  ${isTappable ? `onclick="showSessionDetail(${entry.objectId})"` : ''}>
-                <div class="timeline-dot ${entry.type === 'session' ? 'timeline-dot-session' : ''}"></div>
+                <div class="timeline-icon-wrap timeline-icon-${iconType}">${icon}</div>
                 <div class="timeline-content">
-                    <div class="timeline-date">${formatTimelineDate(entry.date)}</div>
-                    <div class="timeline-title">${entry.title}</div>
+                    <div class="timeline-title ${isPraise ? 'timeline-praise-text' : ''}">${entry.title}</div>
                     ${entry.body ? `<div class="timeline-subtitle">${entry.body}</div>` : ''}
                     ${isTappable ? `<div class="timeline-tap-hint">tap to review →</div>` : ''}
                 </div>
             </div>`;
-        }).join('');
+        }
+
+        const groupsHtml = groups.map(g => `
+            <div class="timeline-group">
+                <div class="timeline-group-label" id="tg-${g.label.replace(/\s/g,'-').toLowerCase()}">${g.label}</div>
+                ${g.entries.map(renderTimelineEntry).join('')}
+            </div>
+        `).join('');
 
         timelineEl.innerHTML = `
-            ${sessionEntries}
-            <div class="timeline-item">
-                <div class="timeline-dot"></div>
-                <div class="timeline-content">
-                    <div class="timeline-date">Today</div>
-                    <div class="timeline-title">${firstEntryText}</div>
+            ${groupsHtml}
+            <div class="timeline-group">
+                <div class="timeline-item">
+                    <div class="timeline-icon-wrap timeline-icon-manual">${TIMELINE_ICONS.manual}</div>
+                    <div class="timeline-content">
+                        <div class="timeline-title">${firstEntryText}</div>
+                    </div>
                 </div>
             </div>
         `;
@@ -4880,6 +5095,160 @@ function saveKnowledgeItem(skillId, popoverEl, type) {
 
 
 /* ═══════════════════════════════════════════════════════════════
+   GLOSSARY
+   All terms from the skill library + musicality vocabulary.
+   Definitions to be completed — marked as such.
+   ═══════════════════════════════════════════════════════════════ */
+
+// Musicality and theory terms not covered by skill pages
+const GLOSSARY_MUSIC_TERMS = [
+    { term: 'Bar',          category: 'Musicality' },
+    { term: 'Beat',         category: 'Musicality' },
+    { term: 'Count',        category: 'Musicality' },
+    { term: 'Downbeat',     category: 'Musicality' },
+    { term: 'Dynamics',     category: 'Musicality' },
+    { term: 'Phrase',       category: 'Musicality' },
+    { term: 'Tempo',        category: 'Musicality' },
+    { term: 'Upbeat',       category: 'Musicality' },
+    // Ballet vocabulary
+    { term: 'À la seconde', category: 'Position'   },
+    { term: 'Adagio',       category: 'Style'      },
+    { term: 'Allegro',      category: 'Style'      },
+    { term: 'Allongé',      category: 'Style'      },
+    { term: 'Ballon',       category: 'Quality'    },
+    { term: 'Battement',    category: 'Technique'  },
+    { term: 'Corps de ballet', category: 'Company' },
+    { term: 'Croisé',       category: 'Position'   },
+    { term: 'Effacé',       category: 'Position'   },
+    { term: 'En croix',     category: 'Direction'  },
+    { term: 'En dedans',    category: 'Direction'  },
+    { term: 'En dehors',    category: 'Direction'  },
+    { term: 'En face',      category: 'Position'   },
+    { term: 'Enchaînement', category: 'Structure'  },
+    { term: 'Épaulement',   category: 'Technique'  },
+    { term: 'Five positions', category: 'Foundation' },
+    { term: 'Pas de deux',  category: 'Structure'  },
+    { term: 'Port de bras', category: 'Technique'  },
+    { term: 'Relevé',       category: 'Technique'  },
+    { term: 'Retiré',       category: 'Position'   },
+    { term: 'Spotting',     category: 'Technique'  },
+    { term: 'Turnout',      category: 'Foundation' },
+];
+
+function buildGlossaryTerms() {
+    // Skill terms from DATA.skills
+    const skillTerms = DATA.skills.map(s => ({
+        term:       s.french,
+        alt:        s.english,
+        category:   s.category,
+        skillId:    s.id,
+        _isSkill:   true,
+    }));
+
+    // Merge with music/vocabulary terms
+    const all = [...skillTerms, ...GLOSSARY_MUSIC_TERMS];
+
+    // Sort alphabetically, stripping leading accents for sort key
+    return all.sort((a, b) => normaliseStr(a.term).localeCompare(normaliseStr(b.term)));
+}
+
+function showGlossary() {
+    let screen = document.getElementById('glossary-screen');
+    if (!screen) {
+        screen = document.createElement('div');
+        screen.className = 'screen';
+        screen.id = 'glossary-screen';
+        document.querySelector('.app-container').appendChild(screen);
+    }
+    renderGlossaryScreen('');
+    showScreen('glossary-screen');
+}
+
+function renderGlossaryScreen(query) {
+    const screen = document.getElementById('glossary-screen');
+    if (!screen) return;
+
+    const q = normaliseStr(query);
+    const terms = buildGlossaryTerms();
+    const filtered = q
+        ? terms.filter(t => normaliseStr(t.term).includes(q) || normaliseStr(t.alt || '').includes(q))
+        : terms;
+
+    // Group alphabetically
+    const groups = {};
+    filtered.forEach(t => {
+        const letter = normaliseStr(t.term)[0]?.toUpperCase() || '#';
+        if (!groups[letter]) groups[letter] = [];
+        groups[letter].push(t);
+    });
+
+    const lettersHtml = Object.keys(groups).sort().map(letter => `
+        <div class="glossary-group" id="gl-${letter}">
+            <div class="glossary-group-label">${letter}</div>
+            ${groups[letter].map(t => `
+                <div class="glossary-term-row ${t._isSkill ? 'glossary-term-skill' : ''}"
+                     ${t._isSkill ? `onclick="showSkillKnowledgePage('${t.skillId}', 'glossary-screen')"` : ''}>
+                    <div class="glossary-term-main">
+                        <span class="glossary-term-name">${t.term}</span>
+                        ${t.alt ? `<span class="glossary-term-alt">${t.alt}</span>` : ''}
+                    </div>
+                    <div class="glossary-term-meta">
+                        <span class="glossary-term-category">${t.category || ''}</span>
+                        ${t._isSkill
+                            ? `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="4 2 8 6 4 10"/></svg>`
+                            : `<span class="glossary-term-stub">definition coming soon</span>`}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `).join('');
+
+    // Alpha index for jump navigation
+    const indexLetters = Object.keys(groups).sort();
+    const indexHtml = indexLetters.map(l =>
+        `<button class="glossary-index-btn" onclick="document.getElementById('gl-${l}')?.scrollIntoView({behavior:'smooth', block:'start'})">
+            ${l}
+        </button>`
+    ).join('');
+
+    screen.innerHTML = `
+        <div class="skill-detail-header">
+            <button class="session-detail-back" onclick="navigateTo('learn')">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="13 4 7 10 13 16"/>
+                </svg>
+                learn
+            </button>
+            <span class="skill-lib-count">${terms.length} terms</span>
+        </div>
+
+        <div class="skill-lib-sticky">
+            <div class="skill-lib-search-wrapper">
+                <svg class="skill-lib-search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                    <circle cx="7" cy="7" r="5"/><line x1="11" y1="11" x2="14" y2="14"/>
+                </svg>
+                <input type="text" class="skill-lib-search" id="glossary-search"
+                       placeholder="Search terms…" autocomplete="off"
+                       oninput="renderGlossaryScreen(this.value)" />
+            </div>
+            <div class="glossary-stub-notice">
+                Definitions are being written — check back soon.
+            </div>
+        </div>
+
+        <div class="glossary-body" id="glossary-body">
+            ${lettersHtml}
+            ${filtered.length === 0 ? `<div class="skill-detail-empty-state">No terms match.</div>` : ''}
+        </div>
+
+        <div class="glossary-index">${indexHtml}</div>
+
+        <div style="height: 120px;"></div>
+    `;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
    7. SKILLS SYSTEM
    Skills rendering, filtering, flagging, phonetic toggles.
    ═══════════════════════════════════════════════════════════════ */
@@ -4987,6 +5356,7 @@ function resetProfile() {
     document.querySelectorAll('[id^="skill-detail-"]').forEach(el => el.remove());
     document.querySelectorAll('[id^="skill-knowledge-"]').forEach(el => el.remove());
     document.getElementById('skill-library-screen')?.remove();
+    document.getElementById('glossary-screen')?.remove();
 
     // Remove overlays
     document.getElementById('session-logger-overlay')?.remove();
