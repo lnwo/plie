@@ -868,6 +868,17 @@ function renderQuestion() {
     document.getElementById('assessmentCategory').textContent = question.category || '';
     document.getElementById('assessmentQuestion').textContent = question.question;
 
+    // Update progress counter
+    const counter = document.getElementById('assessmentCounter');
+    if (counter) {
+        counter.textContent = `${appState.currentQuestion + 1} / ${DATA.questions.length}`;
+    }
+    // Update progress bar
+    const bar = document.getElementById('assessmentProgressBar');
+    if (bar) {
+        bar.style.width = `${((appState.currentQuestion + 1) / DATA.questions.length) * 100}%`;
+    }
+
     const subtextEl = document.getElementById('assessmentSubtext');
     if (question.subtext) {
         subtextEl.textContent = question.subtext;
@@ -1651,11 +1662,24 @@ function renderNewSessionForm() {
 
             <div class="session-field">
                 <label class="session-field-label">Location <span class="session-field-optional">optional</span></label>
-                <input type="text" class="session-input"
-                       placeholder="e.g. Covent Garden Studio"
-                       value="${d.location}"
-                       oninput="appState._draftTemplate.location = this.value"
-                       maxlength="60" />
+                ${(() => {
+                    const savedLocations = [...new Set(
+                        appState.sessionTemplates
+                            .map(t => t.location)
+                            .filter(Boolean)
+                    )];
+                    const datalistId = 'location-suggestions';
+                    return `
+                        <input type="text" class="session-input" list="${datalistId}"
+                               placeholder="e.g. Covent Garden Studio"
+                               value="${d.location}"
+                               oninput="appState._draftTemplate.location = this.value"
+                               maxlength="60" />
+                        <datalist id="${datalistId}">
+                            ${savedLocations.map(loc => `<option value="${loc}">`).join('')}
+                        </datalist>
+                    `;
+                })()}
             </div>
 
             <div class="session-field">
@@ -2442,7 +2466,10 @@ function renderGoalCard(goal, completed) {
                     ${!completed ? `
                         <div class="goal-card-actions">
                             <button class="goal-action-btn" onclick="markGoalComplete('${goal.id}')">mark complete</button>
-                        </div>` : ''}
+                        </div>` : `
+                        <div class="goal-card-actions">
+                            <button class="goal-action-btn" onclick="reopenGoal('${goal.id}')">reopen</button>
+                        </div>`}
                 </div>
             </div>
         </div>
@@ -2744,6 +2771,15 @@ function markGoalComplete(goalId) {
         body:     goal.title,
         date:     new Date().toISOString().split('T')[0],
     });
+    if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
+    if (appState.currentScreen === 'profile') initProfile();
+}
+
+function reopenGoal(goalId) {
+    const goal = appState.goals.find(g => g.id === Number(goalId));
+    if (!goal) return;
+    goal.completedAt = null;
+    storage.save('goals', appState.goals);
     if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
     if (appState.currentScreen === 'profile') initProfile();
 }
@@ -3136,6 +3172,9 @@ function showSkillDetail(skillId, returnTo) {
         document.querySelector('.app-container').appendChild(screen);
     }
 
+    // Store returnTo so saveSkillNote can use it after re-render
+    appState._skillDetailReturnTo = returnTo;
+
     // ── Corrections for this skill ──
     const allCorrections = appState.corrections
         .filter(c => c.skillId === skillId)
@@ -3183,8 +3222,10 @@ function showSkillDetail(skillId, returnTo) {
             </button>` : ''}
         <div class="skill-add-note-row">
             <textarea class="session-block-textarea" id="skill-new-note"
-                      placeholder="Add a note…" rows="2"
-                      oninput="autoResizeTextarea(this)"></textarea>
+                      placeholder="Add a note… (tap save or press ⌘↵)"
+                      rows="2"
+                      oninput="autoResizeTextarea(this)"
+                      onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter'){saveSkillNote('${skillId}');event.preventDefault();}"></textarea>
             <button class="skill-add-note-btn" onclick="saveSkillNote('${skillId}')">save</button>
         </div>
     `;
@@ -3269,7 +3310,7 @@ function showSkillDetail(skillId, returnTo) {
             </div>
 
             <!-- Notes -->
-            <div class="skill-detail-section">
+            <div class="skill-detail-section" id="skill-notes-section-${skillId}">
                 <div class="skill-detail-section-header">
                     <div class="skill-detail-section-label">My notes</div>
                 </div>
@@ -3348,7 +3389,10 @@ function expandSkillNotes(skillId) {
 function saveSkillNote(skillId) {
     const textarea = document.getElementById('skill-new-note');
     const text = textarea?.value?.trim();
-    if (!text) return;
+    if (!text) {
+        textarea?.focus();
+        return;
+    }
 
     appState.skillNotes = appState.skillNotes || [];
     appState.skillNotes.push({
@@ -3360,8 +3404,56 @@ function saveSkillNote(skillId) {
     });
     storage.save('skillNotes', appState.skillNotes);
 
-    // Refresh the skill detail view
-    showSkillDetail(skillId, appState.currentScreen);
+    // Re-render the notes section only — don't full-refresh the screen
+    const notesSection = document.getElementById(`skill-notes-section-${skillId}`);
+    if (notesSection) {
+        renderSkillNotesSectionInPlace(skillId, notesSection);
+    } else {
+        // Fall back to full screen refresh preserving the current screen as returnTo
+        const screenId = `skill-detail-${skillId}`;
+        showSkillDetail(skillId, appState._skillDetailReturnTo || 'barre-screen');
+    }
+}
+
+function renderSkillNotesSectionInPlace(skillId, sectionEl) {
+    const skillNotes = (appState.skillNotes || [])
+        .filter(n => n.skillId === skillId)
+        .sort((a, b) => b.createdAt - a.createdAt);
+
+    const NOTES_PREVIEW = 2;
+    const notesHaveMore = skillNotes.length > NOTES_PREVIEW;
+    const visibleNotes = skillNotes.slice(0, NOTES_PREVIEW);
+
+    const notesHtml = `
+        <div id="skill-notes-list">
+            ${visibleNotes.map(n => `
+                <div class="skill-note-entry">
+                    <div class="skill-note-date">${formatTimelineDate(n.date)}</div>
+                    <div class="skill-note-text">${n.text}</div>
+                </div>
+            `).join('')}
+            ${skillNotes.length === 0 ? `<div class="skill-detail-empty-state">No notes yet.</div>` : ''}
+        </div>
+        ${notesHaveMore ? `
+            <button class="skill-see-more-btn" onclick="expandSkillNotes('${skillId}')">
+                see all ${skillNotes.length} notes
+            </button>` : ''}
+        <div class="skill-add-note-row">
+            <textarea class="session-block-textarea" id="skill-new-note"
+                      placeholder="Add a note… (tap save or press ⌘↵)"
+                      rows="2"
+                      oninput="autoResizeTextarea(this)"
+                      onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter'){saveSkillNote('${skillId}');event.preventDefault();}"></textarea>
+            <button class="skill-add-note-btn" onclick="saveSkillNote('${skillId}')">save</button>
+        </div>
+    `;
+
+    sectionEl.innerHTML = `
+        <div class="skill-detail-section-header">
+            <div class="skill-detail-section-label">My notes</div>
+        </div>
+        ${notesHtml}
+    `;
 }
 
 function toggleSkillFocus(skillId) {
@@ -3385,13 +3477,13 @@ function toggleSkillFocus(skillId) {
 
 function openGoalCreatorForSkill(skillId) {
     openGoalCreator();
-    requestAnimationFrame(() => {
-        if (appState._goalDraft) {
-            appState._goalDraft.skillId = skillId;
-            const select = document.getElementById('goal-skill-select');
-            if (select) select.value = skillId;
-        }
-    });
+    // _goalDraft is set by openGoalCreator — update skillId immediately
+    if (appState._goalDraft) appState._goalDraft.skillId = skillId;
+    // Also update the select once DOM renders
+    setTimeout(() => {
+        const select = document.getElementById('goal-skill-select');
+        if (select) select.value = skillId || '';
+    }, 50);
 }
 
 function closeSkillDetail(skillId, returnTo) {
@@ -3663,11 +3755,21 @@ function showSkillKnowledgePage(skillId, returnTo) {
     const isStub = !SKILL_KNOWLEDGE[skillId];
 
     const keyCuesHtml = knowledge.keyCues.length > 0
-        ? knowledge.keyCues.map(cue => `<li class="skill-know-list-item">${cue}</li>`).join('')
+        ? knowledge.keyCues.map((cue, i) => `
+            <li class="skill-know-list-item skill-know-tappable"
+                onclick="showKnowledgeItemPopover(this, '${skillId}', ${JSON.stringify(cue).replace(/'/g, "&#39;")}, 'note')">
+                ${cue}
+                <span class="skill-know-save-hint">tap to save</span>
+            </li>`).join('')
         : '<li class="skill-know-list-item skill-know-stub">Content coming soon</li>';
 
     const correctionsHtml = knowledge.commonCorrections.length > 0
-        ? knowledge.commonCorrections.map(c => `<li class="skill-know-list-item skill-know-correction">${c}</li>`).join('')
+        ? knowledge.commonCorrections.map((c, i) => `
+            <li class="skill-know-list-item skill-know-correction skill-know-tappable"
+                onclick="showKnowledgeItemPopover(this, '${skillId}', ${JSON.stringify(c).replace(/'/g, "&#39;")}, 'correction')">
+                ${c}
+                <span class="skill-know-save-hint">tap to save</span>
+            </li>`).join('')
         : '<li class="skill-know-list-item skill-know-stub">Content coming soon</li>';
 
     const musclesHtml = knowledge.muscles.length > 0
@@ -3767,6 +3869,87 @@ function closeSkillKnowledgePage(skillId, returnTo) {
         showScreen(returnTo);
     } else {
         showLearnSkillLibrary();
+    }
+}
+
+function showKnowledgeItemPopover(element, skillId, text, defaultType) {
+    // Remove any existing popover
+    document.querySelectorAll('.knowledge-item-popover').forEach(p => p.remove());
+    element.querySelectorAll('.knowledge-item-popover').forEach(p => p.remove());
+
+    const popover = document.createElement('div');
+    popover.className = 'knowledge-item-popover';
+    popover.innerHTML = `
+        <div class="knowledge-popover-label">Save to my ${DATA.skills.find(s => s.id === skillId)?.french || 'skill'}?</div>
+        <div class="knowledge-popover-actions">
+            <button class="knowledge-popover-btn" onclick="saveKnowledgeItem('${skillId}', this.closest('.knowledge-item-popover'), 'note')">
+                as a note
+            </button>
+            <button class="knowledge-popover-btn knowledge-popover-btn-correction" onclick="saveKnowledgeItem('${skillId}', this.closest('.knowledge-item-popover'), 'correction')">
+                as a correction
+            </button>
+            <button class="knowledge-popover-btn knowledge-popover-dismiss" onclick="this.closest('.knowledge-item-popover').remove()">
+                dismiss
+            </button>
+        </div>
+    `;
+    // Store text on the popover element for saveKnowledgeItem to read
+    popover.dataset.text = text;
+    element.appendChild(popover);
+
+    // Close if user taps elsewhere
+    setTimeout(() => {
+        document.addEventListener('click', function closePopover(e) {
+            if (!popover.contains(e.target) && e.target !== element) {
+                popover.remove();
+                document.removeEventListener('click', closePopover);
+            }
+        }, { once: false });
+    }, 10);
+}
+
+function saveKnowledgeItem(skillId, popoverEl, type) {
+    const text = popoverEl?.dataset?.text;
+    if (!text) return;
+
+    const now = Date.now();
+    const today = new Date().toISOString().split('T')[0];
+
+    if (type === 'correction') {
+        appState.corrections.push({
+            id:          now,
+            skillId,
+            text,
+            createdAt:   now,
+            sessionId:   null,
+            source:      'self',
+            type:        'technical',
+            isRecurring: false,
+        });
+        storage.save('corrections', appState.corrections);
+    } else {
+        appState.skillNotes = appState.skillNotes || [];
+        appState.skillNotes.push({
+            id:        now,
+            skillId,
+            text,
+            date:      today,
+            createdAt: now,
+        });
+        storage.save('skillNotes', appState.skillNotes);
+    }
+
+    // Visual feedback — replace popover with confirmation
+    if (popoverEl) {
+        popoverEl.innerHTML = `<div class="knowledge-popover-saved">saved ✓</div>`;
+        setTimeout(() => popoverEl.remove(), 1200);
+    }
+
+    // Flag the skill as active in The Barre if it isn't already
+    const skill = appState.skills.find(s => s.id === skillId);
+    if (skill && !skill.flagged) {
+        skill.flagged = true;
+        persistSkillState();
     }
 }
 
