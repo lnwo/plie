@@ -233,3 +233,56 @@ DEFERRED → BUILT NOT VERIFIED:
   Milestone scroll cap   → BUILT NOT VERIFIED
   Completed see-all      → BUILT NOT VERIFIED
   Completion toast       → BUILT NOT VERIFIED
+
+---
+
+## v4.2.1 → v4.3 delta (deferred items cleared)
+
+### Status changes
+
+DEFERRED → CONFIRMED WORKING:
+- Quiz deselect: selectOption now toggles — tapping a selected option clears it
+- Centre question: rewritten as comfort-framed ("In your most recent classes…")
+- Assessment results: "what to work on" panel added with per-dimension tips
+  for bottom 2 weak dimensions (barre, centre, allegro, turns, flexibility)
+- Barre focus banner: cycles through ALL weak dimensions in order each visit
+  (_barreVisitCount increments per visit, wraps around)
+  Shows stage label alongside dimension name. Handles not-assessed state.
+- Session template delete: × button on each combobox row (onmousedown,
+  stopPropagation so it doesn't trigger template selection)
+- Goal-from-skill scrolls to goal: navigateToGoal(id) navigates then
+  scrollIntoView with 100ms delay for render
+- Swipe reopen text: padding widened to sp-xl, min-width 80px on action panels
+
+DEFERRED → BUILT NOT VERIFIED:
+- Collapsing skill detail hero: IntersectionObserver fires when hero scrolls
+  behind sticky header; compressed name + difficulty badge + last-worked date
+  fade in. Focus toggle becomes target icon (32×32 circle button).
+- Tap-to-save inline on knowledge page: replaced floating popover with
+  element.after(bar) inline insertion that pushes content down. Uses
+  onmousedown. Scrolls bar into view after insertion.
+- Muscles expandable: "why these muscles?" button below chips expands
+  inline context paragraph (toggleMuscleContext). muscleContext field added
+  to all 4 fully-written SKILL_KNOWLEDGE entries.
+- Glossary: showGlossary() / renderGlossaryScreen() — confirmed syntax-clean
+
+### New data fields
+- SKILL_KNOWLEDGE entries: muscleContext (string) — biomechanical explanation
+- appState._barreVisitCount: tracks rotation index for focus banner
+
+### Updated status table
+  Quiz deselect              → CONFIRMED WORKING
+  Centre question            → CONFIRMED WORKING
+  Assessment focus areas     → CONFIRMED WORKING
+  Barre rotation             → CONFIRMED WORKING
+  Template delete UI         → CONFIRMED WORKING
+  Goal-from-skill scroll     → CONFIRMED WORKING
+  Swipe reopen text          → CONFIRMED WORKING
+  Collapsing hero            → BUILT NOT VERIFIED
+  Tap-to-save inline         → BUILT NOT VERIFIED
+  Muscles expandable         → BUILT NOT VERIFIED
+
+### Remaining DEFERRED
+  - Sticky header device verification (CSS applied, unconfirmed on device)
+  - Learn tab content (composers, variations, dancers, knowledge stubs)
+  - Glossary definitions (content work)

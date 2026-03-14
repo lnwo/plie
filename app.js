@@ -1013,9 +1013,12 @@ function renderQuestion() {
 }
 
 function selectOption(key, value) {
-    appState.answers[key] = value;
+    // Deselect if tapping the already-selected option
+    const alreadySelected = appState.answers[key] === value;
+    appState.answers[key] = alreadySelected ? undefined : value;
     document.querySelectorAll('#assessmentOptions .assessment-option, #assessmentOptions .persona-card')
-        .forEach(btn => btn.classList.toggle('selected', parseInt(btn.dataset.idx) === value));
+        .forEach(btn => btn.classList.toggle('selected',
+            !alreadySelected && parseInt(btn.dataset.idx) === value));
 }
 
 function toggleMultiSelect(key, value) {
@@ -1180,6 +1183,40 @@ function calculateResults() {
     document.getElementById('resultLevelDescription').textContent = levelDescription;
     document.getElementById('resultStrength').textContent = strength;
     document.getElementById('resultFocus').textContent = focus;
+
+    // What to work on — specific suggestions per weak dimension
+    const FOCUS_SUGGESTIONS = {
+        barre:       { label: 'Barre work',   tips: ['Focus on the quality of each exercise over speed', 'Work on maintaining turnout through the whole foot', 'Use the barre lightly — build balance away from it'] },
+        centre:      { label: 'Centre work',  tips: ['Spend extra time at the start of class setting your alignment', 'Slow adagio practice helps build centre balance', 'Work on port de bras to connect movement through the body'] },
+        allegro:     { label: 'Jumps',        tips: ['Strengthen your demi-plié — it drives every jump', 'Land through the foot: toes, ball, heel', 'Start with petit allegro and build speed gradually'] },
+        turns:       { label: 'Turns',        tips: ['Your preparation determines the turn — don\'t rush it', 'Spot a fixed point and whip the head', 'Practise the end position (landing) as much as the turn itself'] },
+        flexibility: { label: 'Flexibility',  tips: ['Consistent daily stretching matters more than intensity', 'Warm up fully before any deep stretching', 'Work on hip flexor and hamstring length for higher extensions'] },
+    };
+
+    const weakDims = answeredCoreDims
+        .sort((a, b) => a[1] - b[1])
+        .slice(0, 2)
+        .map(([k]) => k)
+        .filter(k => FOCUS_SUGGESTIONS[k]);
+
+    const workOnEl = document.getElementById('resultWorkOn');
+    if (workOnEl && weakDims.length > 0) {
+        workOnEl.innerHTML = `
+            <p style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:var(--sp-md);">What to work on</p>
+            ${weakDims.map(k => {
+                const s = FOCUS_SUGGESTIONS[k];
+                return `
+                    <div style="margin-bottom:var(--sp-md);">
+                        <p style="font-size:var(--fs-small);font-weight:700;color:var(--primary);margin-bottom:var(--sp-xs);">${s.label}</p>
+                        <ul style="list-style:none;display:flex;flex-direction:column;gap:4px;">
+                            ${s.tips.map(t => `<li style="font-size:var(--fs-small);color:var(--text-secondary);padding-left:var(--sp-md);position:relative;"><span style="position:absolute;left:0;color:var(--accent);">—</span>${t}</li>`).join('')}
+                        </ul>
+                    </div>`;
+            }).join('')}
+        `;
+    } else if (workOnEl) {
+        workOnEl.style.display = 'none';
+    }
 }
 
 function showProfile() { showScreen('profile'); }
@@ -1573,8 +1610,17 @@ function renderSessionComboboxDropdown(query) {
 
     const matchRows = matches.map(t => `
         <div class="session-combobox-row" onmousedown="selectSessionTemplate(${t.id})">
-            <span class="session-combobox-row-name">${t.name}</span>
-            <span class="session-combobox-row-meta">${[t.location, t.days?.join(', ')].filter(Boolean).join(' · ')}</span>
+            <div class="session-combobox-row-info">
+                <span class="session-combobox-row-name">${t.name}</span>
+                <span class="session-combobox-row-meta">${[t.location, t.days?.join(', ')].filter(Boolean).join(' · ')}</span>
+            </div>
+            <button class="session-combobox-row-delete"
+                    onmousedown="event.stopPropagation(); deleteSessionTemplate(${t.id});"
+                    title="Remove saved session">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <line x1="2" y1="2" x2="10" y2="10"/><line x1="10" y1="2" x2="2" y2="10"/>
+                </svg>
+            </button>
         </div>
     `).join('');
 
@@ -2706,9 +2752,26 @@ function showBarreScreen() {
     const activeSkills = appState.skills.filter(s => s.flagged || s.tracked);
     const dims = appState.dimensions || {};
     const dimLabels = { barre: 'Barre', centre: 'Centre', allegro: 'Allegro', turns: 'Turns', flexibility: 'Flexibility' };
-    const coreDims = { barre: dims.barre?.raw ?? 1, centre: dims.centre?.raw ?? 1, allegro: dims.allegro?.raw ?? 1, turns: dims.turns?.raw ?? 1, flexibility: dims.flexibility?.raw ?? 1 };
-    const weakest = Object.entries(coreDims).sort((a, b) => a[1] - b[1])[0];
-    const weakLabel = dimLabels[weakest[0]] || 'Technique';
+    const coreDims = { barre: dims.barre?.raw ?? null, centre: dims.centre?.raw ?? null, allegro: dims.allegro?.raw ?? null, turns: dims.turns?.raw ?? null, flexibility: dims.flexibility?.raw ?? null };
+
+    // Rotate through weak dimensions on each visit — cycle index stored in appState
+    const assessedDims = Object.entries(coreDims)
+        .filter(([, v]) => v !== null)
+        .sort((a, b) => a[1] - b[1]); // weakest first
+    const weakDimKeys = assessedDims.map(([k]) => k);
+
+    let contextText = '';
+    if (weakDimKeys.length === 0) {
+        contextText = 'Complete your assessment to get personalised focus areas';
+    } else {
+        // Rotate index each visit
+        appState._barreVisitCount = (appState._barreVisitCount || 0) + 1;
+        const rotateIdx = (appState._barreVisitCount - 1) % weakDimKeys.length;
+        const focusDim = weakDimKeys[rotateIdx];
+        const dimLabel = dimLabels[focusDim] || focusDim;
+        const stageLabel = dims[focusDim]?.label || '';
+        contextText = `${dimLabel} could use attention${stageLabel ? ` — ${stageLabel}` : ''}`;
+    }
 
     let activeSkillsHtml = '';
     if (activeSkills.length > 0) {
@@ -2767,7 +2830,7 @@ function showBarreScreen() {
         <div class="profile-header"><h1>The Barre</h1></div>
         <div class="barre-context">
             <span class="barre-context-badge">${(appState.level || 'beginner').replace('-', ' ')}</span>
-            <span class="barre-context-text">${weakLabel} could use the most attention</span>
+            <span class="barre-context-text">${contextText}</span>
         </div>
         <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);">
             <div class="profile-action-card hero" onclick="openSessionLogger()">
@@ -4247,7 +4310,7 @@ function showSkillDetail(skillId, returnTo) {
     const linkedGoals = (appState.goals || []).filter(g => g.skillId === skillId && !g.completedAt);
     const goalsHtml = linkedGoals.length > 0
         ? linkedGoals.map(g => `
-            <div class="skill-linked-goal" onclick="navigateTo('goals')">
+            <div class="skill-linked-goal" onclick="navigateToGoal(${g.id})">
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="6" r="5"/><circle cx="6" cy="6" r="2.5"/></svg>
                 <span>${g.title}</span>
             </div>`).join('')
@@ -4317,22 +4380,27 @@ function showSkillDetail(skillId, returnTo) {
     screen.innerHTML = `
         <div class="skill-detail-view">
 
-            <!-- Header -->
-            <div class="skill-detail-header">
+            <!-- Sticky header — shows compressed name once hero scrolls away -->
+            <div class="skill-detail-header" id="skill-detail-header-${skillId}">
                 <button class="session-detail-back" onclick="closeSkillDetail('${skillId}', '${returnTo}')">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="13 4 7 10 13 16"/>
                     </svg>
                     back
                 </button>
-                <button class="skill-focus-btn ${isFlagged ? 'active' : ''}"
+                <div class="skill-detail-header-collapsed" id="skill-detail-collapsed-${skillId}">
+                    <span class="skill-detail-collapsed-name">${refSkill.french}</span>
+                    <span class="difficulty-badge difficulty-${refSkill.difficulty}">${refSkill.difficulty}</span>
+                    ${lastSession ? `<span class="skill-detail-collapsed-date">${formatTimelineDate(lastSession.date)}</span>` : ''}
+                </div>
+                <button class="skill-focus-btn ${isFlagged ? 'active' : ''}" id="skill-focus-btn-${skillId}"
                         onclick="toggleSkillFocus('${skillId}')">
-                    ${isFlagged ? '● in focus' : '○ add to focus'}
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><circle cx="7" cy="7" r="2"/></svg>
                 </button>
             </div>
 
-            <!-- Hero -->
-            <div class="skill-detail-hero">
+            <!-- Hero — scrolls away, triggers collapsed header -->
+            <div class="skill-detail-hero" id="skill-hero-${skillId}">
                 <div class="skill-detail-category">${refSkill.category}</div>
                 <h1 class="skill-detail-title">${refSkill.french}</h1>
                 <div class="skill-detail-phonetic">${refSkill.phonetic}</div>
@@ -4395,6 +4463,17 @@ function showSkillDetail(skillId, returnTo) {
     `;
 
     showScreen(screenId);
+
+    // Collapse header when hero scrolls out of view
+    requestAnimationFrame(() => {
+        const hero = document.getElementById(`skill-hero-${skillId}`);
+        const collapsed = document.getElementById(`skill-detail-collapsed-${skillId}`);
+        if (!hero || !collapsed) return;
+        const obs = new IntersectionObserver(([entry]) => {
+            collapsed.classList.toggle('visible', !entry.isIntersecting);
+        }, { threshold: 0, rootMargin: '-56px 0px 0px 0px' });
+        obs.observe(hero);
+    });
 }
 
 function renderSkillCorrectionRow(correction) {
@@ -4585,15 +4664,14 @@ function toggleSkillFocus(skillId) {
     skill.flagged = !skill.flagged;
     persistSkillState();
 
-    // Update the button in place without full re-render
-    const btn = document.querySelector('.skill-focus-btn');
+    // Update the focus button in place
+    const btn = document.getElementById(`skill-focus-btn-${skillId}`) || document.querySelector('.skill-focus-btn');
     if (btn) {
         btn.className = `skill-focus-btn ${skill.flagged ? 'active' : ''}`;
-        btn.textContent = skill.flagged ? '● in focus' : '○ add to focus';
     }
 
-    // If unflagging and The Barre is visible, refresh it
-    if (!skill.flagged && document.getElementById('barre-screen')?.classList.contains('active')) {
+    // If The Barre is the current screen, refresh it
+    if (document.getElementById('barre-screen')?.classList.contains('active')) {
         showBarreScreen();
     }
 }
@@ -4607,6 +4685,17 @@ function openGoalCreatorForSkill(skillId) {
         const select = document.getElementById('goal-skill-select');
         if (select) select.value = skillId || '';
     }, 50);
+}
+
+function navigateToGoal(goalId) {
+    navigateTo('goals');
+    // After goals screen renders, scroll to the specific goal card
+    requestAnimationFrame(() => {
+        setTimeout(() => {
+            const row = document.querySelector(`.swipe-row[data-goal-id="${goalId}"]`);
+            if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+    });
 }
 
 function closeSkillDetail(skillId, returnTo) {
@@ -4835,6 +4924,7 @@ const SKILL_KNOWLEDGE = {
         musicality: 'Typically performed in slow 4/4 or 3/4 time. The descent follows the musical phrase down; the rise follows it back up. Breathe with the movement.',
         commonCorrections: ['Don\'t let the knees roll inward', 'Keep the weight even across the whole foot', 'Don\'t grip the barre — use it lightly for balance only'],
         muscles: ['Quadriceps (lowering and controlling)', 'Glutes and hip rotators (maintaining turnout)', 'Core (maintaining posture)'],
+        muscleContext: 'The quadriceps control the descent eccentrically — they lengthen under load rather than shorten, which is why pliés build strength differently from a squat. The glutes and external hip rotators work constantly to maintain turnout against gravity. Core engagement keeps the pelvis neutral and prevents the lower back from compensating.',
         buildsOn: [],
         leadsTo: ['tendu', 'fondu', 'pirouette'],
     },
@@ -4844,6 +4934,7 @@ const SKILL_KNOWLEDGE = {
         musicality: 'Often 2/4 or 4/4. Each tendu takes one or two counts. In combinations, tendus create the rhythm of the phrase.',
         commonCorrections: ['Keep the standing hip down', 'Don\'t sickle the foot', 'Maintain the heel forward in the working leg'],
         muscles: ['Foot intrinsics and calf (pointing)', 'Hip flexors and extensors (extending and returning)', 'Core and standing-leg glute (stability)'],
+        muscleContext: 'The intrinsic foot muscles and calf work together to create a fully articulated point — toe, ball, arch, heel in sequence. The hip flexors initiate the extension while the extensors control its range. On the standing side, the glute and core stabilise the pelvis so the hip doesn\'t hike as the working leg extends.',
         buildsOn: ['plie'],
         leadsTo: ['degage', 'grand-battement', 'arabesque'],
     },
@@ -4853,6 +4944,7 @@ const SKILL_KNOWLEDGE = {
         musicality: 'Usually initiated on a strong beat. Single pirouettes typically take one count; multiples occupy a phrase. The landing should land on the music, not after it.',
         commonCorrections: ['Spot earlier — the head should lead, not follow', 'Don\'t lean forward on the supporting leg', 'Keep the arms firmly in position — don\'t let them open out'],
         muscles: ['Calves and foot intrinsics (relevé on supporting leg)', 'Core (maintaining axis)', 'Hip rotators (holding retiré)', 'Neck and eyes (spotting)'],
+        muscleContext: 'The calf and foot must be strong enough to balance on a single relevé while the body rotates — this is often the limiting factor in multiple turns. The core provides the vertical axis; any collapse or lean causes the turn to spiral off. The hip rotators hold the retiré position against centrifugal force. The sternocleidomastoid and eye muscles coordinate spotting — which is partly a vestibular reflex that can be trained.',
         buildsOn: ['plie', 'tendu', 'degage'],
         leadsTo: ['fouette', 'manege'],
     },
@@ -4862,6 +4954,7 @@ const SKILL_KNOWLEDGE = {
         musicality: 'Often held for a full phrase or used as the ending position of an adagio sequence. The quality should be sustained and musical, not static.',
         commonCorrections: ['Don\'t tilt the pelvis — height comes from the hip, not the back', 'Keep the standing hip over the standing foot', 'Don\'t let the supporting shoulder drop'],
         muscles: ['Glutes and hamstrings (lifting the back leg)', 'Spinal extensors (maintaining the back line)', 'Hip flexors of the standing leg (balance)', 'Core (stabilisation)'],
+        muscleContext: 'The glutes and hamstrings of the working leg extend the hip to lift it behind. Critically, the spinal extensors must work without compressing the lumbar spine — height comes from hip extension, not back arch. On the standing side, the hip flexors work isometrically to prevent the pelvis from posteriorly tilting. Core engagement ties both sides together into a single long line.',
         buildsOn: ['tendu', 'developpe'],
         leadsTo: ['attitude', 'grand-jete'],
     },
@@ -4913,7 +5006,18 @@ function showSkillKnowledgePage(skillId, returnTo) {
         : '<li class="skill-know-list-item skill-know-stub">Content coming soon</li>';
 
     const musclesHtml = knowledge.muscles.length > 0
-        ? knowledge.muscles.map(m => `<span class="skill-know-muscle-chip">${m}</span>`).join('')
+        ? `<div class="skill-know-muscles">
+               ${knowledge.muscles.map(m => `<span class="skill-know-muscle-chip">${m}</span>`).join('')}
+           </div>
+           ${knowledge.muscleContext ? `
+           <div class="skill-know-muscle-expand" id="muscle-expand-${skillId}">
+               <button class="skill-know-muscle-why" onmousedown="toggleMuscleContext('${skillId}')">
+                   why these muscles?
+               </button>
+               <div class="skill-know-muscle-context" id="muscle-context-${skillId}" style="display:none;">
+                   ${knowledge.muscleContext}
+               </div>
+           </div>` : ''}`
         : '<span class="skill-know-stub">Content coming soon</span>';
 
     const buildsOnHtml = knowledge.buildsOn.length > 0
@@ -4982,7 +5086,7 @@ function showSkillKnowledgePage(skillId, returnTo) {
             <!-- Muscles -->
             <div class="skill-know-section">
                 <div class="skill-know-section-label">Muscles involved</div>
-                <div class="skill-know-muscles">${musclesHtml}</div>
+                ${musclesHtml}
             </div>
 
             <!-- Skill web -->
@@ -5004,6 +5108,15 @@ function showSkillKnowledgePage(skillId, returnTo) {
     showScreen(screenId);
 }
 
+function toggleMuscleContext(skillId) {
+    const ctx = document.getElementById(`muscle-context-${skillId}`);
+    const btn = document.querySelector(`#muscle-expand-${skillId} .skill-know-muscle-why`);
+    if (!ctx) return;
+    const isOpen = ctx.style.display !== 'none';
+    ctx.style.display = isOpen ? 'none' : 'block';
+    if (btn) btn.textContent = isOpen ? 'why these muscles?' : 'hide';
+}
+
 function closeSkillKnowledgePage(skillId, returnTo) {
     if (returnTo) {
         showScreen(returnTo);
@@ -5013,39 +5126,33 @@ function closeSkillKnowledgePage(skillId, returnTo) {
 }
 
 function showKnowledgeItemPopover(element, skillId, text, defaultType) {
-    // Remove any existing popover
+    // Remove any existing inline saves
     document.querySelectorAll('.knowledge-item-popover').forEach(p => p.remove());
-    element.querySelectorAll('.knowledge-item-popover').forEach(p => p.remove());
 
-    const popover = document.createElement('div');
-    popover.className = 'knowledge-item-popover';
-    popover.innerHTML = `
+    // If this element already has an open save bar, close it
+    if (element.querySelector('.knowledge-item-popover')) return;
+
+    const bar = document.createElement('div');
+    bar.className = 'knowledge-item-popover';
+    bar.innerHTML = `
         <div class="knowledge-popover-label">Save to my ${DATA.skills.find(s => s.id === skillId)?.french || 'skill'}?</div>
         <div class="knowledge-popover-actions">
-            <button class="knowledge-popover-btn" onclick="saveKnowledgeItem('${skillId}', this.closest('.knowledge-item-popover'), 'note')">
+            <button class="knowledge-popover-btn" onmousedown="saveKnowledgeItem('${skillId}', this.closest('.knowledge-item-popover'), 'note')">
                 as a note
             </button>
-            <button class="knowledge-popover-btn knowledge-popover-btn-correction" onclick="saveKnowledgeItem('${skillId}', this.closest('.knowledge-item-popover'), 'correction')">
+            <button class="knowledge-popover-btn knowledge-popover-btn-correction" onmousedown="saveKnowledgeItem('${skillId}', this.closest('.knowledge-item-popover'), 'correction')">
                 as a correction
             </button>
-            <button class="knowledge-popover-btn knowledge-popover-dismiss" onclick="this.closest('.knowledge-item-popover').remove()">
+            <button class="knowledge-popover-btn knowledge-popover-dismiss" onmousedown="this.closest('.knowledge-item-popover').remove()">
                 dismiss
             </button>
         </div>
     `;
-    // Store text on the popover element for saveKnowledgeItem to read
-    popover.dataset.text = text;
-    element.appendChild(popover);
+    bar.dataset.text = text;
 
-    // Close if user taps elsewhere
-    setTimeout(() => {
-        document.addEventListener('click', function closePopover(e) {
-            if (!popover.contains(e.target) && e.target !== element) {
-                popover.remove();
-                document.removeEventListener('click', closePopover);
-            }
-        }, { once: false });
-    }, 10);
+    // Insert inline below the tapped item — pushes content down
+    element.after(bar);
+    bar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function saveKnowledgeItem(skillId, popoverEl, type) {
