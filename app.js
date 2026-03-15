@@ -1016,20 +1016,19 @@ let currentOnboardingScreen = 1;
 const totalOnboardingScreens = 3;
 
 function nextOnboarding() {
-
-  const current = document.querySelector('.onboarding-screen.active');
-  if (!current) return;
-
-  const next = current.nextElementSibling;
-
-  current.classList.remove('active');
-
-  if (next && next.classList.contains('onboarding-screen')) {
-    next.classList.add('active');
-  } else {
-    completeOnboarding();
-  }
-
+    const currentEl = document.getElementById(`onboarding-${currentOnboardingScreen}`);
+    if (currentEl) currentEl.classList.remove('active');
+    if (currentOnboardingScreen < totalOnboardingScreens) {
+        currentOnboardingScreen++;
+        const nextEl = document.getElementById(`onboarding-${currentOnboardingScreen}`);
+        if (nextEl) {
+            nextEl.classList.add('active');
+        } else {
+            completeOnboarding(); // element missing — bail out gracefully
+        }
+    } else {
+        completeOnboarding();
+    }
 }
 
 function completeOnboarding() {
