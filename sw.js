@@ -1,4 +1,4 @@
-const CACHE_NAME = 'plie-v1';
+const CACHE_NAME = 'plie-v2';
 const ASSETS_TO_CACHE = [
     '/ballet-app.html',
     '/manifest.json',
