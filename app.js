@@ -7050,6 +7050,17 @@ function handlePicUpload(input) {
     reader.readAsDataURL(file);
 }
 
+document.addEventListener('DOMContentLoaded', initUI);
+
+function initUI() {
+  const startBtn = document.getElementById('getStartedBtn');
+  if (startBtn) startBtn.addEventListener('click', nextOnboarding);
+
+  document.querySelectorAll('[data-onboarding-next]').forEach(btn => {
+    btn.addEventListener('click', nextOnboarding);
+  });
+}
+
 // Service Worker
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
