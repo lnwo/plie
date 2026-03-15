@@ -1010,17 +1010,23 @@ let currentOnboardingScreen = 1;
 const totalOnboardingScreens = 3;
 
 function nextOnboarding() {
+    const currentEl = document.getElementById(`onboarding-${currentOnboardingScreen}`);
+    if (currentEl) currentEl.classList.remove('active');
     if (currentOnboardingScreen < totalOnboardingScreens) {
-        document.getElementById(`onboarding-${currentOnboardingScreen}`).classList.remove('active');
         currentOnboardingScreen++;
-        document.getElementById(`onboarding-${currentOnboardingScreen}`).classList.add('active');
+        const nextEl = document.getElementById(`onboarding-${currentOnboardingScreen}`);
+        if (nextEl) {
+            nextEl.classList.add('active');
+        } else {
+            completeOnboarding(); // element missing — bail out gracefully
+        }
     } else {
         completeOnboarding();
     }
 }
 
 function completeOnboarding() {
-    document.getElementById(`onboarding-${currentOnboardingScreen}`).classList.remove('active');
+    document.querySelectorAll('.onboarding-screen').forEach(s => s.classList.remove('active'));
     storage.save('onboardingComplete', true);
     appState.currentQuestion = 0;
     showScreen('assessment');
@@ -1028,7 +1034,7 @@ function completeOnboarding() {
 }
 
 function skipOnboarding() {
-    document.getElementById(`onboarding-${currentOnboardingScreen}`).classList.remove('active');
+    document.querySelectorAll('.onboarding-screen').forEach(s => s.classList.remove('active'));
     storage.save('onboardingComplete', true);
     // Only set not-assessed if no level has been established yet
     if (!appState.level) {
@@ -1059,9 +1065,11 @@ function handleOnboardingSwipe() {
     }
     if (touchEndX > touchStartX + threshold) {
         if (currentOnboardingScreen > 1) {
-            document.getElementById(`onboarding-${currentOnboardingScreen}`).classList.remove('active');
+            const cur = document.getElementById(`onboarding-${currentOnboardingScreen}`);
+            if (cur) cur.classList.remove('active');
             currentOnboardingScreen--;
-            document.getElementById(`onboarding-${currentOnboardingScreen}`).classList.add('active');
+            const prev = document.getElementById(`onboarding-${currentOnboardingScreen}`);
+            if (prev) prev.classList.add('active');
         }
     }
 }
