@@ -286,3 +286,111 @@ DEFERRED → BUILT NOT VERIFIED:
   - Sticky header device verification (CSS applied, unconfirmed on device)
   - Learn tab content (composers, variations, dancers, knowledge stubs)
   - Glossary definitions (content work)
+
+---
+
+## Design system v2 — Implementation pass (v4.4)
+
+### What was implemented
+
+**CSS variables completely replaced.** Old palette (warm brown/amber/coral/sage) replaced
+with the confirmed v2 token set. All variables renamed and documented in :root with rules.
+Key new tokens: --ink through --ink-4, --gold/--gold-mid/--gold-soft/--gold-wash,
+--brown-btn/--brown, --input-bg (#F9F5F0 off-white), --praise-border (#E8B84B),
+--border/--border-mid/--border-light as rgba values.
+
+**Elevation system.** Four levels: --shadow-0 (flat), --shadow-1 (cards),
+--shadow-2 (sheets/overlays), --shadow-3 (FAB). Warm ink shadows not black.
+
+**Spacing rules locked.**
+  xs/4px   — inline gaps between related elements
+  sm/8px   — stacked elements within a component
+  md/12px  — internal component padding, field gaps
+  lg/16px  — card padding, section margins, sheet padding
+  xl/24px  — between distinct sections
+  2xl/32px — screen-level top padding, large section breaks
+
+**Border radius locked.**
+  4px everywhere (cards, inputs, buttons) via --r-sm/md/lg/xl all = 4px
+  999px for tags and pills only (--r-full)
+  50% for dots, circles, FAB
+
+**Typography updated.**
+  Cormorant Garamond 500 loaded for H1/H2 headings
+  DM Serif Display retained for logo (Handlee removed)
+  DM Sans throughout for UI
+  Note: Fraunces stubbed as preferred heading font for future swap
+
+**Buttons.**
+  Primary: --brown-btn (#5A4030) background, white text, weight 500, 4px radius
+  Hover: --brown (#6B4F3A)
+  Secondary bordered: reserved for future use
+  Text-only actions (add notes, hide notes): no border, ink-3 colour
+
+**FAB.**
+  Moved to bottom-right (was bottom-centre)
+  Brown circle (#5A4030), shadow-3
+  SVG rotates 45deg to × when open (.fab.open)
+  Chip menu opens above it
+
+**Session block mode toggle.**
+  Replaced pill buttons with underline tab control
+  .block-mode-btn: unset + inline-block + bottom border
+  .block-mode-btn.active: brown text + brown 2px bottom border
+  Topic select: bold DM Sans 700, styled SVG chevron
+
+**Inputs/textareas.**
+  Background: #F9F5F0 (--input-bg)
+  Border: 1.5px --gold-soft at rest, --gold-mid on focus
+  No black focus ring, no box-shadow on focus
+  Title input: borderless with brown bottom border on focus
+
+**Correction bullet placeholder.**
+  contenteditable::before CSS: "Note a correction…"
+
+**Timeline.**
+  No icons — type labels only (Session / Praise ★ / Milestone / Reflection / Assessment)
+  Left border per type: session=gold-mid, praise=praise-border, milestone=sage,
+  assessment=coral, reflection=none
+  Praise entries: bold text + ★ in label
+  Reflections: italic, ink-2, no left border
+  Date group labels sticky
+
+**Goal cards.**
+  shadow-1, 1px border-mid, 4px radius
+  Tags top-right of card header
+  Last milestone has no bottom border (no double line with footer)
+  "created [date]" via CSS ::before
+
+**Placeholder copy updated.**
+  Reflection block: "Note a reflection…"
+  Praise block: "Note praise received…"
+  Skill notes: "Note a thought…"
+  Goal detail: "Optional detail…"
+  Correction bullet: "Note a correction…" (CSS ::before)
+
+### CONFIRMED WORKING after this pass
+  Everything in the prior confirmed list, plus:
+  - Design system v2 tokens applied globally
+  - Cormorant Garamond headings loaded
+  - All buttons: brown, weight 500, 4px radius
+  - FAB: brown circle, rotates to ×, shadow-3
+  - Mode toggle: underline tabs, brown active
+  - Input/focus: gold border, no black ring
+  - Timeline: type labels, left borders, praise star
+  - All corner radii: 4px (was 8-16px throughout)
+
+### BUILT NOT VERIFIED (need device test)
+  - Collapsing hero IntersectionObserver on iOS
+  - Sticky headers with clip-path overflow fix
+  - Touch targets in goal creator overlay
+  - All new component styles rendering on device
+
+### DEFERRED
+  - Fraunces as heading font (swap single variable when ready)
+  - Logo font finalisation (DM Serif Display placeholder)
+  - Learn tab content (composers, variations, dancers)
+  - Glossary definitions
+  - Dark mode stub
+  - Pointe disclaimer copy on assessment screen
+  - Inline helper text on fields (persistent below-field guidance)

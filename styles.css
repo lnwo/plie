@@ -1,61 +1,115 @@
 /* ═══════════════════════════════════════
-   DESIGN SYSTEM — Plié Ballet App
+   DESIGN SYSTEM — Plié v2
+   All tokens confirmed. Do not edit
+   individual component colours — use
+   these variables throughout.
    ═══════════════════════════════════════ */
 
 :root {
-    /* Palette */
-    --primary: #5C4F49;
-    --primary-light: #7A6D66;
-    --primary-dark: #3D3430;
-    --accent: #C4A882;
-    --accent-soft: #E2CEAF;
-    --accent-wash: #F0E6D8;
-    --coral: #D4796A;
-    --coral-soft: #F2C4BB;
-    --background: #FAF7F4;
-    --surface: #FFFFFF;
-    --surface-warm: #FBF8F5;
-    --text: #2E2926;
-    --text-secondary: #6B5F58;
-    --text-muted: #A39790;
-    --border: #EDE8E3;
-    --border-light: #F4F0EC;
-    --success: #8B9E6B;
-    --error: #C96B5C;
+    /* ── Ink scale ── */
+    --ink:           #1A1714;   /* primary text */
+    --ink-2:         #5C5149;   /* secondary text */
+    --ink-3:         #9A8E87;   /* muted text, labels */
+    --ink-4:         #C8BFB8;   /* timeline type labels, hints */
 
-    /* Typography scale */
-    --fs-display: 2.5rem;    /* 40px - page titles */
-    --fs-h1: 1.75rem;        /* 28px - section headers */
-    --fs-h2: 1.25rem;        /* 20px - card titles */
-    --fs-h3: 1.0625rem;      /* 17px - sub-headers */
-    --fs-body: 0.9375rem;    /* 15px - body text */
-    --fs-small: 0.8125rem;   /* 13px - secondary text */
-    --fs-caption: 0.6875rem; /* 11px - labels, badges */
+    /* ── Legacy aliases (keep for backward compat during migration) ── */
+    --primary:       #5A4030;   /* brown-btn — buttons, FAB */
+    --primary-light: #6B4F3A;   /* brown — hover states */
+    --primary-dark:  #3D2C1E;
+    --text:          #1A1714;
+    --text-secondary:#5C5149;
+    --text-muted:    #9A8E87;
 
-    /* Spacing scale (8px base) */
-    --sp-xs: 4px;
-    --sp-sm: 8px;
-    --sp-md: 16px;
-    --sp-lg: 24px;
-    --sp-xl: 32px;
-    --sp-2xl: 48px;
-    --sp-3xl: 64px;
+    /* ── Gold scale ── */
+    --accent:        #C4900C;   /* gold-mid — focus borders, session timeline */
+    --gold:          #8A5E0A;   /* links, eyebrows */
+    --gold-mid:      #C4900C;   /* focus border, active states */
+    --gold-soft:     #E8D5A8;   /* input border at rest */
+    --gold-wash:     #F5EDD6;   /* tag backgrounds */
+    --accent-soft:   #E8D5A8;
+    --accent-wash:   #F5EDD6;
 
-    /* Radii */
-    --r-sm: 8px;
-    --r-md: 12px;
-    --r-lg: 16px;
-    --r-xl: 24px;
+    /* ── Praise timeline border ── */
+    --praise-border: #E8B84B;
+
+    /* ── Semantic ── */
+    --coral:         #A84030;   /* corrections, alerts, delete */
+    --coral-soft:    #F0D5CF;   /* recurring badge bg */
+    --sage:          #4A7038;   /* milestones, completed states */
+    --sage-soft:     #D4E5C8;   /* milestone tags */
+    --success:       #4A7038;
+    --error:         #A84030;
+
+    /* ── Brown (buttons, FAB, active tabs) ── */
+    --brown-btn:     #5A4030;
+    --brown:         #6B4F3A;
+
+    /* ── Surfaces ── */
+    --background:    #F7F3EE;   /* parchment — app background */
+    --surface:       #FFFFFF;   /* cards, sheets */
+    --surface-warm:  #FDF8F3;   /* block shells */
+    --input-bg:      #F9F5F0;   /* input fields — off-white */
+
+    /* ── Borders ── */
+    --border:        rgba(26, 23, 20, 0.12);
+    --border-mid:    rgba(26, 23, 20, 0.20);
+    --border-light:  rgba(26, 23, 20, 0.08);
+
+    /* ── Typography scale ── */
+    --fs-display: 2.5rem;    /* 40px */
+    --fs-h1:      1.625rem;  /* 26px — Cormorant Garamond */
+    --fs-h2:      1.25rem;   /* 20px — Cormorant Garamond */
+    --fs-h3:      1.0625rem; /* 17px */
+    --fs-body:    0.9375rem; /* 15px */
+    --fs-small:   0.8125rem; /* 13px */
+    --fs-caption: 0.6875rem; /* 11px */
+
+    /* ── Spacing scale ──
+       xs  4px  — inline gaps between related elements
+       sm  8px  — stacked elements within a component
+       md  12px — internal component padding, field gaps
+       lg  16px — card padding, section margins, sheet padding
+       xl  24px — between distinct sections on a screen
+       2xl 32px — screen-level top padding, large section breaks
+    ── */
+    --sp-xs:  4px;
+    --sp-sm:  8px;
+    --sp-md:  12px;
+    --sp-lg:  16px;
+    --sp-xl:  24px;
+    --sp-2xl: 32px;
+    --sp-3xl: 48px;
+
+    /* ── Border radius ──
+       4px for cards, inputs, buttons
+       999px for tags and pills only
+       50%  for dots, circles, FAB
+    ── */
+    --r-sm:   4px;
+    --r-md:   4px;
+    --r-lg:   4px;
+    --r-xl:   4px;
     --r-full: 9999px;
 
-    /* Shadows */
-    --shadow-sm: 0 1px 3px rgba(46, 41, 38, 0.04), 0 1px 2px rgba(46, 41, 38, 0.03);
-    --shadow-md: 0 4px 12px rgba(46, 41, 38, 0.06), 0 1px 4px rgba(46, 41, 38, 0.04);
-    --shadow-lg: 0 8px 24px rgba(46, 41, 38, 0.08), 0 2px 8px rgba(46, 41, 38, 0.04);
-    --shadow-xl: 0 16px 40px rgba(46, 41, 38, 0.1), 0 4px 12px rgba(46, 41, 38, 0.05);
+    /* ── Elevation shadows (warm ink, not black) ──
+       0 — flat (inline content, correction rows, timeline)
+       1 — cards (goal cards, session cards)
+       2 — sheets and overlays
+       3 — FAB only
+    ── */
+    --shadow-0: none;
+    --shadow-1: 0 1px 4px rgba(26, 23, 20, 0.08);
+    --shadow-2: 0 4px 16px rgba(26, 23, 20, 0.12);
+    --shadow-3: 0 8px 24px rgba(26, 23, 20, 0.18);
 
-    /* Transitions */
-    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    /* ── Legacy shadow aliases ── */
+    --shadow-sm: var(--shadow-1);
+    --shadow-md: var(--shadow-2);
+    --shadow-lg: var(--shadow-3);
+    --shadow-xl: var(--shadow-3);
+
+    /* ── Transitions ── */
+    --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
     --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -64,10 +118,16 @@
 body {
     font-family: 'DM Sans', sans-serif;
     background: var(--background);
-    color: var(--text);
+    color: var(--ink);
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}
+
+/* Cormorant Garamond for screen headings */
+h1, h2, .screen-heading {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 500;
 }
 
 .app-container {
@@ -86,9 +146,10 @@ body {
 
 /* ── Logo ── */
 .logo {
-    font-family: 'Handlee', cursive;
+    font-family: 'DM Serif Display', serif;
     font-size: 26px;
-    color: var(--primary);
+    color: var(--ink);
+    font-weight: 400;
 }
 
 /* ── Screen transitions ── */
@@ -152,7 +213,7 @@ body {
 }
 
 .onboarding-logo-small {
-    font-family: 'Handlee', cursive;
+    font-family: 'DM Serif Display', serif;
     font-size: 26px;
     color: var(--primary);
     position: absolute;
@@ -186,7 +247,7 @@ body {
 }
 
 .onboarding-title .brand {
-    font-family: 'Handlee', cursive;
+    font-family: 'DM Serif Display', serif;
     font-weight: 400;
 }
 
@@ -255,87 +316,75 @@ body {
 
 .btn-large {
     width: 100%;
-    background: var(--primary);
+    background: var(--brown-btn);
     color: #fff;
     border: none;
-    border-radius: var(--r-lg);
-    padding: 16px var(--sp-xl);
-    font-size: var(--fs-body);
+    border-radius: var(--r-md);
+    padding: 14px var(--sp-xl);
+    font-size: var(--fs-small);
     font-family: 'DM Sans', sans-serif;
-    font-weight: 600;
-    letter-spacing: 0.3px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
     cursor: pointer;
-    transition: all 0.25s var(--ease-out);
-    box-shadow: var(--shadow-md);
+    transition: background 0.2s ease;
+    box-shadow: none;
     margin-bottom: 0;
 }
 
-.btn-large:hover {
-    background: var(--primary-dark);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-lg);
-}
-
-.btn-large:active {
-    transform: translateY(0);
-    box-shadow: var(--shadow-sm);
-}
+.btn-large:hover { background: var(--brown); }
+.btn-large:active { background: var(--brown); }
 
 .btn-primary {
-    background: var(--primary);
+    background: var(--brown-btn);
     color: #fff;
     border: none;
-    border-radius: var(--r-lg);
-    padding: 16px var(--sp-xl);
-    font-size: var(--fs-body);
+    border-radius: var(--r-md);
+    padding: 10px 18px;
+    font-size: var(--fs-small);
     font-family: 'DM Sans', sans-serif;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.25s var(--ease-out);
-    box-shadow: var(--shadow-md);
-    margin-top: var(--sp-lg);
+    transition: background 0.2s ease;
+    box-shadow: none;
+    margin-top: var(--sp-md);
 }
 
-.btn-primary:hover {
-    background: var(--primary-dark);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-lg);
-}
+.btn-primary:hover { background: var(--brown); }
 
 .btn-secondary {
     background: transparent;
-    color: var(--text-secondary);
-    border: 1.5px solid var(--border);
-    border-radius: var(--r-lg);
-    padding: 16px var(--sp-xl);
-    font-size: var(--fs-body);
+    color: var(--ink-2);
+    border: 1.5px solid var(--border-mid);
+    border-radius: var(--r-md);
+    padding: 10px 18px;
+    font-size: var(--fs-small);
     font-family: 'DM Sans', sans-serif;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.25s var(--ease-out);
-    margin-top: var(--sp-lg);
+    transition: border-color 0.2s ease, color 0.2s ease;
+    margin-top: var(--sp-md);
 }
 
 .btn-secondary:hover {
-    border-color: var(--primary);
-    color: var(--primary);
+    border-color: var(--brown);
+    color: var(--ink);
 }
 
 .button-group {
     display: flex;
-    gap: var(--sp-md);
+    gap: var(--sp-sm);
     justify-content: center;
 }
 
 .skip-text {
-    color: var(--text-muted);
+    color: var(--ink-3);
     text-decoration: none;
     font-size: var(--fs-small);
     cursor: pointer;
     transition: color 0.2s ease;
 }
 
-.skip-text:hover { color: var(--primary); }
+.skip-text:hover { color: var(--ink); }
 
 /* ═══════════════════════════════════════
    WELCOME / PERSONA SCREEN
@@ -362,7 +411,7 @@ body {
 }
 
 .welcome-title {
-    font-family: 'Handlee', cursive;
+    font-family: 'DM Serif Display', serif;
     font-size: var(--fs-display);
     color: var(--primary);
     margin-bottom: var(--sp-md);
@@ -481,7 +530,7 @@ body {
 }
 
 .assessment-logo {
-    font-family: 'Handlee', cursive;
+    font-family: 'DM Serif Display', serif;
     font-size: 24px;
     color: var(--primary);
     margin-bottom: var(--sp-sm);
@@ -1184,38 +1233,34 @@ body {
 .fab {
     position: fixed;
     bottom: 84px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: var(--primary);
+    right: 20px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50% !important;
+    background: var(--brown-btn);
     color: #fff;
-    border: 3px solid var(--background);
-    box-shadow: 0 4px 16px rgba(92, 79, 73, 0.25);
+    border: none;
+    box-shadow: var(--shadow-3);
     cursor: pointer;
-    z-index: 1002;
+    z-index: 200;
     display: none;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s var(--ease-out);
+    transition: background 0.2s ease, transform 0.3s var(--ease-spring);
 }
 
-.fab:hover {
-    transform: translateX(-50%) scale(1.08);
-    box-shadow: 0 6px 24px rgba(92, 79, 73, 0.3);
-    background: var(--primary-dark);
-}
-
-.fab:active {
-    transform: translateX(-50%) scale(0.95);
-}
-
+.fab:hover { background: var(--brown); }
+.fab:active { transform: scale(0.95); }
 .fab.visible { display: flex; }
 
+.fab.open svg {
+    transform: rotate(45deg);
+}
+
 .fab svg {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
+    transition: transform 0.3s var(--ease-spring);
 }
 
 /* ═══════════════════════════════════════
@@ -4936,3 +4981,681 @@ button, a, input, select, textarea,
 #resultWorkOn {
     text-align: left;
 }
+
+/* ═══════════════════════════════════════
+   DESIGN SYSTEM v2 — OVERRIDES
+   Applied after all component styles so
+   variables propagate correctly.
+   ═══════════════════════════════════════ */
+
+/* ── Global text colour migration ── */
+body { color: var(--ink); }
+
+/* ── Inputs and textareas ── */
+.session-block-textarea,
+.session-block-title-input,
+textarea,
+input[type="text"],
+input[type="date"],
+input[type="search"] {
+    background: var(--input-bg);
+    border: 1.5px solid var(--gold-soft);
+    border-radius: var(--r-md);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    transition: border-color 0.15s ease;
+    outline: none;
+    box-shadow: none;
+}
+
+.session-block-textarea:focus,
+.session-block-title-input:focus,
+textarea:focus,
+input[type="text"]:focus,
+input[type="date"]:focus,
+input[type="search"]:focus {
+    border-color: var(--gold-mid);
+    outline: none;
+    box-shadow: none;
+}
+
+.session-block-textarea::placeholder,
+.session-block-title-input::placeholder,
+textarea::placeholder,
+input::placeholder { color: var(--ink-4); }
+
+/* Title input stays borderless, uses underline */
+.session-block-title-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px solid var(--border);
+    border-radius: 0;
+}
+.session-block-title-input:focus {
+    border: none;
+    border-bottom-color: var(--brown);
+    box-shadow: none;
+}
+
+/* ── Mode toggle — underline tab style ── */
+.block-mode-toggle {
+    display: flex;
+    border-bottom: 1.5px solid var(--border-mid);
+    margin-bottom: var(--sp-sm);
+    gap: 0;
+}
+
+.block-mode-btn {
+    all: unset;
+    display: inline-block;
+    padding: 5px 12px 7px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-3);
+    cursor: pointer;
+    position: relative;
+    margin-bottom: -1.5px;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s ease;
+}
+
+.block-mode-btn.active {
+    color: var(--brown) !important;
+    font-weight: 600;
+    border-bottom-color: var(--brown);
+}
+
+.block-mode-btn:hover:not(.active) { color: var(--ink-2); }
+
+/* ── Notes toggle ── */
+.block-notes-toggle {
+    all: unset;
+    display: inline-block;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-3);
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+.block-notes-toggle:hover { color: var(--brown); }
+.block-notes-toggle-open { color: var(--ink-4); font-size: 11px; }
+
+/* ── Session block ── */
+.session-block {
+    background: var(--surface-warm);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    overflow: visible;
+}
+
+.session-block-header {
+    background: transparent;
+    border-bottom: none;
+    padding: var(--sp-md) var(--sp-md) var(--sp-sm);
+}
+
+.session-block-topic-select {
+    font-weight: 700;
+    color: var(--ink);
+    font-size: var(--fs-small);
+}
+
+.block-remove-btn { color: var(--ink-3); }
+.block-remove-btn:hover { background: none; color: var(--coral); }
+
+/* ── Praise / reflection block accents ── */
+.block-mode-praise     { border-left: 2px solid var(--praise-border); }
+.block-mode-reflection { border-left: 2px solid transparent; }
+
+/* ── Goal cards ── */
+.goal-card {
+    background: var(--surface);
+    border: 1px solid var(--border-mid);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-1);
+}
+
+/* Tags — pill only */
+.goal-category-tag,
+.difficulty-badge,
+.correction-recurring-badge {
+    border-radius: var(--r-full) !important;
+}
+
+.goal-card-title { color: var(--ink); }
+.goal-card-completed .goal-card-title {
+    text-decoration: line-through;
+    color: var(--ink-3);
+}
+.goal-card-completed {
+    opacity: 0.65;
+    background: var(--border);
+    border-color: transparent;
+}
+
+/* Goal footer date */
+.goal-card-date::before { content: "created "; }
+
+/* ── Goal milestones ── */
+.goal-milestone-check {
+    border-color: var(--border-mid);
+}
+.goal-milestone.done .goal-milestone-check {
+    background: var(--sage);
+    border-color: var(--sage);
+}
+.goal-milestone.done .goal-milestone-text {
+    color: var(--ink-3);
+}
+/* Remove double border on last milestone */
+.goal-milestone:last-child {
+    border-bottom: none !important;
+}
+
+/* ── Correction rows ── */
+.correction-dot {
+    background: var(--coral);
+}
+.correction-dot-praise { background: var(--gold-mid) !important; }
+
+.correction-recurring-badge {
+    color: var(--coral);
+    background: var(--coral-soft);
+    border: none;
+    font-weight: 600;
+    font-size: 10px;
+}
+
+/* ── Timeline ── */
+.timeline-dot { display: none; } /* Replaced by left borders */
+
+.timeline-item {
+    padding: 10px 0 10px 12px;
+    border-bottom: 1px solid var(--border);
+    border-left: 2px solid transparent;
+    position: relative;
+}
+.timeline-item:first-child { border-top: 1px solid var(--border); }
+
+.timeline-item-session    { border-left-color: var(--gold-mid); }
+.timeline-item-milestone  { border-left-color: var(--sage); }
+.timeline-item-assessment { border-left-color: var(--coral); }
+.timeline-item-praise     { border-left-color: var(--praise-border); }
+/* Reflections have no left border — intentional */
+.timeline-item-reflection { border-left-color: transparent; }
+
+/* Timeline icon wrap hidden — type labels handle differentiation */
+.timeline-icon-wrap { display: none; }
+
+/* Timeline type label */
+.timeline-group-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 12px 0 8px;
+    position: sticky;
+    top: 0;
+    background: var(--background);
+    z-index: 5;
+}
+
+/* Per-entry type label above title */
+.timeline-item .timeline-date {
+    display: none; /* replaced by type label */
+}
+
+.timeline-type-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    margin-bottom: 3px;
+    display: block;
+}
+
+.timeline-title { font-size: 13px; color: var(--ink); font-weight: 500; line-height: 1.4; }
+.timeline-praise-text  { font-weight: 600; }
+.timeline-reflection-text { font-style: italic; color: var(--ink-2); font-weight: 400; }
+.timeline-subtitle { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+.timeline-tap-hint { font-size: 11px; color: var(--gold); margin-top: 3px; }
+
+/* ── Profile section headings ── */
+.profile-header h1,
+.section-title,
+.skill-detail-title,
+.session-detail-title {
+    font-family: 'Cormorant Garamond', serif !important;
+    font-weight: 500 !important;
+    color: var(--ink) !important;
+}
+
+/* ── Skill detail hero ── */
+.skill-detail-collapsed-name { color: var(--ink); font-weight: 600; }
+.skill-detail-collapsed.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+/* ── Session detail header ── */
+.session-detail-header {
+    background: var(--background);
+    border-bottom: 1px solid var(--border);
+}
+
+/* ── Active skill card ── */
+.active-skill-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-1);
+}
+.active-skill-name { font-weight: 700; color: var(--ink); }
+.active-skill-meta { color: var(--ink-3); font-size: 11px; }
+
+/* ── Bottom nav ── */
+.bottom-nav {
+    background: var(--background);
+    border-top: 1px solid var(--border);
+}
+.nav-item.active { color: var(--brown); }
+.nav-item.active .nav-icon { color: var(--brown); }
+
+/* ── FAB action sheet ── */
+.fab-action-sheet-inner { background: var(--surface); box-shadow: var(--shadow-2); }
+.fab-action-item { color: var(--ink); }
+.fab-action-item:hover { background: var(--gold-wash); }
+.fab-action-icon { background: var(--gold-wash); color: var(--gold); }
+
+/* ── Goal complete toast ── */
+.goal-complete-toast { background: var(--brown-btn); box-shadow: var(--shadow-2); }
+
+/* ── Assessment options ── */
+.assessment-option {
+    border: 1.5px solid var(--border-mid);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+.assessment-option.selected {
+    border-color: var(--brown);
+    background: var(--gold-wash);
+    color: var(--ink);
+}
+.assessment-option:hover:not(.selected) { border-color: var(--gold-soft); }
+
+/* ── Difficulty badges ── */
+.difficulty-beginner    { background: var(--sage-soft);  color: var(--sage); }
+.difficulty-improver    { background: var(--gold-wash);  color: var(--gold); }
+.difficulty-intermediate{ background: var(--gold-wash);  color: var(--gold-mid); }
+.difficulty-advanced    { background: var(--coral-soft); color: var(--coral); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 2px; }
+
+/* ── Correction bullets ── */
+.correction-bullets-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.correction-bullet {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-sm);
+    padding: 4px 0;
+}
+
+.correction-bullet-dash {
+    color: var(--coral);
+    font-size: var(--fs-small);
+    flex-shrink: 0;
+    margin-top: 2px;
+    line-height: 1.55;
+}
+
+.correction-bullet-input-wrapper { flex: 1; min-width: 0; }
+
+.correction-bullet-input {
+    width: 100%;
+    min-height: 22px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink);
+    line-height: 1.55;
+    outline: none;
+    word-break: break-word;
+}
+
+/* Placeholder via CSS since these are contenteditable */
+.correction-bullet-placeholder:empty::before {
+    content: "Note a correction…";
+    color: var(--ink-4);
+    pointer-events: none;
+}
+
+.correction-bullet-delete {
+    background: none;
+    border: none;
+    color: var(--ink-4);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 2px;
+    flex-shrink: 0;
+    transition: color 0.15s ease;
+}
+.correction-bullet-delete:hover { color: var(--coral); }
+
+.correction-bullets-hint {
+    font-size: 10px;
+    color: var(--ink-4);
+    margin-top: var(--sp-xs);
+    font-style: italic;
+}
+
+/* ── Goal creator ── */
+.goal-correction-search-results {
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    box-shadow: var(--shadow-2);
+    overflow: hidden;
+}
+
+.goal-correction-result {
+    padding: var(--sp-md) var(--sp-lg);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    font-size: var(--fs-small);
+    color: var(--ink);
+    transition: background 0.15s ease;
+}
+.goal-correction-result:last-child { border-bottom: none; }
+.goal-correction-result:hover { background: var(--gold-wash); }
+
+/* ── Session combobox ── */
+.session-combobox-dropdown {
+    background: var(--surface);
+    border: 1px solid var(--border-mid);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-2);
+    overflow: hidden;
+}
+
+.session-combobox-row {
+    padding: 12px var(--sp-lg);
+    cursor: pointer;
+    font-size: var(--fs-small);
+    color: var(--ink);
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s ease;
+}
+.session-combobox-row:last-child { border-bottom: none; }
+.session-combobox-row:hover { background: var(--gold-wash); }
+
+.session-combobox-row-name {
+    font-weight: 600;
+    color: var(--ink);
+}
+.session-combobox-row-meta {
+    font-size: 11px;
+    color: var(--ink-3);
+    margin-top: 2px;
+}
+.session-combobox-row-delete {
+    all: unset;
+    color: var(--ink-4);
+    cursor: pointer;
+    padding: 4px;
+    font-size: 14px;
+    transition: color 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    min-height: 24px;
+}
+.session-combobox-row-delete:hover { color: var(--coral); }
+
+/* ── Skill library ── */
+.skill-lib-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-1);
+}
+.skill-lib-card:hover { background: var(--gold-wash); }
+
+/* ── Profile action cards ── */
+.profile-action-card {
+    background: var(--surface);
+    border: 1px solid var(--border-mid);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-1);
+}
+.profile-action-card.hero {
+    background: var(--gold-wash);
+    border-color: var(--gold-soft);
+    box-shadow: var(--shadow-1);
+}
+.profile-action-label { color: var(--gold); }
+.profile-action-title { color: var(--ink); }
+.profile-action-description { color: var(--ink-2); }
+.profile-action-arrow { color: var(--gold); font-size: var(--fs-small); margin-top: var(--sp-sm); }
+
+/* ── Barre context banner ── */
+.barre-context {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-sm);
+    padding: var(--sp-sm) var(--sp-lg);
+    background: var(--gold-wash);
+    border-bottom: 1px solid var(--gold-soft);
+}
+.barre-context-badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--gold);
+    background: var(--surface);
+    border: 1px solid var(--gold-soft);
+    border-radius: var(--r-full);
+    padding: 2px 8px;
+}
+.barre-context-text { font-size: var(--fs-small); color: var(--ink-2); }
+
+/* ── Overlays and sheets ── */
+.session-logger-sheet,
+.goal-creator-overlay .session-logger-sheet {
+    background: var(--surface);
+    box-shadow: var(--shadow-2);
+    border-radius: 12px 12px 0 0;
+}
+
+.session-logger-eyebrow { color: var(--ink-3); }
+.session-logger-title   { color: var(--ink); font-family: 'Cormorant Garamond', serif; font-weight: 500; }
+
+/* Sheet close button replaces grabber as primary affordance */
+.session-sheet-handle { display: none; }
+
+.session-close-btn {
+    background: none;
+    border: none;
+    color: var(--ink-3);
+    cursor: pointer;
+    padding: var(--sp-sm);
+    border-radius: var(--r-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.session-close-btn:hover {
+    background: var(--border);
+    color: var(--ink);
+}
+
+/* ── Add session btn in goals screen ── */
+/* .add-goal-btn commented out per design decision */
+
+/* ── Glossary ── */
+.glossary-term-name { font-weight: 700; color: var(--ink); }
+.glossary-term-alt  { color: var(--ink-3); font-size: 11px; }
+.glossary-term-category {
+    background: var(--border);
+    color: var(--ink-3);
+    border-radius: var(--r-full);
+    font-size: 10px;
+    padding: 2px 8px;
+}
+.glossary-stub-notice { color: var(--ink-4); font-size: 11px; font-style: italic; }
+.glossary-group-label { color: var(--ink-3); }
+
+/* ── Knowledge page ── */
+.skill-know-muscle-chip {
+    background: var(--gold-wash);
+    color: var(--gold);
+    border: 1px solid var(--gold-soft);
+    border-radius: var(--r-full);
+    font-size: 11px;
+    padding: 3px 10px;
+    display: inline-block;
+    margin: 2px;
+}
+.skill-know-muscle-why {
+    color: var(--gold);
+    font-size: 11px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+}
+.skill-know-muscle-context {
+    background: var(--gold-wash);
+    border-left: 2px solid var(--gold-soft);
+    border-radius: 0;
+    padding: var(--sp-md);
+    font-size: var(--fs-small);
+    color: var(--ink-2);
+    line-height: 1.6;
+    margin-top: var(--sp-sm);
+}
+
+/* ── Skill detail collapsed header ── */
+.skill-detail-header-collapsed {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-sm);
+    flex: 1;
+    margin: 0 var(--sp-sm);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+    overflow: hidden;
+}
+.skill-detail-header-collapsed.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+.skill-detail-collapsed-name {
+    font-size: var(--fs-body);
+    font-weight: 700;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+}
+.skill-detail-collapsed-date {
+    font-size: var(--fs-caption);
+    color: var(--ink-3);
+    white-space: nowrap;
+}
+
+/* ── Focus button ── */
+.skill-focus-btn {
+    all: unset;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-mid);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--ink-3);
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+.skill-focus-btn.active {
+    background: var(--brown-btn);
+    border-color: var(--brown-btn);
+    color: #fff;
+}
+
+/* ── Goals see-all ── */
+.goals-see-all-btn {
+    border-color: var(--border-mid);
+    color: var(--ink-3);
+    border-radius: var(--r-md);
+}
+.goals-see-all-btn:hover {
+    border-color: var(--gold-mid);
+    color: var(--ink);
+}
+
+/* ── Toast ── */
+.goal-complete-toast {
+    background: var(--brown-btn);
+    box-shadow: var(--shadow-2);
+    border-radius: var(--r-full);
+}
+
+/* ── Swipe actions ── */
+.swipe-action-remove   { background: var(--coral);  color: #fff; }
+.swipe-action-complete { background: var(--sage);   color: #fff; }
+.swipe-action-reopen   { background: var(--brown);  color: #fff; }
+
+/* ── Empty states ── */
+.barre-empty-state,
+.skill-detail-empty-state {
+    color: var(--ink-3);
+    font-style: italic;
+    font-size: var(--fs-small);
+    padding: var(--sp-lg) 0;
+}
+.barre-empty-icon { display: none; }
+
+/* ── Milestone input in goal creator ── */
+.milestone-input {
+    background: var(--input-bg);
+    border: 1.5px solid var(--gold-soft);
+    border-radius: var(--r-md);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    padding: 8px 12px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+.milestone-input:focus { border-color: var(--gold-mid); }
+.milestone-input::placeholder { color: var(--ink-4); }
+
+/* ── Section headings in profile ── */
+.section-header h2 { font-family: 'Cormorant Garamond', serif; font-weight: 500; }
+.profile-header h1 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: var(--fs-h1); }

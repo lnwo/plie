@@ -2026,7 +2026,7 @@ function renderBlockHtml(block, index) {
     // Reflection field (mode === 'reflection')
     const reflectionHtml = `
         <textarea class="session-block-textarea session-block-capped"
-                  placeholder="What stood out to you today?"
+                  placeholder="Note a reflection2026"
                   oninput="updateBlockField(${index}, 'reflectionText', this.value); autoResizeCapped(this);"
                   >${block.reflectionText || ''}</textarea>
     `;
@@ -2616,15 +2616,21 @@ function openGoalFromPrompt(skillIds) {
 
 function openFabActionSheet() {
     const sheet = document.getElementById('fab-action-sheet');
+    const fab   = document.querySelector('.fab');
     if (!sheet) return;
     sheet.style.display = 'flex';
-    requestAnimationFrame(() => sheet.classList.add('open'));
+    requestAnimationFrame(() => {
+        sheet.classList.add('open');
+        fab?.classList.add('open');
+    });
 }
 
 function closeFabActionSheet() {
     const sheet = document.getElementById('fab-action-sheet');
+    const fab   = document.querySelector('.fab');
     if (!sheet) return;
     sheet.classList.remove('open');
+    fab?.classList.remove('open');
     sheet.addEventListener('transitionend', () => {
         sheet.style.display = 'none';
     }, { once: true });
@@ -3995,27 +4001,34 @@ function initProfile() {
 
         function renderTimelineEntry(entry) {
             if (entry._noteEntry) {
-                const icon = TIMELINE_ICONS[entry._type] || TIMELINE_ICONS.manual;
                 const skillRef = entry.skillId ? DATA.skills.find(s => s.id === entry.skillId) : null;
                 const isReflection = entry._type === 'reflection';
+                const typeLabel = isReflection ? 'Reflection' : 'Praise ★';
                 return `
                 <div class="timeline-item timeline-item-${entry._type}">
-                    <div class="timeline-icon-wrap timeline-icon-${entry._type}">${icon}</div>
                     <div class="timeline-content">
-                        <div class="timeline-entry-text ${isReflection ? 'timeline-reflection-text' : 'timeline-praise-text'}">${isReflection ? `"${entry.text}"` : entry.text}</div>
+                        <span class="timeline-type-label">${typeLabel}</span>
+                        <div class="timeline-title ${isReflection ? 'timeline-reflection-text' : 'timeline-praise-text'}">${isReflection ? `"${entry.text}"` : entry.text}</div>
                         ${skillRef ? `<div class="timeline-subtitle">${skillRef.french}</div>` : ''}
                     </div>
                 </div>`;
             }
-            const isPraise     = entry.isPraise;
-            const isTappable   = entry.type === 'session' && entry.objectId;
-            const iconType     = isPraise ? 'praise' : (entry.type || 'manual');
-            const icon         = TIMELINE_ICONS[iconType] || TIMELINE_ICONS.manual;
+            const isPraise   = entry.isPraise;
+            const isTappable = entry.type === 'session' && entry.objectId;
+            const typeKey    = isPraise ? 'praise' : (entry.type || 'manual');
+            const typeLabels = {
+                session:    'Session',
+                milestone:  'Milestone',
+                assessment: 'Assessment',
+                praise:     'Praise ★',
+                manual:     '',
+            };
+            const typeLabel = typeLabels[typeKey] || '';
             return `
-            <div class="timeline-item ${isTappable ? 'timeline-item-tappable' : ''} timeline-item-${entry.type || 'manual'}"
+            <div class="timeline-item timeline-item-${typeKey} ${isTappable ? 'timeline-item-tappable' : ''}"
                  ${isTappable ? `onclick="showSessionDetail(${entry.objectId})"` : ''}>
-                <div class="timeline-icon-wrap timeline-icon-${iconType}">${icon}</div>
                 <div class="timeline-content">
+                    ${typeLabel ? `<span class="timeline-type-label">${typeLabel}</span>` : ''}
                     <div class="timeline-title ${isPraise ? 'timeline-praise-text' : ''}">${entry.title}</div>
                     ${entry.body ? `<div class="timeline-subtitle">${entry.body}</div>` : ''}
                     ${isTappable ? `<div class="timeline-tap-hint">tap to review →</div>` : ''}
@@ -4034,7 +4047,6 @@ function initProfile() {
             ${groupsHtml}
             <div class="timeline-group">
                 <div class="timeline-item">
-                    <div class="timeline-icon-wrap timeline-icon-manual">${TIMELINE_ICONS.manual}</div>
                     <div class="timeline-content">
                         <div class="timeline-title">${firstEntryText}</div>
                     </div>
@@ -4298,7 +4310,7 @@ function showSkillDetail(skillId, returnTo) {
             </button>` : ''}
         <div class="skill-add-note-row">
             <textarea class="session-block-textarea" id="skill-new-note"
-                      placeholder="Add a note… (tap save or press ⌘↵)"
+                      placeholder="Note a thought2026"
                       rows="2"
                       oninput="autoResizeTextarea(this)"
                       onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter'){saveSkillNote('${skillId}');event.preventDefault();}"></textarea>
@@ -4642,7 +4654,7 @@ function renderSkillNotesSectionInPlace(skillId, sectionEl) {
             </button>` : ''}
         <div class="skill-add-note-row">
             <textarea class="session-block-textarea" id="skill-new-note"
-                      placeholder="Add a note… (tap save or press ⌘↵)"
+                      placeholder="Note a thought2026"
                       rows="2"
                       oninput="autoResizeTextarea(this)"
                       onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter'){saveSkillNote('${skillId}');event.preventDefault();}"></textarea>
