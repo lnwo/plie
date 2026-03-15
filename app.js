@@ -1086,6 +1086,22 @@ document.addEventListener('DOMContentLoaded', () => {
         screen.addEventListener('touchend', e => { touchEndX = e.changedTouches[0].screenX; handleOnboardingSwipe(); }, false);
     });
    
+    const startBtn = document.querySelector('.onboarding-cta .btn-large');
+    if (startBtn) {
+        startBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            nextOnboarding();
+        });
+    }
+
+    const skipBtn = document.querySelector('.onboarding-cta .onboarding-skip button');
+    if (skipBtn) {
+        skipBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            skipOnboarding();
+        });
+    }
+   
      // Attach onboarding CTA listeners
      const startBtn = document.querySelector('.onboarding-cta .btn-large');
      if (startBtn) startBtn.addEventListener('click', (e) => {
