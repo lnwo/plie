@@ -2147,17 +2147,26 @@ function sortBlocks() {
     });
 }
 
+// Stable block lookup — avoids stale positional indices after sortBlocks()
+function getBlockById(blockId) {
+    return appState.currentSession?.blocks.find(b => b.id === blockId) || null;
+}
+function getBlockIndexById(blockId) {
+    return appState.currentSession?.blocks.findIndex(b => b.id === blockId) ?? -1;
+}
+
 function renderBlocksOnly() {
     const container = document.getElementById('session-blocks-container');
     if (!container) return;
     const s = appState.currentSession;
     container.innerHTML = s.blocks.map((block, i) => renderBlockHtml(block, i)).join('');
     // Attach swipe-to-remove on each block
-    container.querySelectorAll('.swipe-row[data-block-index]').forEach(row => {
-        const index = parseInt(row.dataset.blockIndex);
+    container.querySelectorAll('.swipe-row[data-block-id]').forEach(row => {
+        const blockId = parseInt(row.dataset.blockId);
         attachSwipe(row, {
             onLeft: () => {
-                appState.currentSession.blocks.splice(index, 1);
+                const idx = getBlockIndexById(blockId);
+                if (idx !== -1) appState.currentSession.blocks.splice(idx, 1);
                 setTimeout(() => renderBlocksOnly(), 320);
             }
         });
@@ -2172,19 +2181,19 @@ function renderBlockHtml(block, index) {
     // Corrections bullet list (mode === 'correction')
     const corrList = Array.isArray(block.corrections) ? block.corrections : [];
     const corrBulletsHtml = corrList.map((text, ci) => `
-        <div class="correction-bullet" data-block="${index}" data-ci="${ci}">
+        <div class="correction-bullet" data-block="${block.id}" data-ci="${ci}">
             <span class="correction-bullet-dash">—</span>
             <div class="correction-bullet-input-wrapper">
                 <div class="correction-bullet-input"
                      contenteditable="true"
-                     data-block="${index}"
+                     data-block="${block.id}"
                      data-ci="${ci}"
-                     oninput="updateCorrectionBullet(${index}, ${ci}, this.innerText)"
-                     onkeydown="handleCorrectionBulletKey(event, ${index}, ${ci})"
+                     oninput="updateCorrectionBullet(${block.id}, ${ci}, this.innerText)"
+                     onkeydown="handleCorrectionBulletKey(event, ${block.id}, ${ci})"
                      >${text}</div>
             </div>
             <button class="correction-bullet-delete"
-                    onmousedown="deleteCorrectionBullet(${index}, ${ci})"
+                    onmousedown="deleteCorrectionBullet(${block.id}, ${ci})"
                     aria-label="Delete">×</button>
         </div>
     `).join('');
@@ -2192,15 +2201,15 @@ function renderBlockHtml(block, index) {
     const corrFieldHtml = `
         <div class="correction-bullets-container" id="correction-bullets-${block.id}">
             ${corrBulletsHtml}
-            <div class="correction-bullet correction-bullet-new" data-block="${index}">
+            <div class="correction-bullet correction-bullet-new" data-block="${block.id}">
                 <span class="correction-bullet-dash">—</span>
                 <div class="correction-bullet-input-wrapper">
                     <div class="correction-bullet-input correction-bullet-placeholder"
                          contenteditable="true"
-                         data-block="${index}"
+                         data-block="${block.id}"
                          data-ci="${corrList.length}"
-                         oninput="handleNewCorrectionBulletInput(event, ${index})"
-                         onkeydown="handleCorrectionBulletKey(event, ${index}, ${corrList.length})"
+                         oninput="handleNewCorrectionBulletInput(event, ${block.id})"
+                         onkeydown="handleCorrectionBulletKey(event, ${block.id}, ${corrList.length})"
                          ></div>
                 </div>
             </div>
@@ -2212,7 +2221,7 @@ function renderBlockHtml(block, index) {
     const reflectionHtml = `
         <textarea class="session-block-textarea session-block-capped"
                   placeholder="Note a reflection2026"
-                  oninput="updateBlockField(${index}, 'reflectionText', this.value); autoResizeCapped(this);"
+                  oninput="updateBlockField(${block.id}, 'reflectionText', this.value); autoResizeCapped(this);"
                   >${block.reflectionText || ''}</textarea>
     `;
 
@@ -2222,13 +2231,13 @@ function renderBlockHtml(block, index) {
             ${block.notesOpen || block.notes ? `
                 <textarea class="session-block-textarea session-block-capped"
                           placeholder="Notes — context, rehearsal, how it felt…"
-                          oninput="updateBlockField(${index}, 'notes', this.value); autoResizeCapped(this);"
+                          oninput="updateBlockField(${block.id}, 'notes', this.value); autoResizeCapped(this);"
                           >${block.notes || ''}</textarea>
                 <button class="block-notes-toggle block-notes-toggle-open"
-                        onmousedown="toggleBlockNotes(${index})">hide notes</button>
+                        onmousedown="toggleBlockNotes(${block.id})">hide notes</button>
             ` : `
                 <button class="block-notes-toggle"
-                        onmousedown="toggleBlockNotes(${index})">
+                        onmousedown="toggleBlockNotes(${block.id})">
                     ${block.notes ? `${ICONS.get('edit', 12)} notes` : '+ add notes'}
                 </button>
             `}
@@ -2239,7 +2248,7 @@ function renderBlockHtml(block, index) {
     const praiseHtml = `
         <textarea class="session-block-textarea session-block-capped"
                   placeholder="What were you praised for? e.g. your arabesque line, timing…"
-                  oninput="updateBlockField(${index}, 'praiseText', this.value); autoResizeCapped(this);"
+                  oninput="updateBlockField(${block.id}, 'praiseText', this.value); autoResizeCapped(this);"
                   >${block.praiseText || ''}</textarea>
     `;
 
@@ -2247,11 +2256,11 @@ function renderBlockHtml(block, index) {
     const modeToggleHtml = `
         <div class="block-mode-toggle">
             <button class="block-mode-btn ${mode === 'correction' ? 'active' : ''}"
-                    onmousedown="setBlockMode(${index}, 'correction')">Correction</button>
+                    onmousedown="setBlockMode(${block.id}, 'correction')">Correction</button>
             <button class="block-mode-btn ${mode === 'praise' ? 'active' : ''}"
-                    onmousedown="setBlockMode(${index}, 'praise')">Praise</button>
+                    onmousedown="setBlockMode(${block.id}, 'praise')">Praise</button>
             <button class="block-mode-btn ${mode === 'reflection' ? 'active' : ''}"
-                    onmousedown="setBlockMode(${index}, 'reflection')">Reflection</button>
+                    onmousedown="setBlockMode(${block.id}, 'reflection')">Reflection</button>
         </div>
     `;
 
@@ -2260,7 +2269,7 @@ function renderBlockHtml(block, index) {
                     : '';
 
     return `
-        <div class="swipe-row" data-block-index="${index}">
+        <div class="swipe-row" data-block-id="${block.id}">
             <div class="swipe-action-left swipe-action-remove">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
                 remove
@@ -2271,7 +2280,7 @@ function renderBlockHtml(block, index) {
                     <div class="session-block-header">
                         <div class="session-block-topic-wrapper">
                             <select class="session-block-topic-select"
-                                    onchange="updateBlockTopic(${index}, this.value)">
+                                    onchange="updateBlockTopic(${block.id}, this.value)">
                                 <optgroup label="General">
                                     ${topics.filter(t => t.group === 'General').map(t =>
                                         `<option value="${t.id}" ${t.id === block.topicId ? 'selected' : ''}>${t.label}</option>`
@@ -2292,7 +2301,7 @@ function renderBlockHtml(block, index) {
                                 <polyline points="4 6 8 10 12 6"/>
                             </svg>
                         </div>
-                        <button class="block-remove-btn" onclick="removeBlock(${index})" aria-label="Remove">
+                        <button class="block-remove-btn" onclick="removeBlock(${block.id})" aria-label="Remove">
                             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                                 <line x1="3" y1="3" x2="11" y2="11"/>
                                 <line x1="11" y1="3" x2="3" y2="11"/>
@@ -2304,7 +2313,7 @@ function renderBlockHtml(block, index) {
                         <textarea class="session-block-title-input"
                                   placeholder="${isGeneral ? 'Topic or title…' : 'Add a title…'}"
                                   rows="1"
-                                  oninput="updateBlockField(${index}, 'title', this.value); autoResizeCapped(this);"
+                                  oninput="updateBlockField(${block.id}, 'title', this.value); autoResizeCapped(this);"
                                   onfocus="this.placeholder=''"
                                   onblur="this.placeholder='${isGeneral ? 'Topic or title…' : 'Add a title…'}'"
                                   >${block.title}</textarea>
@@ -2323,22 +2332,24 @@ function renderBlockHtml(block, index) {
     `;
 }
 
-function updateBlockTopic(index, topicId) {
-    if (!appState.currentSession?.blocks[index]) return;
-    appState.currentSession.blocks[index].topicId = topicId;
+function updateBlockTopic(blockId, topicId) {
+    const block = getBlockById(blockId);
+    if (!block) return;
+    block.topicId = topicId;
     sortBlocks();
     renderBlocksOnly();
 }
 
-function setBlockMode(index, mode) {
-    if (!appState.currentSession?.blocks[index]) return;
-    appState.currentSession.blocks[index].mode = mode;
+function setBlockMode(blockId, mode) {
+    const block = getBlockById(blockId);
+    if (!block) return;
+    block.mode = mode;
     renderBlocksOnly();
 }
 
-function toggleBlockNotes(index) {
-    if (!appState.currentSession?.blocks[index]) return;
-    const block = appState.currentSession.blocks[index];
+function toggleBlockNotes(blockId) {
+    const block = getBlockById(blockId);
+    if (!block) return;
     block.notesOpen = !block.notesOpen;
     const blockEl = document.getElementById(`block-${block.id}`);
     if (!blockEl) return;
@@ -2347,13 +2358,13 @@ function toggleBlockNotes(index) {
     notesArea.innerHTML = block.notesOpen || block.notes ? `
         <textarea class="session-block-textarea session-block-capped"
                   placeholder="Notes — context, rehearsal, how it felt…"
-                  oninput="updateBlockField(${index}, 'notes', this.value); autoResizeCapped(this);"
+                  oninput="updateBlockField(${block.id}, 'notes', this.value); autoResizeCapped(this);"
                   >${block.notes || ''}</textarea>
         <button class="block-notes-toggle block-notes-toggle-open"
-                onmousedown="toggleBlockNotes(${index})">hide notes</button>
+                onmousedown="toggleBlockNotes(${block.id})">hide notes</button>
     ` : `
         <button class="block-notes-toggle"
-                onmousedown="toggleBlockNotes(${index})">
+                onmousedown="toggleBlockNotes(${block.id})">
             ${block.notes ? `${ICONS.get('edit', 12)} notes` : '+ add notes'}
         </button>
     `;
@@ -2365,23 +2376,21 @@ function toggleBlockNotes(index) {
 
 // ── Correction bullet handlers ──
 
-function updateCorrectionBullet(blockIndex, ci, text) {
-    const block = appState.currentSession?.blocks[blockIndex];
+function updateCorrectionBullet(blockId, ci, text) {
+    const block = getBlockById(blockId);
     if (!block) return;
     if (!Array.isArray(block.corrections)) block.corrections = [];
     block.corrections[ci] = text;
 }
 
-function handleNewCorrectionBulletInput(event, blockIndex) {
-    const text = event.target.innerText;
-    if (!text.trim()) return;
-    // This is the new-entry row — update state but don't commit yet
-    // commitNewBullet is called on Enter
+function handleNewCorrectionBulletInput(event, blockId) {
+    // Text committed on Enter or flushed on save — nothing to do here
 }
 
-function handleCorrectionBulletKey(event, blockIndex, ci) {
-    const block = appState.currentSession?.blocks[blockIndex];
+function handleCorrectionBulletKey(event, blockId, ci) {
+    const block = getBlockById(blockId);
     if (!block) return;
+    const blockIndex = getBlockIndexById(blockId);
 
     if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
@@ -2412,14 +2421,14 @@ function handleCorrectionBulletKey(event, blockIndex, ci) {
     // Shift+Enter: default behaviour (new line within same bullet)
 }
 
-function deleteCorrectionBullet(blockIndex, ci) {
-    const block = appState.currentSession?.blocks[blockIndex];
+function deleteCorrectionBullet(blockId, ci) {
+    const block = getBlockById(blockId);
     if (!block || !Array.isArray(block.corrections)) return;
     block.corrections.splice(ci, 1);
-    renderBlockBulletsInPlace(block, blockIndex);
+    renderBlockBulletsInPlace(block, blockId);
 }
 
-function renderBlockBulletsInPlace(block, blockIndex) {
+function renderBlockBulletsInPlace(block, blockId) {
     const container = document.getElementById(`correction-bullets-${block.id}`);
     if (!container) return;
     const corrList = block.corrections || [];
@@ -2430,14 +2439,14 @@ function renderBlockBulletsInPlace(block, blockIndex) {
             <div class="correction-bullet-input-wrapper">
                 <div class="correction-bullet-input"
                      contenteditable="true"
-                     data-block="${blockIndex}"
+                     data-block="${blockId}"
                      data-ci="${ci}"
-                     oninput="updateCorrectionBullet(${blockIndex}, ${ci}, this.innerText)"
-                     onkeydown="handleCorrectionBulletKey(event, ${blockIndex}, ${ci})"
+                     oninput="updateCorrectionBullet(${blockId}, ${ci}, this.innerText)"
+                     onkeydown="handleCorrectionBulletKey(event, ${blockId}, ${ci})"
                      >${text}</div>
             </div>
             <button class="correction-bullet-delete"
-                    onmousedown="deleteCorrectionBullet(${blockIndex}, ${ci})"
+                    onmousedown="deleteCorrectionBullet(${blockId}, ${ci})"
                     aria-label="Delete">×</button>
         </div>
     `).join('') + `
@@ -2446,10 +2455,10 @@ function renderBlockBulletsInPlace(block, blockIndex) {
             <div class="correction-bullet-input-wrapper">
                 <div class="correction-bullet-input correction-bullet-placeholder"
                      contenteditable="true"
-                     data-block="${blockIndex}"
+                     data-block="${blockId}"
                      data-ci="${corrList.length}"
-                     oninput="handleNewCorrectionBulletInput(event, ${blockIndex})"
-                     onkeydown="handleCorrectionBulletKey(event, ${blockIndex}, ${corrList.length})"
+                     oninput="handleNewCorrectionBulletInput(event, ${blockId})"
+                     onkeydown="handleCorrectionBulletKey(event, ${blockId}, ${corrList.length})"
                      ></div>
             </div>
         </div>
@@ -2474,13 +2483,16 @@ function autoResizeTextarea(el) {
     el.style.height = el.scrollHeight + 'px';
 }
 
-function updateBlockField(index, field, value) {
-    if (!appState.currentSession?.blocks[index]) return;
-    appState.currentSession.blocks[index][field] = value;
+function updateBlockField(blockId, field, value) {
+    const block = getBlockById(blockId);
+    if (!block) return;
+    block[field] = value;
 }
 
-function removeBlock(index) {
-    appState.currentSession.blocks.splice(index, 1);
+function removeBlock(blockId) {
+    const idx = getBlockIndexById(blockId);
+    if (idx === -1) return;
+    appState.currentSession.blocks.splice(idx, 1);
     renderBlocksOnly();
 }
 
@@ -2570,8 +2582,8 @@ function saveSession() {
     document.querySelectorAll('.correction-bullet-new .correction-bullet-input').forEach(el => {
         const text = el.innerText?.trim();
         if (!text) return;
-        const blockIndex = parseInt(el.dataset.block, 10);
-        const block = s.blocks?.[blockIndex];
+        const blockId = parseInt(el.dataset.block, 10);
+        const block = getBlockById(blockId);
         if (!block) return;
         if (!Array.isArray(block.corrections)) block.corrections = [];
         block.corrections.push(text);
@@ -4175,7 +4187,7 @@ function initProfile() {
         else if (quizGoals.includes(0)) suggestedGoal = 'Get back into a regular class routine';
 
         goalEl.innerHTML = `
-            <div class="profile-action-card" onclick="openGoalCreatorWithTitle(${JSON.stringify(suggestedGoal)})">
+            <div class="profile-action-card" onclick="openGoalCreatorWithTitle('${suggestedGoal.replace(/'/g, "\\'")}')">
                 <div class="profile-action-label">YOUR FIRST GOAL</div>
                 <div class="profile-action-title">${suggestedGoal}</div>
                 <div class="profile-action-description">Based on what you told us. Tap to set it, edit, or write your own.</div>
@@ -4758,14 +4770,17 @@ function showSkillDetail(skillId, returnTo) {
 
     showScreen(screenId);
 
-    // Collapse header when hero scrolls out of view
+    // Collapse header when hero scrolls out of view.
+    // Use .app-container as root so the observer is immune to overflow-x:clip
+    // on the container, which can cause the viewport-based observer to misfire on iOS.
     requestAnimationFrame(() => {
         const hero = document.getElementById(`skill-hero-${skillId}`);
         const collapsed = document.getElementById(`skill-detail-collapsed-${skillId}`);
         if (!hero || !collapsed) return;
+        const root = document.querySelector('.app-container');
         const obs = new IntersectionObserver(([entry]) => {
             collapsed.classList.toggle('visible', !entry.isIntersecting);
-        }, { threshold: 0, rootMargin: '-56px 0px 0px 0px' });
+        }, { root, threshold: 0, rootMargin: '-56px 0px 0px 0px' });
         obs.observe(hero);
     });
 }
@@ -5284,7 +5299,7 @@ function showSkillKnowledgePage(skillId, returnTo) {
     const keyCuesHtml = knowledge.keyCues.length > 0
         ? knowledge.keyCues.map((cue, i) => `
             <li class="skill-know-list-item skill-know-tappable"
-                onmousedown="showKnowledgeItemPopover(this, '${skillId}', ${JSON.stringify(cue).replace(/'/g, "&#39;")}, 'note')">
+                onclick="showKnowledgeItemPopover(this, '${skillId}', ${JSON.stringify(cue).replace(/'/g, "&#39;")}, 'note')">
                 ${cue}
                 <span class="skill-know-save-hint">tap to save</span>
             </li>`).join('')
@@ -5293,7 +5308,7 @@ function showSkillKnowledgePage(skillId, returnTo) {
     const correctionsHtml = knowledge.commonCorrections.length > 0
         ? knowledge.commonCorrections.map((c, i) => `
             <li class="skill-know-list-item skill-know-correction skill-know-tappable"
-                onmousedown="showKnowledgeItemPopover(this, '${skillId}', ${JSON.stringify(c).replace(/'/g, "&#39;")}, 'correction')">
+                onclick="showKnowledgeItemPopover(this, '${skillId}', ${JSON.stringify(c).replace(/'/g, "&#39;")}, 'correction')">
                 ${c}
                 <span class="skill-know-save-hint">tap to save</span>
             </li>`).join('')
