@@ -1,6 +1,183 @@
 'use strict';
 
 /* ═══════════════════════════════════════════════════════════════
+   ICON MAP
+   All SVG icons in one place. Data objects reference keys.
+   Render with: ICONS.get('key') or ICONS.get('key', 20) for size.
+   All icons: stroke="currentColor", inherit colour from parent.
+═══════════════════════════════════════════════════════════════ */
+const ICONS = {
+    _svg(paths, size = 24, extra = '') {
+        return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${extra}>${paths}</svg>`;
+    },
+    get(key, size = 24) {
+        const fn = this[key];
+        return fn ? fn.call(this, size) : this._svg('', size);
+    },
+
+    profile: (s) => ICONS._svg(
+        '<circle cx="12" cy="8" r="4"/>' +
+        '<path d="M4 20 C4 16 8 13 12 13 C16 13 20 16 20 20"/>', s),
+
+    // ── Navigation ──────────────────────────────────────────────
+    barre: (s) => ICONS._svg(
+        // Horizontal barre with a leg extending up — simplified dance pose
+        '<line x1="3" y1="13" x2="21" y2="13"/>' +
+        '<circle cx="8" cy="13" r="1.2" fill="currentColor" stroke="none"/>' +
+        '<path d="M10 13 C10 9 12 6 12 5"/>' +
+        '<path d="M10 13 C9 17 7 20 6 21"/>' +
+        '<path d="M10 13 C12 11 15 10 16 9"/>', s),
+
+    assess: (s) => ICONS._svg(
+        // Clipboard / assessment sheet
+        '<rect x="4" y="3" width="16" height="18" rx="2"/>' +
+        '<line x1="8" y1="8" x2="16" y2="8"/>' +
+        '<line x1="8" y1="12" x2="14" y2="12"/>' +
+        '<line x1="8" y1="16" x2="12" y2="16"/>', s),
+
+    goals: (s) => ICONS._svg(
+        // Target / bullseye
+        '<circle cx="12" cy="12" r="9"/>' +
+        '<circle cx="12" cy="12" r="5"/>' +
+        '<circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>', s),
+
+    learn: (s) => ICONS._svg(
+        // Open book / mortarboard
+        '<path d="M2 5 L12 9 L22 5"/>' +
+        '<path d="M12 9 L12 20"/>' +
+        '<path d="M4 6.5 L4 15 C4 15 8 18 12 18 C16 18 20 15 20 15 L20 6.5"/>', s),
+
+    profile: (s) => ICONS._svg(
+        '<circle cx="12" cy="8" r="4"/>' +
+        '<path d="M4 20 C4 16 8 13 12 13 C16 13 20 16 20 20"/>', s),
+
+    // ── Skill categories ────────────────────────────────────────
+    'cat-barre': (s) => ICONS._svg(
+        // Barre rail — horizontal line with support posts
+        '<line x1="2" y1="10" x2="22" y2="10" stroke-width="2.2"/>' +
+        '<line x1="6" y1="10" x2="6" y2="20"/>' +
+        '<line x1="18" y1="10" x2="18" y2="20"/>' +
+        '<line x1="3" y1="20" x2="21" y2="20"/>', s),
+
+    'cat-centre': (s) => ICONS._svg(
+        // Four arrows expanding from centre — open space
+        '<line x1="12" y1="12" x2="19" y2="5"/>' +
+        '<polyline points="14 5 19 5 19 10"/>' +
+        '<line x1="12" y1="12" x2="5" y2="19"/>' +
+        '<polyline points="10 19 5 19 5 14"/>', s),
+
+    'cat-turns': (s) => ICONS._svg(
+        // Circular arrow — rotation
+        '<path d="M20 12 A8 8 0 1 1 13 4.1"/>' +
+        '<polyline points="13 2 13 6 17 6"/>', s),
+
+    'cat-allegro': (s) => ICONS._svg(
+        // Upward arc — jump
+        '<path d="M5 18 C5 18 7 8 12 6 C17 8 19 18 19 18"/>' +
+        '<line x1="8" y1="18" x2="16" y2="18"/>', s),
+
+    'cat-pointe': (s) => ICONS._svg(
+        // Pointed foot silhouette — simplified
+        '<path d="M8 4 L8 16 C8 18 10 20 13 20 C16 20 17 18 17 17 C17 15 15 14 12 15"/>' +
+        '<line x1="5" y1="4" x2="11" y2="4"/>', s),
+
+    'cat-flexibility': (s) => ICONS._svg(
+        // Side stretch / arc
+        '<path d="M5 18 C5 12 8 7 12 6"/>' +
+        '<path d="M12 6 C16 7 19 11 20 16"/>' +
+        '<circle cx="12" cy="6" r="1.5" fill="currentColor" stroke="none"/>', s),
+
+    // ── Learn cards ─────────────────────────────────────────────
+    'learn-quiz': (s) => ICONS._svg(
+        // Question mark in circle
+        '<circle cx="12" cy="12" r="9"/>' +
+        '<path d="M9.5 9 C9.5 7.3 10.6 6 12 6 C13.4 6 14.5 7.1 14.5 8.5 C14.5 10.5 12 11 12 13"/>' +
+        '<circle cx="12" cy="16.5" r="0.8" fill="currentColor" stroke="none"/>', s),
+
+    'learn-footwork': (s) => ICONS._svg(
+        // Foot / relevé — simplified
+        '<path d="M8 5 L8 15 C8 17 9.5 19 12 19 C14.5 19 16 17.5 16 16.5 C16 15 14.5 14 12 14.5"/>' +
+        '<line x1="5" y1="5" x2="11" y2="5"/>', s),
+
+    'learn-splits': (s) => ICONS._svg(
+        // Figure with legs extended — splits
+        '<circle cx="12" cy="5" r="2"/>' +
+        '<line x1="12" y1="7" x2="12" y2="13"/>' +
+        '<line x1="3" y1="17" x2="12" y2="13"/>' +
+        '<line x1="12" y1="13" x2="21" y2="17"/>', s),
+
+    'learn-core': (s) => ICONS._svg(
+        // Shield / core strength
+        '<path d="M12 3 L20 7 L20 13 C20 17 16 20 12 21 C8 20 4 17 4 13 L4 7 Z"/>' +
+        '<polyline points="9 12 11 14 15 10"/>', s),
+
+    'learn-pirouette': (s) => ICONS._svg(
+        // Spinning figure — circle with upward line
+        '<circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/>' +
+        '<circle cx="12" cy="5" r="2"/>' +
+        '<line x1="12" y1="7" x2="12" y2="14"/>', s),
+
+    // ── Actions / utility ────────────────────────────────────────
+    'flag': (s) => ICONS._svg(
+        // Filled flag — skill in focus
+        '<path d="M4 21 L4 4" stroke-width="2"/>' +
+        '<path d="M4 4 L16 4 L13 9.5 L16 15 L4 15" fill="currentColor" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5"/>', s),
+
+    'flag-outline': (s) => ICONS._svg(
+        // Outline flag — not flagged
+        '<path d="M4 21 L4 4" stroke-width="2"/>' +
+        '<path d="M4 4 L16 4 L13 9.5 L16 15 L4 15" fill="none" stroke-linejoin="round" stroke-width="1.5"/>', s),
+
+    'edit': (s) => ICONS._svg(
+        // Pencil — edit / notes
+        '<path d="M17 3 L21 7 L8 20 L3 21 L4 16 Z"/>' +
+        '<line x1="14" y1="6" x2="18" y2="10"/>', s),
+
+    // ── Folders ─────────────────────────────────────────────────
+    'folder-ballets': (s) => ICONS._svg(
+        // Stage curtains with arch — theatre / repertoire
+        '<path d="M3 5 C3 5 7 7 12 5 C17 7 21 5 21 5 L21 19 L3 19 Z"/>' +
+        '<path d="M3 5 L3 19"/>' +
+        '<path d="M21 5 L21 19"/>' +
+        '<path d="M7 19 L7 11 C7 8 10 7 12 9 C14 7 17 8 17 11 L17 19"/>', s),
+
+    // ── Persona / experience level ──────────────────────────────
+    'persona-natural': (s) => ICONS._svg(
+        // Star — natural talent
+        '<polygon points="12,2 15.1,8.3 22,9.3 17,14.1 18.2,21 12,17.8 5.8,21 7,14.1 2,9.3 8.9,8.3"/>', s),
+
+    'persona-lifelong': (s) => ICONS._svg(
+        // Continuous loop — lifelong
+        '<path d="M12 3 C7 3 3 7 3 12 C3 17 7 21 12 21 C17 21 21 17 21 12 C21 9 19 6.5 16 5"/>' +
+        '<polyline points="16 2 16 6 12 6"/>', s),
+
+    'persona-new': (s) => ICONS._svg(
+        // Seedling / sprout
+        '<line x1="12" y1="21" x2="12" y2="10"/>' +
+        '<path d="M12 10 C12 10 8 9 7 5 C10 4 13 6 12 10"/>' +
+        '<path d="M12 13 C12 13 16 12 17 8 C14 7 11 9 12 13"/>', s),
+
+    'persona-finding': (s) => ICONS._svg(
+        // Compass rose — finding direction
+        '<circle cx="12" cy="12" r="9"/>' +
+        '<polygon points="12,5 13.5,10.5 12,12 10.5,10.5" fill="currentColor" stroke="none"/>' +
+        '<polygon points="12,19 10.5,13.5 12,12 13.5,13.5" fill="none"/>', s),
+
+    'persona-returning': (s) => ICONS._svg(
+        // Curtain / stage — returning to it
+        '<rect x="2" y="3" width="20" height="16" rx="1"/>' +
+        '<path d="M2 3 C2 3 7 5 12 3 C17 5 22 3 22 3"/>' +
+        '<path d="M7 19 L7 10 C7 7 10 6 12 8 C14 6 17 7 17 10 L17 19"/>', s),
+
+    'persona-break': (s) => ICONS._svg(
+        // Pause then play — after a break
+        '<circle cx="12" cy="12" r="9"/>' +
+        '<line x1="9" y1="8" x2="9" y2="16"/>' +
+        '<line x1="13" y1="8" x2="13" y2="16"/>' +
+        '<polyline points="16 10 19 12 16 14"/>', s),
+};
+
+/* ═══════════════════════════════════════════════════════════════
    1. DATA MODELS
    All static data and the central app state.
    ═══════════════════════════════════════════════════════════════ */
@@ -26,7 +203,7 @@ const DATA = {
 
     folders: {
         barre: {
-            icon: '🩰',
+            icon: 'cat-barre',
             title: 'Barre Exercises',
             subtitle: '15 fundamental skills',
             items: [
@@ -41,7 +218,7 @@ const DATA = {
             ],
         },
         footwork: {
-            icon: '🦶',
+            icon: 'learn-footwork',
             title: 'Footwork & Articulation',
             subtitle: '5 assessment exercises',
             items: [
@@ -53,7 +230,7 @@ const DATA = {
             ]
         },
         ballets: {
-            icon: '🎭',
+            icon: 'folder-ballets',
             title: 'Famous Ballets',
             subtitle: '18 iconic works',
             items: [
@@ -75,12 +252,12 @@ const DATA = {
             question: "Which best describes you?",
             type: "card-select",
             options: [
-                { icon: "⭐", label: "Born to dance", description: "Dancing since before I can remember" },
-                { icon: "💫", label: "Lifelong dancer", description: "Training consistently since childhood" },
-                { icon: "🌱", label: "Just starting out", description: "Less than a year of ballet" },
-                { icon: "🌸", label: "Finding my feet", description: "1–3 years of training" },
-                { icon: "🎭", label: "Coming back", description: "Strong foundation, getting back to it" },
-                { icon: "✨", label: "After a break", description: "Returning after some time away" }
+                { icon: "persona-natural", label: "Born to dance", description: "Dancing since before I can remember" },
+                { icon: "persona-lifelong", label: "Lifelong dancer", description: "Training consistently since childhood" },
+                { icon: "persona-new", label: "Just starting out", description: "Less than a year of ballet" },
+                { icon: "persona-finding", label: "Finding my feet", description: "1–3 years of training" },
+                { icon: "persona-returning", label: "Coming back", description: "Strong foundation, getting back to it" },
+                { icon: "persona-break", label: "After a break", description: "Returning after some time away" }
             ],
             key: "persona"
         },
@@ -271,29 +448,29 @@ const DATA = {
     },
 
     skillCategories: [
-        { id: 'barre', icon: '🩰', name: 'Barre work', count: '15 skills', onclick: "openFolder('barre')" },
-        { id: 'centre', icon: '💫', name: 'Centre work', count: '12 skills', onclick: "alert('Coming soon')" },
-        { id: 'turns', icon: '🔄', name: 'Turns', count: '8 skills', onclick: "alert('Coming soon')" },
-        { id: 'allegro', icon: '🦘', name: 'Allegro', count: '14 skills', onclick: "alert('Coming soon')" },
-        { id: 'pointe', icon: '🩰', name: 'Pointe work', count: '10 skills', onclick: "alert('Coming soon')" },
-        { id: 'flexibility', icon: '🤸', name: 'Flexibility & strength', count: '12 exercises', onclick: "alert('Coming soon')" }
+        { id: 'barre', icon: 'cat-barre', name: 'Barre work', count: '15 skills', onclick: "openFolder('barre')" },
+        { id: 'centre', icon: 'cat-centre', name: 'Centre work', count: '12 skills', onclick: "alert('Coming soon')" },
+        { id: 'turns', icon: 'cat-turns', name: 'Turns', count: '8 skills', onclick: "alert('Coming soon')" },
+        { id: 'allegro', icon: 'cat-allegro', name: 'Allegro', count: '14 skills', onclick: "alert('Coming soon')" },
+        { id: 'pointe', icon: 'cat-pointe', name: 'Pointe work', count: '10 skills', onclick: "alert('Coming soon')" },
+        { id: 'flexibility', icon: 'cat-flexibility', name: 'Flexibility & strength', count: '12 exercises', onclick: "alert('Coming soon')" }
     ],
 
     assessments: [
-        { icon: '📋', name: 'Placement quiz', desc: 'Find your overall level across 6 dimensions', action: 'startPlacementQuiz()', badge: '14 questions' },
-        { icon: '🦶', name: 'Footwork & articulation', desc: 'Pointe work, relevé strength, and foot flexibility', action: "openFolder('footwork')", badge: '5 exercises' },
-        { icon: '🤸', name: 'Splits & extensions', desc: 'Splits, leg height, and range of motion', action: "alert('Coming soon')", badge: '6 exercises' },
-        { icon: '💪', name: 'Core & stamina', desc: 'Endurance, balance, and core stability', action: "alert('Coming soon')", badge: '10 exercises' },
-        { icon: '🔄', name: 'Pirouettes & rotation', desc: 'Turning technique and spotting', action: "alert('Coming soon')", badge: '7 exercises' }
+        { icon: 'learn-quiz', name: 'Placement quiz', desc: 'Find your overall level across 6 dimensions', action: 'startPlacementQuiz()', badge: '14 questions' },
+        { icon: 'learn-footwork', name: 'Footwork & articulation', desc: 'Pointe work, relevé strength, and foot flexibility', action: "openFolder('footwork')", badge: '5 exercises' },
+        { icon: 'learn-splits', name: 'Splits & extensions', desc: 'Splits, leg height, and range of motion', action: "alert('Coming soon')", badge: '6 exercises' },
+        { icon: 'learn-core', name: 'Core & stamina', desc: 'Endurance, balance, and core stability', action: "alert('Coming soon')", badge: '10 exercises' },
+        { icon: 'learn-pirouette', name: 'Pirouettes & rotation', desc: 'Turning technique and spotting', action: "alert('Coming soon')", badge: '7 exercises' }
     ],
 
     learnSections: [
-        { name: 'Skill library',     desc: 'Every ballet movement — browse, search, and learn',       count: '80+ skills',   action: "showLearnSkillLibrary()" },
-        { name: 'Glossary',          desc: 'Key terms, musicality concepts, and ballet vocabulary',    count: 'coming soon',  action: "showGlossary()" },
-        { name: 'Famous ballets',    desc: 'Iconic productions and the dancers who defined them',      count: '18 ballets',   action: "openFolder('ballets')" },
-        { name: 'Composers',         desc: 'From Tchaikovsky to Prokofiev and beyond',                 count: '12 composers', action: "alert('Coming soon')" },
-        { name: 'Variations',        desc: 'Classical variations to study and learn',                  count: '25 variations',action: "alert('Coming soon')" },
-        { name: 'Legendary dancers', desc: 'From Plisetskaya to Acosta — the greats',                 count: '15 dancers',   action: "alert('Coming soon')" }
+        { icon: 'cat-barre',        name: 'Skill library',     desc: 'Every ballet movement — browse, search, and learn',       count: '80+ skills',   action: "showLearnSkillLibrary()" },
+        { icon: 'learn-quiz',       name: 'Glossary',          desc: 'Key terms, musicality concepts, and ballet vocabulary',    count: 'coming soon',  action: "showGlossary()" },
+        { icon: 'persona-returning',name: 'Famous ballets',    desc: 'Iconic productions and the dancers who defined them',      count: '18 ballets',   action: "openFolder('ballets')" },
+        { icon: 'learn-pirouette',  name: 'Composers',         desc: 'From Tchaikovsky to Prokofiev and beyond',                 count: '12 composers', action: "alert('Coming soon')" },
+        { icon: 'cat-centre',       name: 'Variations',        desc: 'Classical variations to study and learn',                  count: '25 variations',action: "alert('Coming soon')" },
+        { icon: 'profile',          name: 'Legendary dancers', desc: 'From Plisetskaya to Acosta — the greats',                 count: '15 dancers',   action: "alert('Coming soon')" }
     ],
 
     profileCapabilities: [
@@ -965,7 +1142,7 @@ function renderQuestion() {
                 const selected = appState.answers[question.key] === idx ? ' selected' : '';
                 return `
                     <div class="persona-card${selected}" onclick="selectOption('${question.key}', ${idx})">
-                        <div class="persona-icon">${opt.icon}</div>
+                        <div class="persona-icon">${ICONS.get(opt.icon, 28)}</div>
                         <h3>${opt.label}</h3>
                         <p>${opt.description}</p>
                     </div>
@@ -2044,7 +2221,7 @@ function renderBlockHtml(block, index) {
             ` : `
                 <button class="block-notes-toggle"
                         onmousedown="toggleBlockNotes(${index})">
-                    ${block.notes ? '✎ notes' : '+ add notes'}
+                    ${block.notes ? `${ICONS.get('edit', 12)} notes` : '+ add notes'}
                 </button>
             `}
         </div>
@@ -2169,7 +2346,7 @@ function toggleBlockNotes(index) {
     ` : `
         <button class="block-notes-toggle"
                 onmousedown="toggleBlockNotes(${index})">
-            ${block.notes ? '✎ notes' : '+ add notes'}
+            ${block.notes ? `${ICONS.get('edit', 12)} notes` : '+ add notes'}
         </button>
     `;
     if (block.notesOpen) {
@@ -2379,6 +2556,19 @@ function appendTimelineEntry({ type, objectId = null, title, body = null, date }
 function saveSession() {
     const s = appState.currentSession;
     if (!s) return;
+
+    // Flush any pending new-bullet inputs — if the user typed in a correction
+    // row and tapped Save without pressing Enter, capture it before processing.
+    document.querySelectorAll('.correction-bullet-new .correction-bullet-input').forEach(el => {
+        const text = el.innerText?.trim();
+        if (!text) return;
+        const blockIndex = parseInt(el.dataset.block, 10);
+        const block = s.blocks?.[blockIndex];
+        if (!block) return;
+        if (!Array.isArray(block.corrections)) block.corrections = [];
+        block.corrections.push(text);
+        el.innerText = ''; // clear so it doesn't double-save
+    });
 
     const now = Date.now();
     let seq = 0; // monotonic sequence within this save — guarantees unique IDs
@@ -2723,7 +2913,71 @@ function closeReflectionOverlay() {
     overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
 }
 
-function saveReflection() {
+function editTimelineNote(noteId) {
+    const note = (appState.skillNotes || []).find(n => n.id === noteId);
+    if (!note) return;
+
+    const existing = document.getElementById('edit-note-overlay');
+    if (existing) existing.remove();
+
+    const isReflection = note.isReflection;
+    const overlay = document.createElement('div');
+    overlay.id = 'edit-note-overlay';
+    overlay.className = 'session-overlay';
+    overlay.innerHTML = `
+        <div class="session-logger-sheet">
+            <div class="session-sheet-handle"></div>
+            <div class="session-logger-header">
+                <div>
+                    <div class="session-logger-eyebrow">${isReflection ? 'Reflection' : 'Praise'}</div>
+                    <h2 class="session-logger-title">Edit note</h2>
+                </div>
+                <button class="session-close-btn" onmousedown="document.getElementById('edit-note-overlay')?.remove()">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="session-logger-body">
+                <div class="session-field">
+                    <textarea class="session-block-textarea session-block-capped"
+                              id="edit-note-textarea"
+                              oninput="autoResizeCapped(this)"
+                              style="min-height: 100px;">${note.text}</textarea>
+                </div>
+            </div>
+            <div class="session-logger-footer">
+                <button class="btn-large session-save-btn" onmousedown="saveTimelineNoteEdit(${noteId})">save</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('open'));
+    setTimeout(() => {
+        const ta = document.getElementById('edit-note-textarea');
+        if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+    }, 300);
+}
+
+function saveTimelineNoteEdit(noteId) {
+    const text = document.getElementById('edit-note-textarea')?.value?.trim();
+    if (!text) return;
+    const note = (appState.skillNotes || []).find(n => n.id === noteId);
+    if (!note) return;
+    note.text = text;
+    storage.save('skillNotes', appState.skillNotes);
+    document.getElementById('edit-note-overlay')?.remove();
+    if (appState.currentScreen === 'profile') initProfile();
+}
+
+function deleteTimelineNote(noteId) {
+    if (!confirm('Delete this entry?')) return;
+    appState.skillNotes = (appState.skillNotes || []).filter(n => n.id !== noteId);
+    storage.save('skillNotes', appState.skillNotes);
+    if (appState.currentScreen === 'profile') initProfile();
+}
+
+
     const text = document.getElementById('reflection-textarea')?.value?.trim();
     if (!text) {
         closeReflectionOverlay();
@@ -2825,7 +3079,7 @@ function showBarreScreen() {
     } else {
         activeSkillsHtml = `
             <div class="barre-empty-state">
-                <div class="barre-empty-icon">🩰</div>
+                <div class="barre-empty-icon">${ICONS.get('cat-barre', 32)}</div>
                 <div class="barre-empty-title">No active skills yet</div>
                 <div class="barre-empty-text">Log a session to start tracking skills, or browse the categories below to add them manually.</div>
             </div>
@@ -2852,7 +3106,7 @@ function showBarreScreen() {
             <div style="display: flex; flex-direction: column; gap: var(--sp-sm);">
                 ${DATA.skillCategories.map(cat => `
                     <div class="skill-category-card" onclick="${cat.onclick}">
-                        <div class="skill-category-icon">${cat.icon}</div>
+                        <div class="skill-category-icon">${ICONS.get(cat.icon, 24)}</div>
                         <div class="skill-category-info">
                             <div class="skill-category-name">${cat.name}</div>
                             <div class="skill-category-count">${cat.count}</div>
@@ -2899,7 +3153,7 @@ function showAssessScreen() {
                 <div style="display: flex; flex-direction: column; gap: var(--sp-sm);">
                     ${DATA.assessments.map((a, i) => `
                         <div class="skill-category-card" onclick="${a.action}" ${i === 0 ? 'style="background: var(--accent-wash); border-color: var(--accent-soft);"' : ''}>
-                            <div class="skill-category-icon" ${i === 0 ? 'style="background: var(--accent-soft);"' : ''}>${a.icon}</div>
+                            <div class="skill-category-icon" ${i === 0 ? 'style="background: var(--accent-soft);"' : ''}>${ICONS.get(a.icon, 24)}</div>
                             <div class="skill-category-info">
                                 <div class="skill-category-name">${a.name}</div>
                                 <div class="skill-category-count">${a.badge}</div>
@@ -2978,7 +3232,7 @@ function renderGoalsScreen() {
     if (goals.length === 0) {
         goalsHtml = `
             <div class="barre-empty-state">
-                <div class="barre-empty-icon">🎯</div>
+                <div class="barre-empty-icon">${ICONS.get('goals', 32)}</div>
                 <div class="barre-empty-title">No goals yet</div>
                 <div class="barre-empty-text">Set targets and track progress. Goals can link to a specific skill or dimension.</div>
             </div>`;
@@ -3173,6 +3427,19 @@ function openGoalCreator() {
     document.querySelector('.fab')?.classList.remove('visible');
     document.querySelector('.bottom-nav')?.classList.remove('visible');
     requestAnimationFrame(() => overlay.classList.add('open'));
+}
+
+function openGoalCreatorWithTitle(title) {
+    openGoalCreator();
+    // Pre-fill the title after the creator has rendered
+    if (appState._goalDraft) {
+        appState._goalDraft.title = title;
+        // Update the rendered input directly so it's immediately visible
+        requestAnimationFrame(() => {
+            const titleInput = document.getElementById('goal-title-input');
+            if (titleInput) titleInput.value = title;
+        });
+    }
 }
 
 function openGoalEditor(goalId) {
@@ -3771,7 +4038,7 @@ function showLearnScreen() {
                 <div style="display: flex; flex-direction: column; gap: var(--sp-sm);">
                     ${DATA.learnSections.map(s => `
                         <div class="skill-category-card" onclick="${s.action}">
-                            <div class="skill-category-icon">${s.icon}</div>
+                            <div class="skill-category-icon">${ICONS.get(s.icon, 24)}</div>
                             <div class="skill-category-info">
                                 <div class="skill-category-name">${s.name}</div>
                                 <div class="skill-category-count">${s.count}</div>
@@ -3804,7 +4071,7 @@ function openFolder(folderId) {
                 <div class="detail-header">
                     <button class="detail-back-btn" onclick="navigateTo('assess')">←</button>
                     <div class="detail-title-section">
-                        <div class="detail-icon">${folder.icon}</div>
+                        <div class="detail-icon">${ICONS.get(folder.icon, 28)}</div>
                         <div class="detail-title">${folder.title}</div>
                         <div class="detail-subtitle">${folder.subtitle}</div>
                     </div>
@@ -3900,7 +4167,7 @@ function initProfile() {
         else if (quizGoals.includes(0)) suggestedGoal = 'Get back into a regular class routine';
 
         goalEl.innerHTML = `
-            <div class="profile-action-card" onclick="openGoalCreator()">
+            <div class="profile-action-card" onclick="openGoalCreatorWithTitle(${JSON.stringify(suggestedGoal)})">
                 <div class="profile-action-label">YOUR FIRST GOAL</div>
                 <div class="profile-action-title">${suggestedGoal}</div>
                 <div class="profile-action-description">Based on what you told us. Tap to set it, edit, or write your own.</div>
@@ -3911,12 +4178,15 @@ function initProfile() {
 
     // Explore cards
     const exploreEl = document.getElementById('profileExploreCards');
+    const exploreSection = document.getElementById('profileExploreSection');
     const caps = DATA.profileCapabilities;
     const allDone = caps.every(c => c.isDone());
 
     if (allDone) {
-        exploreEl.innerHTML = ''; // section disappears once all complete
+        if (exploreSection) exploreSection.style.display = 'none';
     } else {
+        if (exploreSection) exploreSection.style.display = '';
+    
         exploreEl.innerHTML = caps.map(cap => {
             const done = cap.isDone();
             return `
@@ -4010,6 +4280,10 @@ function initProfile() {
                         <span class="timeline-type-label">${typeLabel}</span>
                         <div class="timeline-title ${isReflection ? 'timeline-reflection-text' : 'timeline-praise-text'}">${isReflection ? `"${entry.text}"` : entry.text}</div>
                         ${skillRef ? `<div class="timeline-subtitle">${skillRef.french}</div>` : ''}
+                        <div class="timeline-note-actions">
+                            <button class="timeline-note-btn" onmousedown="editTimelineNote(${entry.id})">edit</button>
+                            <button class="timeline-note-btn timeline-note-btn-delete" onmousedown="deleteTimelineNote(${entry.id})">delete</button>
+                        </div>
                     </div>
                 </div>`;
             }
@@ -4906,9 +5180,9 @@ function renderSkillLibCard(ref, query) {
             <div class="skill-lib-card-meta">
                 <span class="difficulty-badge difficulty-${ref.difficulty}">${ref.difficulty}</span>
                 <div class="skill-lib-card-indicators">
-                    ${isFlagged ? `<span class="skill-lib-indicator" title="In focus">●</span>` : ''}
+                    ${isFlagged ? `<span class="skill-lib-indicator" title="In focus">${ICONS.get('flag', 10)}</span>` : ''}
                     ${correctionCount > 0 ? `<span class="skill-lib-indicator skill-lib-indicator-count">${correctionCount}</span>` : ''}
-                    ${hasNotes ? `<span class="skill-lib-indicator" title="Has notes">✎</span>` : ''}
+                    ${hasNotes ? `<span class="skill-lib-indicator" title="Has notes">${ICONS.get('edit', 10)}</span>` : ''}
                 </div>
             </div>
         </div>
@@ -5002,7 +5276,7 @@ function showSkillKnowledgePage(skillId, returnTo) {
     const keyCuesHtml = knowledge.keyCues.length > 0
         ? knowledge.keyCues.map((cue, i) => `
             <li class="skill-know-list-item skill-know-tappable"
-                onclick="showKnowledgeItemPopover(this, '${skillId}', ${JSON.stringify(cue).replace(/'/g, "&#39;")}, 'note')">
+                onmousedown="showKnowledgeItemPopover(this, '${skillId}', ${JSON.stringify(cue).replace(/'/g, "&#39;")}, 'note')">
                 ${cue}
                 <span class="skill-know-save-hint">tap to save</span>
             </li>`).join('')
@@ -5011,7 +5285,7 @@ function showSkillKnowledgePage(skillId, returnTo) {
     const correctionsHtml = knowledge.commonCorrections.length > 0
         ? knowledge.commonCorrections.map((c, i) => `
             <li class="skill-know-list-item skill-know-correction skill-know-tappable"
-                onclick="showKnowledgeItemPopover(this, '${skillId}', ${JSON.stringify(c).replace(/'/g, "&#39;")}, 'correction')">
+                onmousedown="showKnowledgeItemPopover(this, '${skillId}', ${JSON.stringify(c).replace(/'/g, "&#39;")}, 'correction')">
                 ${c}
                 <span class="skill-know-save-hint">tap to save</span>
             </li>`).join('')
@@ -5401,7 +5675,7 @@ function renderSkills(filter = 'all') {
             <td>
                 <button class="skill-flag ${skill.flagged ? 'flagged' : ''}"
                         onclick="toggleFlag('${skill.id}')">
-                    ${skill.flagged ? '🚩' : '⚐'}
+                    ${skill.flagged ? ICONS.get('flag', 14) : ICONS.get('flag-outline', 14)}
                 </button>
             </td>
         </tr>
