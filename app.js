@@ -1086,7 +1086,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const onboardingDone = storage.load('onboardingComplete');
     const hasData = (appState.sessions.length > 0) ||
                     (appState.assessments.length > 0) ||
-                    (appState.timeline.length > 0);
+                    (appState.timeline.length > 0) ||
+                    (appState.corrections.length > 0) ||
+                    ((appState.goals || []).length > 0);
 
     if (onboardingDone || hasData) {
         // Never overwrite a real level with not-assessed
@@ -1094,8 +1096,11 @@ document.addEventListener('DOMContentLoaded', () => {
         showScreen('profile');
         document.querySelector('.bottom-nav')?.classList.add('visible');
         document.querySelector('.fab')?.classList.add('visible');
+    } else {
+        // New user — ensure nav is hidden during onboarding
+        document.querySelector('.bottom-nav')?.classList.remove('visible');
+        document.querySelector('.fab')?.classList.remove('visible');
     }
-    // else: stay on onboarding-1 (already active in HTML)
 });
 
 
@@ -1776,6 +1781,7 @@ function handleSessionNameInput(value) {
     appState.currentSession.sessionName = value;
     appState.currentSession.templateId = null;
     renderSessionComboboxDropdown(value);
+    checkSessionTitleForSkills(value);
 }
 
 function showSessionDropdown() {
@@ -2220,7 +2226,7 @@ function renderBlockHtml(block, index) {
     // Reflection field (mode === 'reflection')
     const reflectionHtml = `
         <textarea class="session-block-textarea session-block-capped"
-                  placeholder="Note a reflection2026"
+                  placeholder="Note a reflection…"
                   oninput="updateBlockField(${block.id}, 'reflectionText', this.value); autoResizeCapped(this);"
                   >${block.reflectionText || ''}</textarea>
     `;
@@ -2278,28 +2284,18 @@ function renderBlockHtml(block, index) {
                 <div class="session-block ${modeClass}" id="block-${block.id}">
 
                     <div class="session-block-header">
-                        <div class="session-block-topic-wrapper">
-                            <select class="session-block-topic-select"
-                                    onchange="updateBlockTopic(${block.id}, this.value)">
-                                <optgroup label="General">
-                                    ${topics.filter(t => t.group === 'General').map(t =>
-                                        `<option value="${t.id}" ${t.id === block.topicId ? 'selected' : ''}>${t.label}</option>`
-                                    ).join('')}
-                                </optgroup>
-                                <optgroup label="Category">
-                                    ${topics.filter(t => t.group === 'Category').map(t =>
-                                        `<option value="${t.id}" ${t.id === block.topicId ? 'selected' : ''}>${t.label}</option>`
-                                    ).join('')}
-                                </optgroup>
-                                <optgroup label="Skills">
-                                    ${topics.filter(t => t.group === 'Skills').map(t =>
-                                        `<option value="${t.id}" ${t.id === block.topicId ? 'selected' : ''}>${t.label}</option>`
-                                    ).join('')}
-                                </optgroup>
-                            </select>
-                            <svg class="session-select-chevron" style="right:8px;" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="4 6 8 10 12 6"/>
-                            </svg>
+                        <div class="session-block-topic-wrapper" id="topic-wrapper-${block.id}">
+                            <input class="session-block-topic-input"
+                                   id="topic-input-${block.id}"
+                                   type="text"
+                                   autocomplete="off"
+                                   spellcheck="false"
+                                   value="${topics.find(t => t.id === block.topicId)?.label || 'General'}"
+                                   oninput="filterBlockTopics(${block.id}, this.value)"
+                                   onfocus="openBlockTopicDropdown(${block.id})"
+                                   onblur="closeBlockTopicDropdown(${block.id}, 300)"
+                                   placeholder="Search skill…" />
+                            <div class="block-topic-dropdown" id="topic-dropdown-${block.id}" style="display:none;"></div>
                         </div>
                         <button class="block-remove-btn" onclick="removeBlock(${block.id})" aria-label="Remove">
                             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -2313,7 +2309,7 @@ function renderBlockHtml(block, index) {
                         <textarea class="session-block-title-input"
                                   placeholder="${isGeneral ? 'Topic or title…' : 'Add a title…'}"
                                   rows="1"
-                                  oninput="updateBlockField(${block.id}, 'title', this.value); autoResizeCapped(this);"
+                                  oninput="updateBlockField(${block.id}, 'title', this.value); autoResizeCapped(this); checkBlockTitleForSkills(${block.id}, this.value);"
                                   onfocus="this.placeholder=''"
                                   onblur="this.placeholder='${isGeneral ? 'Topic or title…' : 'Add a title…'}'"
                                   >${block.title}</textarea>
@@ -2330,6 +2326,209 @@ function renderBlockHtml(block, index) {
             </div>
         </div>
     `;
+}
+
+// ── Skill / dimension detection in free-text ─────────────────────────────
+// Scans text for mentions of skills (via french, english, aliases) or
+// dimensions. Returns up to 2 highest-confidence matches.
+
+function detectSkillsInText(text) {
+    if (!text || text.trim().length < 3) return [];
+    const q = normaliseStr(text);
+    const matches = [];
+
+    // Check skills first
+    for (const skill of DATA.skills) {
+        const terms = [
+            normaliseStr(skill.french),
+            normaliseStr(skill.english),
+            ...(skill.aliases || []).map(a => normaliseStr(a)),
+        ];
+        if (terms.some(t => t.length >= 3 && q.includes(t))) {
+            matches.push({ topicId: 'skill:' + skill.id, label: skill.french, type: 'skill' });
+            if (matches.length >= 2) break;
+        }
+    }
+
+    // Check dimensions if no skill matched
+    if (!matches.length) {
+        for (const dim of DIMENSION_OPTIONS) {
+            if (q.includes(normaliseStr(dim.label))) {
+                matches.push({ topicId: dim.id, label: dim.label, type: 'dimension' });
+                if (matches.length >= 2) break;
+            }
+        }
+    }
+
+    return matches;
+}
+
+function renderSkillSuggestionChips(blockId, matches) {
+    const block = getBlockById(blockId);
+    if (!block) return;
+    const blockEl = document.getElementById(`block-${blockId}`);
+    if (!blockEl) return;
+
+    // Remove existing chips
+    blockEl.querySelectorAll('.skill-suggestion-chip-row').forEach(el => el.remove());
+    if (!matches.length) return;
+
+    // Don't suggest if topic is already set to one of the matches
+    const filtered = matches.filter(m => m.topicId !== block.topicId);
+    if (!filtered.length) return;
+
+    const titleEl = blockEl.querySelector('.session-block-title-input');
+    if (!titleEl) return;
+
+    const row = document.createElement('div');
+    row.className = 'skill-suggestion-chip-row';
+    row.innerHTML = filtered.map(m => `
+        <button class="skill-suggestion-chip"
+                onmousedown="acceptSkillSuggestion(${blockId}, '${m.topicId}', '${m.label.replace(/'/g, "\\'")}')">
+            link to ${m.label} →
+        </button>`).join('');
+
+    titleEl.insertAdjacentElement('afterend', row);
+}
+
+function acceptSkillSuggestion(blockId, topicId, label) {
+    // Update the topic input label
+    const input = document.getElementById(`topic-input-${blockId}`);
+    if (input) input.value = label;
+    // Remove the suggestion chips
+    const blockEl = document.getElementById(`block-${blockId}`);
+    if (blockEl) blockEl.querySelectorAll('.skill-suggestion-chip-row').forEach(el => el.remove());
+    // Commit the topic
+    updateBlockTopic(blockId, topicId);
+}
+
+function checkBlockTitleForSkills(blockId, text) {
+    const matches = detectSkillsInText(text);
+    renderSkillSuggestionChips(blockId, matches);
+}
+
+function checkSessionTitleForSkills(text) {
+    // For session title: suggest adding a block for detected skills
+    const matches = detectSkillsInText(text);
+    const hint = document.getElementById('session-name-skill-hint');
+    if (!matches.length) {
+        if (hint) hint.remove();
+        return;
+    }
+    // Don't show if a block already exists for this skill
+    const existing = (appState.currentSession?.blocks || []).map(b => b.topicId);
+    const fresh = matches.filter(m => !existing.includes(m.topicId));
+    if (!fresh.length) {
+        if (hint) hint.remove();
+        return;
+    }
+    const container = document.getElementById('session-name-input')?.closest('.session-field');
+    if (!container) return;
+
+    let el = hint || document.createElement('div');
+    el.id = 'session-name-skill-hint';
+    el.className = 'session-skill-hint';
+    el.innerHTML = fresh.map(m => `
+        <button class="skill-suggestion-chip"
+                onmousedown="addBlockForSkill('${m.topicId}', '${m.label.replace(/'/g, "\\'")}')">
+            add ${m.label} block →
+        </button>`).join('');
+    if (!hint) container.appendChild(el);
+}
+
+function addBlockForSkill(topicId, label) {
+    const hint = document.getElementById('session-name-skill-hint');
+    if (hint) hint.remove();
+    addBlock(false);
+    // Set the topic on the newly added block
+    const blocks = appState.currentSession?.blocks;
+    if (!blocks?.length) return;
+    const newBlock = blocks[blocks.length - 1];
+    newBlock.topicId = topicId;
+    // Update the input label after re-render
+    renderBlocksOnly();
+    requestAnimationFrame(() => {
+        const input = document.getElementById(`topic-input-${newBlock.id}`);
+        if (input) input.value = label;
+    });
+}
+
+
+
+function _topicMatchesQuery(topic, q) {
+    if (!q) return true;
+    const norm = normaliseStr(q);
+    if (normaliseStr(topic.label).includes(norm)) return true;
+    // For skill topics, also match english name and aliases
+    if (topic.id.startsWith('skill:')) {
+        const skillId = topic.id.replace('skill:', '');
+        const skill = DATA.skills.find(s => s.id === skillId);
+        if (!skill) return false;
+        return normaliseStr(skill.english).includes(norm) ||
+               (skill.aliases || []).some(a => normaliseStr(a).includes(norm));
+    }
+    return false;
+}
+
+function openBlockTopicDropdown(blockId) {
+    filterBlockTopics(blockId, '');
+}
+
+function filterBlockTopics(blockId, query) {
+    const dropdown = document.getElementById(`topic-dropdown-${blockId}`);
+    const input    = document.getElementById(`topic-input-${blockId}`);
+    if (!dropdown || !input) return;
+
+    const topics = getBlockTopics();
+    const matches = topics.filter(t => _topicMatchesQuery(t, query));
+
+    if (!matches.length) {
+        dropdown.style.display = 'none';
+        return;
+    }
+
+    // Group results
+    const groups = [
+        { label: 'General',  items: matches.filter(t => t.group === 'General')  },
+        { label: 'Category', items: matches.filter(t => t.group === 'Category') },
+        { label: 'Skills',   items: matches.filter(t => t.group === 'Skills')   },
+    ].filter(g => g.items.length);
+
+    dropdown.innerHTML = groups.map(g => `
+        <div class="block-topic-group-label">${g.label}</div>
+        ${g.items.map(t => `
+            <div class="block-topic-option"
+                 onmousedown="selectBlockTopic(${blockId}, '${t.id}', '${t.label.replace(/'/g, "\\'")}')">
+                ${t.label}${t.sub ? `<span class="block-topic-option-sub"> — ${t.sub}</span>` : ''}
+            </div>`).join('')}
+    `).join('');
+
+    dropdown.style.display = 'block';
+}
+
+function selectBlockTopic(blockId, topicId, label) {
+    const input = document.getElementById(`topic-input-${blockId}`);
+    if (input) input.value = label;
+    const dropdown = document.getElementById(`topic-dropdown-${blockId}`);
+    if (dropdown) dropdown.style.display = 'none';
+    updateBlockTopic(blockId, topicId);
+}
+
+function closeBlockTopicDropdown(blockId, delay) {
+    // Delay allows onmousedown on option to fire before blur hides dropdown
+    setTimeout(() => {
+        const dropdown = document.getElementById(`topic-dropdown-${blockId}`);
+        const input    = document.getElementById(`topic-input-${blockId}`);
+        if (!dropdown || dropdown.style.display === 'none') return;
+        // If input is blank or doesn't match a topic, revert to current selection
+        const block = getBlockById(blockId);
+        if (block) {
+            const topics = getBlockTopics();
+            const current = topics.find(t => t.id === block.topicId);
+            if (input && current) input.value = current.label;
+        }
+        dropdown.style.display = 'none';
+    }, delay);
 }
 
 function updateBlockTopic(blockId, topicId) {
@@ -2782,6 +2981,9 @@ function saveSession() {
 function showPostSavePrompt(sessionId, skillIds, isRecurring) {
     if (!skillIds.length) return;
 
+    // Store skillIds globally so the button onclick can access without JSON encoding issues
+    window._pendingGoalSkills = skillIds;
+
     const skillNames = skillIds
         .map(id => DATA.skills.find(s => s.id === id)?.french)
         .filter(Boolean);
@@ -2802,7 +3004,7 @@ function showPostSavePrompt(sessionId, skillIds, isRecurring) {
             <button class="post-save-dismiss" onclick="document.getElementById('post-save-prompt').remove()">×</button>
             <div class="post-save-body">Session saved. ${bodyText}</div>
             <div class="post-save-actions">
-                <button class="post-save-btn" onclick="openGoalFromPrompt(${JSON.stringify(skillIds)}); document.getElementById('post-save-prompt').remove();">
+                <button class="post-save-btn" onmousedown="openGoalFromPrompt(_pendingGoalSkills); document.getElementById('post-save-prompt')?.remove();">
                     add to goals
                 </button>
                 <button class="post-save-btn post-save-btn-muted" onclick="document.getElementById('post-save-prompt').remove()">
@@ -4603,7 +4805,7 @@ function showSkillDetail(skillId, returnTo) {
             </button>` : ''}
         <div class="skill-add-note-row">
             <textarea class="session-block-textarea" id="skill-new-note"
-                      placeholder="Note a thought2026"
+                      placeholder="Note a thought…"
                       rows="2"
                       oninput="autoResizeTextarea(this)"
                       onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter'){saveSkillNote('${skillId}');event.preventDefault();}"></textarea>
@@ -4950,7 +5152,7 @@ function renderSkillNotesSectionInPlace(skillId, sectionEl) {
             </button>` : ''}
         <div class="skill-add-note-row">
             <textarea class="session-block-textarea" id="skill-new-note"
-                      placeholder="Note a thought2026"
+                      placeholder="Note a thought…"
                       rows="2"
                       oninput="autoResizeTextarea(this)"
                       onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter'){saveSkillNote('${skillId}');event.preventDefault();}"></textarea>
