@@ -2390,7 +2390,6 @@ function handleNewCorrectionBulletInput(event, blockId) {
 function handleCorrectionBulletKey(event, blockId, ci) {
     const block = getBlockById(blockId);
     if (!block) return;
-    const blockIndex = getBlockIndexById(blockId);
 
     if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
@@ -2408,7 +2407,7 @@ function handleCorrectionBulletKey(event, blockId, ci) {
                 block.corrections[ci] = text;
             }
             // Re-render to show the new bullet and fresh empty row
-            renderBlockBulletsInPlace(block, blockIndex);
+            renderBlockBulletsInPlace(block, blockId);
             // Focus the new empty row
             requestAnimationFrame(() => {
                 const container = document.getElementById(`correction-bullets-${block.id}`);
@@ -2473,9 +2472,9 @@ function autoResizeCapped(el) {
     el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden';
 }
 
-function toggleBlockPraise(index) {
+function toggleBlockPraise(blockId) {
     // kept for backward compat — now handled by setBlockMode
-    setBlockMode(index, 'praise');
+    setBlockMode(blockId, 'praise');
 }
 
 function autoResizeTextarea(el) {
