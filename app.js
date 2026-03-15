@@ -1015,6 +1015,8 @@ function navigateTo(section) {
 let currentOnboardingScreen = 1;
 const totalOnboardingScreens = 3;
 
+localStorage.setItem("onboardingComplete", "true");
+
 function nextOnboarding() {
     const currentEl = document.getElementById(`onboarding-${currentOnboardingScreen}`);
     if (currentEl) currentEl.classList.remove('active');
