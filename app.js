@@ -4330,27 +4330,55 @@ function initProfile() {
     // Dimension chart
     renderDimensionChart(dims, document.getElementById('profileDimensions'));
 
-    // Hero action card
+    // Hero action card — context-aware based on recent activity
     const heroEl = document.getElementById('profileHeroCard');
     const persona = appState.answers?.persona;
-    let heroLabel, heroTitle, heroDesc, heroAction;
+    const today = new Date().toISOString().split('T')[0];
+    const lastSession = appState.sessions.length
+        ? appState.sessions.slice().sort((a,b) => (b.savedAt||0) - (a.savedAt||0))[0]
+        : null;
+    const loggedToday = lastSession?.date === today;
+    const daysSinceLast = lastSession
+        ? Math.floor((Date.now() - (lastSession.savedAt || 0)) / 86400000)
+        : null;
 
-    if (persona === 4 || persona === 5) {
-        heroLabel = 'WELCOME BACK'; heroTitle = 'Record your first class back';
-        heroDesc = 'After your next session, log what you worked on and how it felt. A good way to ease back in.';
+    let heroLabel, heroTitle, heroDesc, heroAction, heroOnclick;
+    heroOnclick = 'openSessionLogger()';
+
+    if (loggedToday) {
+        // Already logged today — surface a nudge toward goals or reflection
+        const activeGoals = (appState.goals || []).filter(g => !g.completedAt);
+        if (activeGoals.length > 0) {
+            heroLabel = 'TODAY'; heroTitle = 'Session logged';
+            heroDesc = `You have ${activeGoals.length} active goal${activeGoals.length > 1 ? 's' : ''} in progress.`;
+            heroAction = 'view goals →';
+            heroOnclick = "navigateTo('goals')";
+        } else {
+            heroLabel = 'TODAY'; heroTitle = 'Session logged';
+            heroDesc = 'Add a goal to give your practice direction.';
+            heroAction = 'add a goal →';
+            heroOnclick = 'openGoalCreator()';
+        }
+    } else if (persona === 4 || persona === 5) {
+        heroLabel = 'WELCOME BACK'; heroTitle = 'Log your first class back';
+        heroDesc = 'Jot down what you worked on and how it felt.';
         heroAction = 'log a session →';
-    } else if (level === 'beginner' || level === 'elementary') {
-        heroLabel = 'GET STARTED'; heroTitle = 'Record your next class';
-        heroDesc = 'After each session, jot down what you covered and any corrections your teacher gave you.';
+    } else if (!lastSession) {
+        heroLabel = 'GET STARTED'; heroTitle = 'Log your first session';
+        heroDesc = 'After class, jot down what you covered and any corrections your teacher gave you.';
+        heroAction = 'log a session →';
+    } else if (daysSinceLast !== null && daysSinceLast > 6) {
+        heroLabel = 'AFTER CLASS'; heroTitle = 'Log your next session';
+        heroDesc = `Last logged ${daysSinceLast} days ago — keep the record going.`;
         heroAction = 'log a session →';
     } else {
-        heroLabel = 'KEEP GOING'; heroTitle = 'Log your latest session';
-        heroDesc = 'Track what you worked on, save corrections, and note anything you want to revisit.';
+        heroLabel = 'AFTER CLASS'; heroTitle = 'Log a session';
+        heroDesc = "Record corrections, praise, and what you worked on while it's fresh.";
         heroAction = 'log a session →';
     }
 
     heroEl.innerHTML = `
-        <div class="profile-action-card hero" onclick="openSessionLogger()">
+        <div class="profile-action-card hero profile-hero-compact" onclick="${heroOnclick}">
             <div class="profile-action-label">${heroLabel}</div>
             <div class="profile-action-title">${heroTitle}</div>
             <div class="profile-action-description">${heroDesc}</div>
@@ -4990,14 +5018,19 @@ function renderSkillCorrectionRow(correction) {
     const session = correction.sessionId
         ? appState.sessions.find(s => s.id === correction.sessionId)
         : null;
+    const sessionLink = session
+        ? `<button class="skill-correction-source" onmousedown="showSessionDetail(${correction.sessionId})">
+               ${session.sessionName || 'Session'} →
+           </button>`
+        : '';
     return `
         <div class="skill-correction-row ${correction.isRecurring ? 'is-recurring' : ''}">
             <div class="skill-correction-meta">
                 <span class="skill-correction-date">${formatTimelineDate(correction.createdAt ? new Date(correction.createdAt).toISOString().split('T')[0] : '')}</span>
-                ${session ? `<span class="skill-correction-session">${session.sessionName || 'Session'}</span>` : ''}
                 ${correction.isRecurring ? `<span class="skill-correction-recurring">recurring</span>` : ''}
             </div>
             <div class="skill-correction-text">${correction.text}</div>
+            ${sessionLink}
         </div>
     `;
 }

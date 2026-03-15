@@ -45,7 +45,7 @@
     --brown:         #6B4F3A;
 
     /* ── Surfaces ── */
-    --background:    #F7F3EE;   /* parchment — app background */
+    --background:    #FAFAF8;   /* near-white — app background */
     --surface:       #FFFFFF;   /* cards, sheets */
     --surface-warm:  #FDF8F3;   /* block shells */
     --input-bg:      #F9F5F0;   /* input fields — off-white */
@@ -816,7 +816,12 @@ h1, h2, .screen-heading {
 .profile-header {
     text-align: center;
     margin-bottom: var(--sp-xl);
-    padding: var(--sp-xl) var(--sp-lg) 0;
+    padding: var(--sp-xl) var(--sp-lg) var(--sp-lg);
+    position: sticky;
+    top: 0;
+    background: var(--background);
+    z-index: 10;
+    border-bottom: 1px solid var(--border-light);
 }
 
 .profile-header h1 {
@@ -1064,20 +1069,34 @@ h1, h2, .screen-heading {
     padding: 0 var(--sp-lg);
 }
 
-.timeline::before { display: none; }
+/* Vertical connecting line — drawn on the timeline container */
+.timeline::before {
+    content: '';
+    display: block;
+    position: absolute;
+    left: calc(var(--sp-lg) + 1px);
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: var(--border);
+    border-radius: 1px;
+}
 
 .timeline-item {
     display: block;
     width: 100%;
     position: relative;
-    margin-bottom: 0;
-    padding: 10px 0 10px 12px;
-    border-bottom: 1px solid var(--border);
-    border-left: 2px solid transparent;
+    margin-bottom: var(--sp-sm);
+    padding: var(--sp-md) var(--sp-md) var(--sp-md) var(--sp-lg);
+    background: #FFFFFF;
+    border-radius: var(--r-md);
+    border: none;
+    border-left: 3px solid transparent;
+    box-shadow: 0 1px 3px rgba(26,23,20,0.07);
 }
 
 .timeline-item:first-child {
-    border-top: 1px solid var(--border);
+    border-top: none;
 }
 
 .timeline-item-session {
@@ -1179,6 +1198,19 @@ h1, h2, .screen-heading {
     padding: var(--sp-xl) var(--sp-lg);
     border-color: var(--gold-soft);
     box-shadow: var(--shadow-1);
+}
+
+/* Compact variant — reduced padding and smaller title */
+.profile-action-card.profile-hero-compact {
+    padding: var(--sp-lg);
+}
+
+.profile-action-card.profile-hero-compact .profile-action-title {
+    font-size: var(--fs-h3);
+}
+
+.profile-action-card.profile-hero-compact .profile-action-description {
+    font-size: var(--fs-caption);
 }
 
 .profile-action-card.hero:hover {
@@ -2574,6 +2606,68 @@ input[type="date"].session-input[value=""] {
 
 .session-block-topic-select:focus { outline: none; }
 
+/* Searchable topic input — replaces native select */
+.session-block-topic-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 700;
+    color: var(--ink);
+    outline: none;
+    padding: 0;
+    min-width: 0;
+}
+
+.session-block-topic-input::placeholder {
+    color: var(--ink-4);
+    font-weight: 400;
+}
+
+.block-topic-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: -var(--sp-md);
+    min-width: 220px;
+    max-width: 300px;
+    background: var(--surface);
+    border: 1px solid var(--border-mid);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-2);
+    z-index: 50;
+    overflow: hidden;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.block-topic-group-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    padding: 8px var(--sp-md) 4px;
+}
+
+.block-topic-option {
+    padding: 8px var(--sp-md);
+    font-size: var(--fs-small);
+    color: var(--ink);
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+
+.block-topic-option:hover,
+.block-topic-option:active {
+    background: var(--gold-wash);
+}
+
+.block-topic-option-sub {
+    color: var(--ink-3);
+    font-weight: 400;
+}
+
 .block-learn-link {
     background: none;
     border: none;
@@ -2587,6 +2681,36 @@ input[type="date"].session-input[value=""] {
 }
 
 .block-learn-link:hover { color: var(--primary); }
+
+/* Skill / dimension suggestion chips */
+.skill-suggestion-chip-row,
+.session-skill-hint {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: var(--sp-sm);
+}
+
+.skill-suggestion-chip {
+    display: inline-flex;
+    align-items: center;
+    background: var(--gold-wash);
+    border: 1px solid var(--gold-soft);
+    border-radius: var(--r-full);
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    font-weight: 500;
+    color: var(--gold);
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    white-space: nowrap;
+}
+
+.skill-suggestion-chip:hover,
+.skill-suggestion-chip:active {
+    background: var(--gold-soft);
+}
 
 .block-remove-btn {
     width: 24px;
@@ -3719,6 +3843,21 @@ input[type="date"].session-input[value=""] {
     border-left-color: var(--coral);
 }
 
+.skill-correction-source {
+    display: inline-block;
+    margin-top: var(--sp-xs);
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    color: var(--ink-3);
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.15s ease;
+}
+
+.skill-correction-source:hover { color: var(--gold); }
+
 /* See more button */
 .skill-see-more-btn {
     background: none;
@@ -4815,9 +4954,11 @@ button, a, input, select, textarea,
 }
 
 .fab-action-text {
-    display: flex;
+    display: inline-flex;
     flex-direction: column;
     gap: 2px;
+    flex: 1;
+    min-width: 0;
 }
 
 .fab-action-label {
@@ -4852,7 +4993,6 @@ button, a, input, select, textarea,
     background: var(--background);
     z-index: 5;
 }
-
 
 .timeline-icon-wrap {
     width: 28px;
@@ -5350,7 +5490,8 @@ button, a, input, select, textarea,
     color: var(--ink-3);
     transition: all 0.2s ease;
     flex-shrink: 0;
-    all: unset;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 .skill-focus-btn:hover {
