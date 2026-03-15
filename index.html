@@ -280,19 +280,41 @@
 
         <!-- Profile Screen -->
         <div class="screen" id="profile">
-            <div class="profile-header">
-                <h1>Your profile</h1>
-                <div class="level-badge" id="levelBadge">IMPROVER</div>
+
+            <!-- Sticky header — minimal, settings icon replaces level pill -->
+            <div class="profile-sticky-header">
+                <span class="profile-sticky-label">profile</span>
+                <!-- levelBadge kept hidden for JS backward-compat -->
+                <span id="levelBadge" style="display:none;"></span>
+                <button class="profile-settings-btn" onclick="openSettings()" aria-label="Settings">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                        <circle cx="9" cy="9" r="2.5"/>
+                        <path d="M9 1.5V3M9 15v1.5M1.5 9H3M15 9h1.5M3.2 3.2l1.1 1.1M13.7 13.7l1.1 1.1M3.2 14.8l1.1-1.1M13.7 4.3l1.1-1.1"/>
+                    </svg>
+                </button>
             </div>
 
-            <!-- Dimension chart (permanent) -->
-            <div id="profileDimensions" style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);"></div>
+            <!-- Above fold: status surface + card stack fill the viewport -->
+            <div class="profile-above-fold">
 
-            <!-- Contextual action card (evolving) -->
-            <div id="profileHeroCard" style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-lg);"></div>
+                <!-- Status area — the background, not a card -->
+                <div class="profile-status" id="profileStatus">
+                    <!-- Rendered by renderProfileStatus() in app.js -->
+                </div>
 
-            <!-- Goal prompt (evolving) -->
-            <div id="profileGoalCard" style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);"></div>
+                <!-- Focus area card stack — anchored to bottom of above-fold -->
+                <div class="focus-card-stack" id="focusCardStack">
+                    <!-- Rendered by renderFocusCardStack() in app.js -->
+                </div>
+
+            </div>
+
+            <!-- Below fold (revealed on scroll) -->
+            <div id="profileHeroCard" style="padding: var(--sp-xl) var(--sp-lg) 0;"></div>
+            <div id="profileGoalCard" style="padding: var(--sp-lg) var(--sp-lg) 0;"></div>
+
+            <!-- profileDimensions kept as empty div for any legacy JS references -->
+            <div id="profileDimensions" style="display:none;"></div>
 
             <!-- What you can do with plié -->
             <div class="horizontal-section" id="profileExploreSection">
@@ -300,36 +322,75 @@
                 <div class="horizontal-scroll" id="profileExploreCards"></div>
             </div>
 
-            <!-- Goals Section -->
-            <section class="goals-section" id="profileGoalsSection" style="display: none;">
-                <div class="section-header">
-                    <h2>Goals</h2>
-                    <button class="btn-secondary" onclick="addGoal()">+ add goal</button>
-                </div>
-                <div class="goals-grid" id="goalsGrid"></div>
-            </section>
-
             <!-- Timeline -->
             <section class="timeline-section">
                 <div class="section-header">
                     <h2>Timeline</h2>
                     <button class="btn-secondary" onclick="addProgress()">+ add entry</button>
                 </div>
-                <div class="timeline" id="timeline">
-                    <div class="timeline-item">
-                        <div class="timeline-dot"></div>
-                        <div class="timeline-content">
-                            <div class="timeline-date">Today</div>
-                            <div class="timeline-title" id="timelineFirstEntry">Completed placement quiz</div>
-                        </div>
-                    </div>
-                </div>
+                <div class="timeline" id="timeline"></div>
             </section>
 
-            <!-- Reset (testing only — remove before release) -->
+            <!-- Reset (move to settings eventually) -->
             <section style="padding: 0 var(--sp-lg) var(--sp-3xl);">
                 <button class="reset-profile-btn" onclick="confirmResetProfile()">reset profile</button>
             </section>
+        </div>
+
+        <!-- Focus Area Sheet (bottom sheet, same pattern as session logger) -->
+        <div class="session-overlay" id="focus-area-overlay" onclick="closeFocusAreaSheetOnBackdrop(event)">
+            <div class="session-logger-sheet" onclick="event.stopPropagation()">
+                <div class="session-sheet-handle"></div>
+                <div class="session-logger-header" id="focus-sheet-header">
+                    <div>
+                        <div class="session-logger-eyebrow" id="focus-sheet-eyebrow">Focus area</div>
+                        <h2 class="session-logger-title" id="focus-sheet-title"></h2>
+                    </div>
+                    <button class="session-close-btn" onclick="closeFocusAreaSheet()">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/></svg>
+                    </button>
+                </div>
+                <div class="focus-sheet-tab-row" id="focus-sheet-tabs"></div>
+                <div class="session-logger-body" id="focus-sheet-body"></div>
+            </div>
+        </div>
+
+        <!-- Settings Sheet -->
+        <div class="session-overlay" id="settings-overlay" onclick="closeSettingsOnBackdrop(event)">
+            <div class="session-logger-sheet" onclick="event.stopPropagation()">
+                <div class="session-sheet-handle"></div>
+                <div class="session-logger-header">
+                    <div>
+                        <div class="session-logger-eyebrow">plié</div>
+                        <h2 class="session-logger-title">Settings</h2>
+                    </div>
+                    <button class="session-close-btn" onclick="closeSettings()">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/></svg>
+                    </button>
+                </div>
+                <div class="session-logger-body" id="settings-body">
+                    <!-- Rendered by renderSettings() -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Picture Picker Sheet -->
+        <div class="session-overlay" id="pic-picker-overlay" onclick="closePicPickerOnBackdrop(event)">
+            <div class="session-logger-sheet" style="height:70%;" onclick="event.stopPropagation()">
+                <div class="session-sheet-handle"></div>
+                <div class="session-logger-header">
+                    <div>
+                        <div class="session-logger-eyebrow">Profile</div>
+                        <h2 class="session-logger-title">Choose a picture</h2>
+                    </div>
+                    <button class="session-close-btn" onclick="closePicPicker()">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/></svg>
+                    </button>
+                </div>
+                <div class="session-logger-body" id="pic-picker-body">
+                    <!-- Rendered by renderPicPicker() -->
+                </div>
+            </div>
         </div>
 
         <!-- Floating Action Button -->
