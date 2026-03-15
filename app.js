@@ -1015,8 +1015,6 @@ function navigateTo(section) {
 let currentOnboardingScreen = 1;
 const totalOnboardingScreens = 3;
 
-localStorage.setItem("onboardingComplete", "true");
-
 function nextOnboarding() {
     const currentEl = document.getElementById(`onboarding-${currentOnboardingScreen}`);
     if (currentEl) currentEl.classList.remove('active');
@@ -7050,17 +7048,6 @@ function handlePicUpload(input) {
         renderProfileStatus();
     };
     reader.readAsDataURL(file);
-}
-
-document.addEventListener('DOMContentLoaded', initUI);
-
-function initUI() {
-  const startBtn = document.getElementById('getStartedBtn');
-  if (startBtn) startBtn.addEventListener('click', nextOnboarding);
-
-  document.querySelectorAll('[data-onboarding-next]').forEach(btn => {
-    btn.addEventListener('click', nextOnboarding);
-  });
 }
 
 // Service Worker

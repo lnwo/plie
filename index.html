@@ -39,7 +39,7 @@
         </header>
 
         <!-- Onboarding Screen 1 — Welcome -->
-        <div class="onboarding-screen" id="onboarding-1">
+        <div class="onboarding-screen active" id="onboarding-1">
             <div class="onboarding-content">
                 <div class="onboarding-illustration">
                     <svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 180px; height: 180px;">
@@ -69,7 +69,7 @@
                     <div class="onboarding-dot"></div>
                     <div class="onboarding-dot"></div>
                 </div>
-                <button class="btn-large" id="getStartedBtn">get started</button>
+                <button class="btn-large" onclick="nextOnboarding()">get started</button>
                 <div class="onboarding-skip">
                     <button onclick="skipOnboarding()" style="background:none;border:none;cursor:pointer;font-family:inherit;font-size:inherit;color:inherit;padding:0;">skip</button>
                 </div>
@@ -112,8 +112,8 @@
                     <div class="onboarding-dot"></div>
                 </div>
                 <div class="onboarding-btn-row">
-                    <button class="btn-large" data-onboarding-next>how it works</button>
-                    <button class="btn-secondary" data-onboarding-next>see examples</button>
+                    <button class="btn-large" style="flex:1;" onclick="nextOnboarding()">how it works</button>
+                    <button class="btn-secondary onboarding-btn-secondary" onclick="nextOnboarding()">see examples</button>
                 </div>
                 <div class="onboarding-skip">
                     <button onclick="skipOnboarding()" style="background:none;border:none;cursor:pointer;font-family:inherit;font-size:inherit;color:inherit;padding:0;">skip</button>
@@ -279,7 +279,7 @@
         </div>
 
         <!-- Profile Screen -->
-        <div class="screen active" id="profile">
+        <div class="screen" id="profile">
 
             <!-- Sticky header — minimal, settings icon replaces level pill -->
             <div class="profile-sticky-header">
