@@ -1085,6 +1085,19 @@ document.addEventListener('DOMContentLoaded', () => {
         screen.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, false);
         screen.addEventListener('touchend', e => { touchEndX = e.changedTouches[0].screenX; handleOnboardingSwipe(); }, false);
     });
+   
+     // Attach onboarding CTA listeners
+     const startBtn = document.querySelector('.onboarding-cta .btn-large');
+     if (startBtn) startBtn.addEventListener('click', (e) => {
+       e.preventDefault();
+       nextOnboarding();
+     });
+   
+     const skipBtn = document.querySelector('.onboarding-cta .onboarding-skip button');
+     if (skipBtn) skipBtn.addEventListener('click', (e) => {
+       e.preventDefault();
+       skipOnboarding();
+     });
 
     // Route to correct initial screen.
     // A returning user is identified by: onboardingComplete flag OR any existing data.
