@@ -970,7 +970,7 @@ function renderDimensionChart(dims, container) {
    ═══════════════════════════════════════════════════════════════ */
 
 function showScreen(screenId) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.screen, .onboarding-screen').forEach(s => s.classList.remove('active'));
     document.getElementById(screenId)?.classList.add('active');
     appState.currentScreen = screenId;
 
