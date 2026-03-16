@@ -1085,35 +1085,6 @@ document.addEventListener('DOMContentLoaded', () => {
         screen.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, false);
         screen.addEventListener('touchend', e => { touchEndX = e.changedTouches[0].screenX; handleOnboardingSwipe(); }, false);
     });
-   
-    const startBtn = document.querySelector('.onboarding-cta .btn-large');
-    if (startBtn) {
-        startBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            nextOnboarding();
-        });
-    }
-
-    const skipBtn = document.querySelector('.onboarding-cta .onboarding-skip button');
-    if (skipBtn) {
-        skipBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            skipOnboarding();
-        });
-    }
-   
-     // Attach onboarding CTA listeners
-     const startBtn = document.querySelector('.onboarding-cta .btn-large');
-     if (startBtn) startBtn.addEventListener('click', (e) => {
-       e.preventDefault();
-       nextOnboarding();
-     });
-   
-     const skipBtn = document.querySelector('.onboarding-cta .onboarding-skip button');
-     if (skipBtn) skipBtn.addEventListener('click', (e) => {
-       e.preventDefault();
-       skipOnboarding();
-     });
 
     // Route to correct initial screen.
     // A returning user is identified by: onboardingComplete flag OR any existing data.
@@ -5488,7 +5459,7 @@ function renderSkillLibCard(ref, query) {
 
 function highlightMatch(text, query) {
     if (!query) return text;
-    const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\]/g, '\$&')})`, 'gi');
+    const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
     return text.replace(re, '<mark class="search-highlight">$1</mark>');
 }
 
