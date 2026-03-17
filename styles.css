@@ -1445,7 +1445,21 @@ h1, h2, .screen-heading {
    HORIZONTAL SCROLL SECTIONS
    ═══════════════════════════════════════ */
 
-.horizontal-section { margin-bottom: var(--sp-xl); }
+.horizontal-section { margin-bottom: var(--sp-xl); padding-top: var(--sp-xl); }
+
+.explore-all-done {
+    padding: var(--sp-xl) var(--sp-lg);
+    text-align: center;
+    background: var(--surface-warm);
+    border-radius: var(--r-lg);
+    margin: 0 var(--sp-lg) var(--sp-xl);
+}
+
+.explore-all-done-text {
+    font-size: var(--fs-body);
+    color: var(--ink-2);
+    font-style: italic;
+}
 
 .section-title {
     font-family: 'DM Serif Display', serif;
@@ -1761,7 +1775,7 @@ h1, h2, .screen-heading {
 }
 
 .barre-context-text {
-    font-size: var(--fs-small); color: var(--ink-2);
+    font-size: var(--fs-small);
     color: var(--text-secondary);
 }
 
@@ -4236,6 +4250,23 @@ input[type="date"].session-input[value=""] {
     padding: 1px 5px;
     font-size: 10px;
     color: var(--primary);
+}
+
+/* Correction count badge — inline with skill name (not right-aligned) */
+.skill-lib-inline-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: var(--sp-sm);
+}
+
+.skill-lib-inline-count .skill-lib-indicator-count {
+    background: var(--coral-soft);
+    color: var(--coral);
+    padding: 2px 6px;
+    border-radius: var(--r-full);
+    font-size: 10px;
+    font-weight: 600;
 }
 
 /* Search highlight */

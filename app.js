@@ -3248,13 +3248,14 @@ function showBarreScreen() {
     const weakDimKeys = assessedDims.map(([k]) => k);
 
     let contextText = '';
+    let focusDim = null;
     if (weakDimKeys.length === 0) {
         contextText = 'Complete your assessment to get personalised focus areas';
     } else {
         // Rotate index each visit
         appState._barreVisitCount = (appState._barreVisitCount || 0) + 1;
         const rotateIdx = (appState._barreVisitCount - 1) % weakDimKeys.length;
-        const focusDim = weakDimKeys[rotateIdx];
+        focusDim = weakDimKeys[rotateIdx];
         const dimLabel = dimLabels[focusDim] || focusDim;
         const stageLabel = dims[focusDim]?.label || '';
         contextText = `${dimLabel} could use attention${stageLabel ? ` — ${stageLabel}` : ''}`;
@@ -3313,12 +3314,14 @@ function showBarreScreen() {
         `;
     }
 
+    // Context bar is tappable if there's a weak dimension to filter by
+    const contextBarHtml = focusDim
+        ? `<button class="barre-context" onclick="filterSkillsByDimension('${focusDim}'); navigateTo('skill-library');" style="border: none; cursor: pointer; text-align: left; background: none; padding: var(--sp-sm) var(--sp-lg); width: 100%; display: flex; align-items: center; gap: var(--sp-sm); border-bottom: 1px solid var(--gold-soft);"><span class="barre-context-badge">${(appState.level || 'beginner').replace('-', ' ')}</span><span class="barre-context-text">${contextText} →</span></button>`
+        : `<div class="barre-context"><span class="barre-context-badge">${(appState.level || 'beginner').replace('-', ' ')}</span><span class="barre-context-text">${contextText}</span></div>`;
+
     screen.innerHTML = `
         <div class="profile-header"><h1>The Barre</h1></div>
-        <div class="barre-context">
-            <span class="barre-context-badge">${(appState.level || 'beginner').replace('-', ' ')}</span>
-            <span class="barre-context-text">${contextText}</span>
-        </div>
+        ${contextBarHtml}
         <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);">
             <div class="profile-action-card hero" onclick="openSessionLogger()">
                 <div class="profile-action-label">AFTER CLASS</div>
@@ -3656,17 +3659,62 @@ function openGoalCreator() {
     requestAnimationFrame(() => overlay.classList.add('open'));
 }
 
-function openGoalCreatorWithTitle(title) {
-    openGoalCreator();
-    // Pre-fill the title after the creator has rendered
-    if (appState._goalDraft) {
-        appState._goalDraft.title = title;
-        // Update the rendered input directly so it's immediately visible
-        requestAnimationFrame(() => {
-            const titleInput = document.getElementById('goal-title-input');
-            if (titleInput) titleInput.value = title;
-        });
+function openGoalCreatorWithSuggestion(title, dimensionId, skillId, rationale, milestones = []) {
+    appState._goalDraft = {
+        title:         title || '',
+        body:          rationale || '',
+        dueDate:       '',
+        skillId:       skillId || null,
+        dimensionId:   dimensionId || null,
+        category:      null,
+        milestones:    milestones || [],
+        correctionIds: [],
+        _editId:       null,
+    };
+
+    let overlay = document.getElementById('goal-creator-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'goal-creator-overlay';
+        overlay.className = 'session-overlay';
+        document.body.appendChild(overlay);
     }
+
+    renderGoalCreator();
+
+    document.querySelector('.fab')?.classList.remove('visible');
+    document.querySelector('.bottom-nav')?.classList.remove('visible');
+    
+    requestAnimationFrame(() => {
+        overlay.classList.add('open');
+        // Pre-fill all fields immediately
+        const titleInput = document.getElementById('goal-title-input');
+        const bodyInput = document.getElementById('goal-body-input');
+        const dimensionSelect = document.getElementById('goal-dimension-select');
+        const skillSelect = document.getElementById('goal-skill-select');
+        
+        if (titleInput) titleInput.value = title;
+        if (bodyInput) bodyInput.value = rationale;
+        if (dimensionSelect && dimensionId) dimensionSelect.value = dimensionId;
+        if (skillSelect && skillId) skillSelect.value = skillId;
+        
+        // Pre-populate milestones in the DOM if they exist
+        if (milestones.length > 0) {
+            const milestonesContainer = document.getElementById('goal-milestones-container');
+            if (milestonesContainer) {
+                milestonesContainer.innerHTML = '';
+                milestones.forEach(m => {
+                    const mRow = document.createElement('div');
+                    mRow.className = 'milestone-row';
+                    mRow.innerHTML = `
+                        <input type="text" placeholder="Milestone" value="${escapeHtml(m)}" class="milestone-input">
+                        <button class="remove-milestone-btn" onclick="this.parentElement.remove()">✕</button>
+                    `;
+                    milestonesContainer.appendChild(mRow);
+                });
+            }
+        }
+    });
 }
 
 function openGoalEditor(goalId) {
@@ -4417,17 +4465,34 @@ function initProfile() {
             </div>
         `;
     } else {
-        // Keyword-based suggestion from assessment answers
-        // (simple index matching — no AI)
+        // Keyword-based suggestion from assessment answers with rationale and milestones
         let suggestedGoal = 'Build a consistent practice routine';
+        let dimensionId = null;
+        let rationale = 'You indicated you wanted to build a consistent practice routine.';
+        let milestones = ['Plan my weekly schedule', 'Complete my first week', 'Reflect and adjust'];
+        
         const quizGoals = appState.answers?.goals || [];
-        if (quizGoals.includes(2)) suggestedGoal = 'Work towards pointe readiness';
-        else if (quizGoals.includes(3)) suggestedGoal = 'Improve technique in my weakest areas';
-        else if (quizGoals.includes(4)) suggestedGoal = 'Prepare for a performance';
-        else if (quizGoals.includes(0)) suggestedGoal = 'Get back into a regular class routine';
+        if (quizGoals.includes(2)) {
+            suggestedGoal = 'Work towards pointe readiness';
+            dimensionId = 'pointe';
+            rationale = 'Pointe readiness was selected as a goal during your placement assessment. This is a strong foundation to build on.';
+            milestones = ['Complete pointe-readiness assessment', 'Strengthen ankles and calves', 'Work with teacher on technique', 'Progress to pointe shoes'];
+        } else if (quizGoals.includes(3)) {
+            suggestedGoal = 'Improve technique in my weakest areas';
+            rationale = 'You indicated areas where your technique could use improvement. Let\'s build them deliberately.';
+            milestones = ['Identify my three weakest skills', 'Take focused classes', 'Record myself and review', 'Get feedback from teacher'];
+        } else if (quizGoals.includes(4)) {
+            suggestedGoal = 'Prepare for a performance';
+            rationale = 'You mentioned wanting to perform. This is a clear milestone to work towards.';
+            milestones = ['Choose a piece or choreography', 'Learn the full routine', 'Practice with music', 'Perform'];
+        } else if (quizGoals.includes(0)) {
+            suggestedGoal = 'Get back into a regular class routine';
+            rationale = 'You responded that you\'re looking to restart your practice. Consistency is key.';
+            milestones = ['Schedule my weekly classes', 'Attend my first week', 'Build to my target frequency'];
+        }
 
         goalEl.innerHTML = `
-            <div class="profile-action-card" onclick="openGoalCreatorWithTitle('${suggestedGoal.replace(/'/g, "\'")}')">
+            <div class="profile-action-card" onclick="openGoalCreatorWithSuggestion('${suggestedGoal.replace(/'/g, "\\'")}', '${dimensionId}', null, '${rationale.replace(/'/g, "\\'")}', ${JSON.stringify(milestones).replace(/"/g, '&quot;')})">
                 <div class="profile-action-label">YOUR FIRST GOAL</div>
                 <div class="profile-action-title">${suggestedGoal}</div>
                 <div class="profile-action-description">Based on what you told us. Tap to set it, edit, or write your own.</div>
@@ -4443,7 +4508,19 @@ function initProfile() {
     const allDone = caps.every(c => c.isDone());
 
     if (allDone) {
-        if (exploreSection) exploreSection.style.display = 'none';
+        // Show acknowledgement state on first completion, then hide
+        if (!appState._exploreAllDoneShown) {
+            appState._exploreAllDoneShown = true;
+            savePreferences();
+            exploreEl.innerHTML = `
+                <div class="explore-all-done">
+                    <div class="explore-all-done-text">You've explored everything plié has to offer. Keep going.</div>
+                </div>
+            `;
+            if (exploreSection) exploreSection.style.display = '';
+        } else {
+            if (exploreSection) exploreSection.style.display = 'none';
+        }
     } else {
         if (exploreSection) exploreSection.style.display = '';
     
@@ -5349,12 +5426,21 @@ function showLearnSkillLibrary() {
 
 // Tracks current tab without touching the DOM
 let _skillLibTab = 'all';
+let _skillLibDimFilter = null; // Filter by dimension (e.g. 'centre', 'barre')
 
 function setSkillLibTab(btn, tab) {
     _skillLibTab = tab;
     document.querySelectorAll('.skill-lib-tab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     updateSkillLibResults();
+}
+
+function filterSkillsByDimension(dimensionId) {
+    _skillLibDimFilter = dimensionId;
+    _skillLibTab = 'all'; // Reset to all skills
+    // Clear search
+    const searchInput = document.getElementById('skill-lib-search-input');
+    if (searchInput) searchInput.value = '';
 }
 
 function updateSkillLibResults() {
@@ -5370,6 +5456,10 @@ function updateSkillLibResults() {
 
     const userSkills = appState.skills;
     let filtered = DATA.skills.filter(ref => {
+        // Filter by dimension if set
+        if (_skillLibDimFilter && ref.dimension !== _skillLibDimFilter) {
+            return false;
+        }
         if (_skillLibTab === 'my') {
             const user = userSkills.find(s => s.id === ref.id);
             return user?.flagged || user?.tracked;
@@ -5442,14 +5532,16 @@ function renderSkillLibCard(ref, query) {
     return `
         <div class="skill-lib-card" onclick="showSkillKnowledgePage('${ref.id}', 'skill-library-screen')">
             <div class="skill-lib-card-main">
-                <div class="skill-lib-card-name">${displayName}</div>
+                <div class="skill-lib-card-name">
+                    ${displayName}
+                    ${correctionCount > 0 ? `<span class="skill-lib-inline-count"><span class="skill-lib-indicator-count">${correctionCount}</span></span>` : ''}
+                </div>
                 ${q && displayEnglish !== ref.english ? `<div class="skill-lib-card-english">${displayEnglish}</div>` : ''}
             </div>
             <div class="skill-lib-card-meta">
                 <span class="difficulty-badge difficulty-${ref.difficulty}">${ref.difficulty}</span>
                 <div class="skill-lib-card-indicators">
                     ${isFlagged ? `<span class="skill-lib-indicator" title="In focus">${ICONS.get('flag', 10)}</span>` : ''}
-                    ${correctionCount > 0 ? `<span class="skill-lib-indicator skill-lib-indicator-count">${correctionCount}</span>` : ''}
                     ${hasNotes ? `<span class="skill-lib-indicator" title="Has notes">${ICONS.get('edit', 10)}</span>` : ''}
                 </div>
             </div>
@@ -6072,6 +6164,7 @@ function resetProfile() {
         appState.hidePointe     = prefs.hidePointe     ?? false;
         appState.profilePicture = prefs.profilePicture ?? null;
         appState.displayName    = prefs.displayName    ?? null;
+        appState._exploreAllDoneShown = prefs._exploreAllDoneShown ?? false;
     }
 
     // Merge persisted {id, tracked, flagged} onto DATA.skills reference objects
@@ -6102,6 +6195,7 @@ function savePreferences() {
         hidePointe:     appState.hidePointe,
         profilePicture: appState.profilePicture,
         displayName:    appState.displayName,
+        _exploreAllDoneShown: appState._exploreAllDoneShown,
     });
 }
 
