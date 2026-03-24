@@ -4563,7 +4563,7 @@ function renderGlossaryScreen(query) {
     `;
 }
 
-
+    /*
    7. SKILLS SYSTEM
    Skills rendering, filtering, flagging, phonetic toggles.
    ═══════════════════════════════════════════════════════════════ */
@@ -4696,4 +4696,3 @@ function resetProfile() {
 }
 
 
-/* ═══════════════════════════════════════════════════════════════
