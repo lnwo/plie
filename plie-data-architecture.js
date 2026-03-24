@@ -1,34 +1,31 @@
 /**
- * PLIÉ — DATA ARCHITECTURE v2.1
+ * PLIÉ — DATA ARCHITECTURE v2.2
  *
- * Changes from v2:
- * - Correction.source now includes 'praise' for praise-mode blocks
- * - Correction.type includes 'praise'
- * - SkillNote.skillId can be null (session-level reflections)
- * - Goal.category now set via free-text input + prior suggestions (not chip grid)
- * - normaliseStr() used for all text matching (accent-insensitive)
- * - Praise blocks write milestone TimelineEntry in addition to Corrections
- * - STORAGE_KEYS includes plie:onboardingComplete
+ * Changes from v2.1:
+ * - appState: hidePointe, profilePicture, displayName added
+ * - STORAGE_KEYS: plie:preferences added
+ * - FOCUS_AREAS runtime constant documented
+ * - File structure updated to reflect modular JS split
  */
 
 // ─── SKILL ───────────────────────────────────────────────────────
 const Skill = {
   id: String, french: String, phonetic: String, english: String,
   difficulty: String, category: String, dimensionId: String,
-  aliases: Array,       // searched in skill library (accent-normalised)
+  aliases: Array,
   // Runtime only (merged from persisted sparse state):
   tracked: Boolean, flagged: Boolean, phoneticVisible: Boolean,
+  // Deferred — not yet built:
+  // contributingDimensions: Array,
 };
 
 // ─── CORRECTION ──────────────────────────────────────────────────
-// One object per bullet. Multiple bullets = multiple Correction objects
-// sharing the same sessionId + skillId.
 const Correction = {
   id: Number,
-  skillId: String,     // required FK → Skill.id
-  text: String,        // single correction string
+  skillId: String,
+  text: String,
   createdAt: Number,
-  sessionId: Number,   // optional FK → Session.id
+  sessionId: Number,
   source: String,      // 'teacher' | 'praise' | 'self' | 'video-review'
   type: String,        // 'praise' | 'technical' | 'artistic' | null
   isRecurring: Boolean,
@@ -48,7 +45,7 @@ const SessionBlock = {
   title: String,
   notes: String, notesOpen: Boolean,
   mode: String,        // 'correction' | 'praise' | 'reflection'
-  corrections: Array,  // string[] — each non-empty → Correction on save
+  corrections: Array,
   reflectionText: String,
 };
 
@@ -66,10 +63,9 @@ const SessionSkill = {
 };
 
 // ─── SKILL NOTE ───────────────────────────────────────────────────
-// Personal notes. skillId may be null for session-level reflections.
 const SkillNote = {
   id: Number,
-  skillId: String,     // FK → Skill.id | null (null = session-level)
+  skillId: String,     // FK → Skill.id | null (null = session-level reflection)
   text: String, date: String, createdAt: Number,
   isReflection: Boolean,
 };
@@ -79,34 +75,27 @@ const Goal = {
   id: Number, title: String, body: String,
   createdAt: Number, dueDate: String,
   skillId: String, dimensionId: String,
-  category: String,    // free text; set via + input with prior category suggestions
-  correctionIds: Array, // shown on card; struck-through when completedAt is set
-  milestones: Array,   // [{id, text, done}] — Enter key adds next
-  completedAt: Number, // null=active; set=complete; swipe-right to reopen
+  category: String,
+  correctionIds: Array,
+  milestones: Array,   // [{id, text, done}]
+  completedAt: Number,
 };
 
 // ─── ASSESSMENT ───────────────────────────────────────────────────
 const Assessment = {
   id: Number, type: String, date: String, completedAt: Number,
   answers: Object,
-  dimensions: Object,  // {barre:{stage,stageLabel,progressWithin,raw}, ...}
+  dimensions: Object,
   level: String, levelLabel: String, levelDescription: String,
 };
 
 // ─── TIMELINE ENTRY ───────────────────────────────────────────────
-// Intentionally sparse. No correction-level detail.
-// Reflections NOT stored here — they're SkillNote {isReflection:true}
-// merged into the timeline at render time in initProfile().
 const TimelineEntry = {
   id: Number,
   type: String,    // 'session' | 'assessment' | 'milestone' | 'manual'
   objectId: Number,
   title: String, body: String, date: String, createdAt: Number,
 };
-
-// Praise blocks write an extra milestone entry:
-//   { type: 'milestone', objectId: session.id,
-//     title: block.title || firstBullet, body: skill.french | null }
 
 // ─── STORAGE KEYS ────────────────────────────────────────────────
 const STORAGE_KEYS = {
@@ -120,33 +109,47 @@ const STORAGE_KEYS = {
   timeline:           'plie:timeline',
   skillNotes:         'plie:skillNotes',
   onboardingComplete: 'plie:onboardingComplete',
+  hasVisitedLearn:    'plie:hasVisitedLearn',
+  preferences:        'plie:preferences',  // { hidePointe, profilePicture, displayName }
 };
+
+// ─── APP STATE ADDITIONS (v5.0) ───────────────────────────────────
+// These fields added to appState alongside existing fields:
+//
+//   hidePointe:     Boolean  — hides pointe from profile, skills, goals, assess
+//   profilePicture: String   — data URL (uploaded) or default key e.g. 'default-bun'
+//   displayName:    String   — optional display name shown on status card
+
+// ─── FOCUS AREAS (runtime constant, not persisted) ────────────────
+// Each area has: id, name, icon, optIn?, subdims?, getDims(), getStats()
+// Rendered back→front: pointe · artistry · body · movement · technique
+//
+// Areas and their sub-dimensions:
+//   technique  — (single)              — barre + centre questions averaged
+//   movement   — turns, allegro        — pirouette + allegro questions
+//   body       — flexibility, strength, turnout — existing + new questions
+//   artistry   — (single)              — musicality question
+//   pointe     — (single, opt-in)      — pointe question
 
 // ─── NORMALISATION ────────────────────────────────────────────────
 // normaliseStr() strips accents + lowercases for matching.
-// Used in: searchGoalCorrections, updateSkillLibResults
-//
 //   function normaliseStr(str) {
 //     return (str||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 //   }
-//
-// Enables: fouetté → fouette, Développé → developpe, etc.
 
 // ─── RELATIONSHIPS ────────────────────────────────────────────────
 /*
   Skill     (1) ──── (many) Correction     via Correction.skillId
-  Session   (1) ──── (many) Correction     via Correction.sessionId [optional]
+  Session   (1) ──── (many) Correction     via Correction.sessionId
   Session   (1) ──── (many) SessionSkill   via SessionSkill.sessionId
   Skill     (1) ──── (many) SessionSkill   via SessionSkill.skillId
   SessionSkill ────  (many) Correction     via SessionSkill.correctionIds[]
-  Goal      (0..1) ─ (1)    Skill          via Goal.skillId [optional]
+  Goal      (0..1) ─ (1)    Skill          via Goal.skillId
   Goal      ──────── (many) Correction     via Goal.correctionIds[]
   Skill     (1) ──── (many) SkillNote      via SkillNote.skillId
   Session   (1) ──── (1)    TimelineEntry  via TimelineEntry.objectId
-  Session   (1) ──── (0..1) TimelineEntry  via praise block milestone
 
   Skill state persistence (sparse):
     Persisted: [{id, tracked, flagged}] — only non-default entries
     loadUserSkillState() merges onto runtime skills at startup
-    New skills added to DATA.skills default to false automatically
 */
