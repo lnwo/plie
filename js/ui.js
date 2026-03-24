@@ -4564,3 +4564,136 @@ function renderGlossaryScreen(query) {
 }
 
 
+   7. SKILLS SYSTEM
+   Skills rendering, filtering, flagging, phonetic toggles.
+   ═══════════════════════════════════════════════════════════════ */
+
+function renderSkills(filter = 'all') {
+    const tbody = document.getElementById('skillsTableBody');
+    if (!tbody) return;
+    const filtered = filter === 'all'
+        ? appState.skills
+        : appState.skills.filter(s => s.difficulty === filter);
+
+    tbody.innerHTML = filtered.map(skill => {
+        const phoneticHidden = skill.phoneticVisible ? '' : 'hidden';
+        return `
+        <tr>
+            <td>
+                <div class="skill-cell">
+                    <div class="skill-name">
+                        <div class="skill-french">
+                            ${skill.french}
+                            <button class="phonetic-toggle" onclick="togglePhonetic('${skill.id}')">
+                                ${skill.phoneticVisible ? 'hide' : 'show'} pronunciation
+                            </button>
+                        </div>
+                        <div class="skill-phonetic ${phoneticHidden}">${skill.phonetic}</div>
+                    </div>
+                </div>
+            </td>
+            <td>${skill.category}</td>
+            <td><span class="difficulty-badge difficulty-${skill.difficulty}">${skill.difficulty}</span></td>
+            <td>
+                <button class="skill-flag ${skill.flagged ? 'flagged' : ''}"
+                        onclick="toggleFlag('${skill.id}')">
+                    ${skill.flagged ? ICONS.get('flag', 14) : ICONS.get('flag-outline', 14)}
+                </button>
+            </td>
+        </tr>
+    `}).join('');
+}
+
+function filterSkills(difficulty, event) {
+    document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
+    if (event?.target) event.target.classList.add('active');
+    renderSkills(difficulty);
+}
+
+function togglePhonetic(skillId) {
+    const skill = appState.skills.find(s => s.id === skillId);
+    if (!skill) return;
+    skill.phoneticVisible = !skill.phoneticVisible;
+    renderSkills();
+}
+
+function toggleFlag(skillId) {
+    const skill = appState.skills.find(s => s.id === skillId);
+    if (!skill) return;
+    skill.flagged = !skill.flagged;
+    persistSkillState();
+    renderSkills();
+}
+
+// ── Stubs for future features ──
+function addGoal() { openGoalCreator(); }
+function addProgress() { alert('Coming soon'); }
+
+function confirmResetProfile() {
+    if (confirm('Reset all data and start from scratch? This cannot be undone.')) {
+        resetProfile();
+    }
+}
+
+function resetProfile() {
+    // Clear localStorage
+    storage.clear();
+
+    // Reset appState to initial values
+    appState.sessions         = [];
+    appState.sessionTemplates = [];
+    appState.sessionSkills    = [];
+    appState.corrections      = [];
+    appState.assessments      = [];
+    appState.goals            = [];
+    appState.timeline         = [];
+    appState.skillNotes       = [];
+    appState.level            = null;
+    appState.dimensions       = null;
+    appState.rawDimensions    = null;
+    appState.answers          = {};
+    appState.currentQuestion  = 0;
+    appState.currentNav       = null;
+    appState._assessmentWritten = false;
+    appState._goalDraft       = null;
+    appState.hidePointe       = false;
+    appState.profilePicture   = null;
+    appState.displayName      = null;
+
+    // Reset skill user state
+    appState.skills.forEach(s => {
+        s.tracked        = false;
+        s.flagged        = false;
+        s.phoneticVisible = false;
+    });
+
+    // Remove any dynamically created screens so they rebuild fresh
+    ['barre-screen','assess-screen','goals-screen','learn-screen']
+        .forEach(id => document.getElementById(id)?.remove());
+    document.querySelectorAll('[id^="session-detail-"]').forEach(el => el.remove());
+    document.querySelectorAll('[id^="skill-detail-"]').forEach(el => el.remove());
+    document.querySelectorAll('[id^="skill-knowledge-"]').forEach(el => el.remove());
+    document.getElementById('skill-library-screen')?.remove();
+    document.getElementById('glossary-screen')?.remove();
+
+    // Remove overlays
+    document.getElementById('session-logger-overlay')?.remove();
+    document.getElementById('goal-creator-overlay')?.remove();
+    document.getElementById('reflection-overlay')?.remove();
+    document.getElementById('reflection-prompt')?.remove();
+    document.getElementById('post-save-prompt')?.remove();
+
+    // Restore nav visibility state
+    document.querySelector('.bottom-nav')?.classList.remove('visible');
+    document.querySelector('.fab')?.classList.remove('visible');
+
+    // Restart from onboarding
+    currentOnboardingScreen = 1;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.onboarding-screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('onboarding-1').classList.add('active');
+    appState.currentScreen = 'onboarding-1';
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
