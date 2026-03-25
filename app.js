@@ -1202,9 +1202,11 @@ function renderFocusCard(area, stackIndex) {
             bodyContent += `
                 <div class="focus-card-stage-row">
                     <span class="focus-card-stage-l">${firstDim.stage + 1} of 4</span>
-                    <span class="focus-card-stage-r">updated ${formatTimelineDate(
-                        (appState.assessments || []).slice(-1)[0]?.date || ''
-                    )}</span>
+                    <span class="focus-card-stage-r">${
+                        (appState.assessments || []).slice(-1)[0]?.date
+                            ? `updated ${formatTimelineDate((appState.assessments || []).slice(-1)[0].date)}`
+                            : ''
+                    }</span>
                 </div>
                 <div class="focus-card-track">
                     <div class="focus-card-track-fill" style="width:${fillPct}%"></div>
@@ -1212,22 +1214,20 @@ function renderFocusCard(area, stackIndex) {
         }
     }
 
-    // Stats row
-    bodyContent += `
-        <div class="focus-card-stats">
-            <div class="focus-card-stat">
-                <span class="focus-card-stat-value ${stats.corrections === 0 ? 'empty' : ''}">${stats.corrections || '—'}</span>
-                <span class="focus-card-stat-label">corrections</span>
-            </div>
-            <div class="focus-card-stat">
-                <span class="focus-card-stat-value ${!stats.lastSession ? 'empty' : ''}">${stats.lastSession || '—'}</span>
-                <span class="focus-card-stat-label">last session</span>
-            </div>
-            <div class="focus-card-stat">
-                <span class="focus-card-stat-value ${stats.goals === 0 ? 'empty' : ''}">${stats.goals || '—'}</span>
-                <span class="focus-card-stat-label">goals</span>
-            </div>
-        </div>`;
+    // Signal row
+    let signalText = 'no activity yet';
+    let signalMuted = true;
+
+    if (stats.lastSession) {
+        signalText = `last session ${stats.lastSession}`;
+        signalMuted = false;
+    }
+    if (stats.goals > 0) {
+        signalText = `${stats.goals} active goal${stats.goals !== 1 ? 's' : ''}`;
+        signalMuted = false;
+    }
+
+    bodyContent += `<div class="focus-card-signal ${signalMuted ? 'muted' : ''}">${signalText}</div>`;
 
     return `
         <div class="focus-card" style="z-index:${zIndex}" onclick="openFocusAreaSheet('${area.id}')">
