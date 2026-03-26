@@ -2867,30 +2867,315 @@ function showLearnScreen() {
         screen = document.createElement('div');
         screen.id = 'learn-screen';
         screen.className = 'screen';
-        screen.innerHTML = `
-            <div class="profile-header">
-                <h1>Learn</h1>
-                <p style="color: var(--text-muted); font-size: var(--fs-body); margin-top: var(--sp-xs);">Explore the world of ballet</p>
-            </div>
-            <div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
-                <div style="display: flex; flex-direction: column; gap: var(--sp-sm);">
-                    ${DATA.learnSections.map(s => `
-                        <div class="skill-category-card" onclick="${s.action}">
-                            <div class="skill-category-icon">${ICONS.get(s.icon, 24)}</div>
-                            <div class="skill-category-info">
-                                <div class="skill-category-name">${s.name}</div>
-                                <div class="skill-category-count">${s.count}</div>
-                                <div style="font-size: var(--fs-small); color: var(--text-muted); margin-top: 2px; line-height: 1.4;">${s.desc}</div>
-                            </div>
-                            <div class="skill-category-arrow">→</div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
         document.querySelector('.app-container').appendChild(screen);
     }
+    screen.innerHTML = `
+        <div class="profile-header">
+            <h1>Learn</h1>
+            <p class="screen-subtitle">Deepen your understanding</p>
+        </div>
+        <div class="learn-search-wrap">
+            <input
+                class="learn-search-input"
+                type="search"
+                placeholder="Search skills, terms, repertoire…"
+                oninput="handleLearnSearch(this.value)"
+            />
+        </div>
+        <div id="learn-search-results" class="learn-search-results" style="display:none;"></div>
+        <div id="learn-sections-list" style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
+            <p class="learn-helper-text">Search across all sections, or tap a card to explore.</p>
+            ${DATA.learnSections.map(section => {
+                let action;
+                if (section.id === 'skills') action = 'showLearnSkillLibrary()';
+                else if (section.id === 'glossary') action = 'showGlossary()';
+                else action = `showLearnSection('${section.id}')`;
+                const count = section.id === 'skills' ? DATA.skills.length + ' skills'
+                            : section.id === 'glossary' ? ''
+                            : section.items.length + ' entries';
+                return `
+                <div class="skill-category-card" style="margin-bottom: var(--sp-sm);" onclick="${action}">
+                    <div class="skill-category-icon">${ICONS.get(section.icon, 24)}</div>
+                    <div class="skill-category-info">
+                        <div class="skill-category-name">${section.name}</div>
+                        ${count ? `<div class="skill-category-count">${count}</div>` : ''}
+                        <div style="font-size: var(--fs-small); color: var(--text-muted); margin-top: 2px; line-height: 1.4;">${section.desc}</div>
+                    </div>
+                    <div class="skill-category-arrow">→</div>
+                </div>`;
+            }).join('')}
+        </div>
+    `;
     showScreen('learn-screen');
+}
+
+function showLearnSection(sectionId) {
+    const section = DATA.learnSections.find(s => s.id === sectionId);
+    if (!section) return;
+
+    const screenId = `learn-section-${sectionId}`;
+    let screen = document.getElementById(screenId);
+    if (!screen) {
+        screen = document.createElement('div');
+        screen.id = screenId;
+        screen.className = 'screen';
+        document.querySelector('.app-container').appendChild(screen);
+    }
+
+    const items = section.items || [];
+    const showScrubber = items.length >= 20;
+
+    const groups = {};
+    items.forEach(item => {
+        const letter = item.name[0]?.toUpperCase() || '#';
+        if (!groups[letter]) groups[letter] = [];
+        groups[letter].push(item);
+    });
+
+    const lettersHtml = Object.keys(groups).sort().map(letter => `
+        <div class="glossary-group" id="ls-${sectionId}-${letter}">
+            <div class="glossary-group-label">${letter}</div>
+            ${groups[letter].map(item => `
+                <div class="glossary-term-row glossary-term-skill" onclick="showLearnDetail('${sectionId}', '${item.name.replace(/'/g, "\\'")}')">
+                    <div class="glossary-term-main">
+                        <span class="glossary-term-name">${item.name}</span>
+                    </div>
+                    <div class="glossary-term-meta">
+                        <span class="glossary-term-category">${item.chip || ''}</span>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="4 2 8 6 4 10"/></svg>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `).join('');
+
+    const scrubberHtml = showScrubber ? `
+        <div class="glossary-index">
+            ${Object.keys(groups).sort().map(l =>
+                `<button class="glossary-index-btn" onclick="document.getElementById('ls-${sectionId}-${l}')?.scrollIntoView({behavior:'smooth',block:'start'})">${l}</button>`
+            ).join('')}
+        </div>
+    ` : '';
+
+    screen.innerHTML = `
+        <div class="skill-detail-header">
+            <button class="session-detail-back" onclick="navigateTo('learn')">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="13 4 7 10 13 16"/>
+                </svg>
+                learn
+            </button>
+            <span class="skill-lib-count">${items.length} entries</span>
+        </div>
+        <div class="skill-lib-sticky">
+            <div class="skill-lib-search-wrapper">
+                <svg class="skill-lib-search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                    <circle cx="7" cy="7" r="5"/><line x1="11" y1="11" x2="14" y2="14"/>
+                </svg>
+                <input type="text"
+                       class="skill-lib-search"
+                       id="learn-section-search-${sectionId}"
+                       placeholder="Search ${section.name.toLowerCase()}…"
+                       autocomplete="off"
+                       oninput="filterLearnSectionSearch('${sectionId}', this.value)" />
+            </div>
+            <div class="learn-chips-row" id="learn-chips-${sectionId}" style="padding: var(--sp-sm) var(--sp-lg) 0;">
+                ${section.chips.map((chip, i) => `
+                    <button
+                        class="learn-chip ${i === 0 ? 'active' : ''}"
+                        data-chip="${chip}"
+                        onclick="filterLearnSection('${sectionId}', '${chip}', this)"
+                    >${chip}</button>
+                `).join('')}
+            </div>
+        </div>
+        <div class="skill-lib-body" id="learn-items-${sectionId}">
+            ${lettersHtml}
+        </div>
+        ${scrubberHtml}
+        <div style="height: 120px;"></div>
+    `;
+    showScreen(screenId);
+}
+
+function filterLearnSection(sectionId, chip, btn) {
+    const row = document.getElementById(`learn-chips-${sectionId}`);
+    row.querySelectorAll('.learn-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const section = DATA.learnSections.find(s => s.id === sectionId);
+    const items = chip === 'All' ? section.items : section.items.filter(i => i.chip === chip);
+    const showScrubber = items.length >= 20;
+
+    const groups = {};
+    items.forEach(item => {
+        const letter = item.name[0]?.toUpperCase() || '#';
+        if (!groups[letter]) groups[letter] = [];
+        groups[letter].push(item);
+    });
+
+    const lettersHtml = Object.keys(groups).sort().map(letter => `
+        <div class="glossary-group" id="ls-${sectionId}-${letter}">
+            <div class="glossary-group-label">${letter}</div>
+            ${groups[letter].map(item => `
+                <div class="glossary-term-row glossary-term-skill" onclick="showLearnDetail('${sectionId}', '${item.name.replace(/'/g, "\\'")}')">
+                    <div class="glossary-term-main">
+                        <span class="glossary-term-name">${item.name}</span>
+                    </div>
+                    <div class="glossary-term-meta">
+                        <span class="glossary-term-category">${item.chip || ''}</span>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="4 2 8 6 4 10"/></svg>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `).join('') || `<p class="learn-empty" style="padding: var(--sp-md) var(--sp-lg);">No entries in this category.</p>`;
+
+    document.getElementById(`learn-items-${sectionId}`).innerHTML = lettersHtml;
+}
+
+function filterLearnSectionSearch(sectionId, query) {
+    const section = DATA.learnSections.find(s => s.id === sectionId);
+    const q = query.trim().toLowerCase();
+    const items = q
+        ? section.items.filter(i => i.name.toLowerCase().includes(q) || (i.description && i.description.toLowerCase().includes(q)))
+        : section.items;
+
+    const row = document.getElementById(`learn-chips-${sectionId}`);
+    if (row) row.querySelectorAll('.learn-chip').forEach((b, i) => b.classList.toggle('active', i === 0));
+
+    const groups = {};
+    items.forEach(item => {
+        const letter = item.name[0]?.toUpperCase() || '#';
+        if (!groups[letter]) groups[letter] = [];
+        groups[letter].push(item);
+    });
+
+    const lettersHtml = Object.keys(groups).sort().map(letter => `
+        <div class="glossary-group" id="ls-${sectionId}-${letter}">
+            <div class="glossary-group-label">${letter}</div>
+            ${groups[letter].map(item => `
+                <div class="glossary-term-row glossary-term-skill" onclick="showLearnDetail('${sectionId}', '${item.name.replace(/'/g, "\\'")}')">
+                    <div class="glossary-term-main">
+                        <span class="glossary-term-name">${item.name}</span>
+                    </div>
+                    <div class="glossary-term-meta">
+                        <span class="glossary-term-category">${item.chip || ''}</span>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="4 2 8 6 4 10"/></svg>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `).join('') || `<p class="learn-empty" style="padding: var(--sp-md) var(--sp-lg);">No results for "${query}".</p>`;
+
+    document.getElementById(`learn-items-${sectionId}`).innerHTML = lettersHtml;
+}
+
+function showLearnDetail(sectionId, itemName) {
+    const section = DATA.learnSections.find(s => s.id === sectionId);
+    if (!section) return;
+    const item = section.items.find(i => i.name === itemName);
+    if (!item) return;
+
+    const screenId = `learn-detail-${sectionId}-${itemName.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`;
+    let screen = document.getElementById(screenId);
+    if (!screen) {
+        screen = document.createElement('div');
+        screen.id = screenId;
+        screen.className = 'screen';
+        document.querySelector('.app-container').appendChild(screen);
+    }
+
+    screen.innerHTML = `
+        <div class="skill-detail-header">
+            <button class="session-detail-back" onclick="showLearnSection('${sectionId}')">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="13 4 7 10 13 16"/>
+                </svg>
+                back
+            </button>
+        </div>
+        <div class="skill-detail-hero">
+            <div class="skill-detail-category">${item.chip ? item.chip.toUpperCase() : ''}</div>
+            <h1 class="skill-detail-title">${item.name}</h1>
+        </div>
+        ${item.description ? `
+        <div class="skill-know-section">
+            <p class="skill-know-description">${item.description}</p>
+        </div>` : ''}
+        ${item.keyPoints && item.keyPoints.length ? `
+        <div class="skill-know-section">
+            <div class="skill-know-section-label">Key points</div>
+            <ul class="skill-know-list">
+                ${item.keyPoints.map(p => `<li class="skill-know-list-item">${p}</li>`).join('')}
+            </ul>
+        </div>` : ''}
+        <div style="height: 120px;"></div>
+    `;
+    showScreen(screenId);
+}
+
+function handleLearnSearch(query) {
+    const resultsEl = document.getElementById('learn-search-results');
+    const sectionsEl = document.getElementById('learn-sections-list');
+    const q = query.trim().toLowerCase();
+
+    if (!q) {
+        resultsEl.style.display = 'none';
+        sectionsEl.style.display = '';
+        return;
+    }
+
+    sectionsEl.style.display = 'none';
+    resultsEl.style.display = '';
+
+    const results = [];
+    DATA.learnSections.forEach(section => {
+        const items = section.id === 'skills'
+            ? DATA.skills.map(s => ({ name: s.french || s.name, chip: s.category || '', description: s.description || '', skillId: s.id }))
+            : section.items || [];
+        items.forEach(item => {
+            if (
+                item.name.toLowerCase().includes(q) ||
+                (item.description && item.description.toLowerCase().includes(q))
+            ) {
+                results.push({ section, item });
+            }
+        });
+    });
+
+    if (!results.length) {
+        resultsEl.innerHTML = `<p class="learn-empty" style="padding: 0 var(--sp-lg);">No results for "${query}".</p>`;
+        return;
+    }
+
+    const grouped = {};
+    results.forEach(r => {
+        if (!grouped[r.section.name]) grouped[r.section.name] = { section: r.section, items: [] };
+        grouped[r.section.name].items.push(r.item);
+    });
+
+    resultsEl.innerHTML = `<div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">` +
+        Object.values(grouped).map(({ section, items }) => `
+            <div class="learn-search-group">
+                <div class="learn-search-group-label">${section.name}</div>
+                ${items.map(item => `
+                    <div class="glossary-term-row glossary-term-skill" onclick="${
+                        section.id === 'skills' ? `showSkillKnowledgePage('${item.skillId || ''}', 'learn-screen')` :
+                        section.id === 'glossary' ? `showGlossary()` :
+                        `showLearnDetail('${section.id}', '${item.name.replace(/'/g, "\\'")}')`
+                    }">
+                        <div class="glossary-term-main">
+                            <span class="glossary-term-name">${item.name}</span>
+                        </div>
+                        <div class="glossary-term-meta">
+                            <span class="glossary-term-category">${item.chip || ''}</span>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `).join('') +
+    `</div>`;
 }
 
 // ── Folder Detail Views ──
@@ -3924,19 +4209,6 @@ function openSkillFromBlock(topicId) {
    ═══════════════════════════════════════════════════════════════ */
 
 const DIFFICULTY_ORDER = { beginner: 0, improver: 1, intermediate: 2, advanced: 3 };
-
-function showLearnSkillLibrary() {
-    let screen = document.getElementById('skill-library-screen');
-    if (!screen) {
-        screen = document.createElement('div');
-        screen.className = 'screen skill-library-screen';
-        screen.id = 'skill-library-screen';
-        document.querySelector('.app-container').appendChild(screen);
-    }
-    renderSkillLibrary('', 'all');
-    showScreen('skill-library-screen');
-}
-
 function showLearnSkillLibrary() {
     let screen = document.getElementById('skill-library-screen');
     if (!screen) {
@@ -4694,5 +4966,4 @@ function resetProfile() {
     document.getElementById('onboarding-1').classList.add('active');
     appState.currentScreen = 'onboarding-1';
 }
-
 

@@ -281,12 +281,415 @@ const DATA = {
     ],
 
     learnSections: [
-        { icon: 'cat-barre',        name: 'Skill library',     desc: 'Every ballet movement — browse, search, and learn',       count: '80+ skills',   action: "showLearnSkillLibrary()" },
-        { icon: 'learn-quiz',       name: 'Glossary',          desc: 'Key terms, musicality concepts, and ballet vocabulary',    count: 'coming soon',  action: "showGlossary()" },
-        { icon: 'persona-returning',name: 'Famous ballets',    desc: 'Iconic productions and the dancers who defined them',      count: '18 ballets',   action: "openFolder('ballets')" },
-        { icon: 'learn-pirouette',  name: 'Composers',         desc: 'From Tchaikovsky to Prokofiev and beyond',                 count: '12 composers', action: "alert('Coming soon')" },
-        { icon: 'cat-centre',       name: 'Variations',        desc: 'Classical variations to study and learn',                  count: '25 variations',action: "alert('Coming soon')" },
-        { icon: 'profile',          name: 'Legendary dancers', desc: 'From Plisetskaya to Acosta — the greats',                 count: '15 dancers',   action: "alert('Coming soon')" }
+    {
+        id: 'skills',
+        name: 'Skill library',
+        desc: 'The movements that make up ballet training, from foundational barre work to the most demanding allegro.',
+        icon: 'cat-barre',
+        chips: ['All', 'Barre', 'Centre', 'Turns', 'Allegro', 'Pointe'],
+        action: 'showLearnSkillLibrary()',
+        items: [] // populated from DATA.skills
+    },
+    {
+        id: 'glossary',
+        name: 'Glossary',
+        desc: 'The language of ballet. Terms, concepts, and the vocabulary used in class and in the studio.',
+        icon: 'learn-quiz',
+        chips: ['All', 'Technique', 'Musicality'],
+        action: null,
+        items: [
+            {
+                name: 'Épaulement',
+                chip: 'Technique',
+                description: 'The positioning and movement of the shoulders in relation to the hips and head. One of the most defining qualities of classical style — without it, dancing can appear flat or two-dimensional.',
+                keyPoints: ['Rotate the shoulder towards or away from the audience to create line and depth.', 'Always connected to the head and gaze.']
+            },
+            {
+                name: 'Aplomb',
+                chip: 'Technique',
+                description: 'The quality of perfect vertical alignment and balance. A dancer with aplomb appears rooted and effortless simultaneously.',
+                keyPoints: ['Weight centred over the standing leg.', 'Core engaged without tension.', 'The feeling of being pulled up rather than held up.']
+            },
+            {
+                name: 'En dehors',
+                chip: 'Technique',
+                description: 'Outward rotation, moving away from the supporting leg. Applies to turns, movements, and the direction of working leg gestures.',
+                keyPoints: ['Rotation initiates from the hip, not the knee.', 'Used in turns: a pirouette en dehors rotates away from the supporting leg.']
+            },
+            {
+                name: 'En dedans',
+                chip: 'Technique',
+                description: 'Inward rotation, moving towards the supporting leg. The counterpart to en dehors.',
+                keyPoints: ['Rotation initiates from the hip.', 'Often felt as the more natural direction for some movements.']
+            },
+            {
+                name: 'Turnout',
+                chip: 'Technique',
+                description: 'The outward rotation of both legs from the hip joint. A fundamental principle of classical ballet technique.',
+                keyPoints: ['Originates at the hip, not the knee or ankle.', 'Never force beyond your natural range.', 'Maintained through core and glute engagement.']
+            },
+            {
+                name: 'Alignment',
+                chip: 'Technique',
+                description: 'The relationship between body parts in space — head, shoulders, hips, knees, and feet stacked in correct relation to one another.',
+                keyPoints: ['Check alignment from both front and side.', 'Misalignment at the hip affects everything below it.']
+            },
+            {
+                name: 'Plumb line',
+                chip: 'Technique',
+                description: 'An imaginary vertical line through the centre of the body used as a reference for correct alignment and balance.',
+                keyPoints: ['Should pass through ear, shoulder, hip, and ankle in profile.', 'A useful mental image when finding balance on one leg.']
+            },
+            {
+                name: 'Weight placement',
+                chip: 'Technique',
+                description: 'Where the body\'s mass sits in relation to the supporting foot or feet. Critical for balance, transitions, and preparation for turns.',
+                keyPoints: ['Over-the-toe placement supports relevé and turns.', 'Shifting weight clearly and fully prevents falling out of steps.']
+            },
+            {
+                name: 'Adagio',
+                chip: 'Musicality',
+                description: 'Slow, sustained movement. In class, adagio exercises develop balance, control, and the ability to move through space with intention.',
+                keyPoints: ['Resist the pull of gravity — control the descent.', 'Musicality is especially visible in adagio.']
+            },
+            {
+                name: 'Rubato',
+                chip: 'Musicality',
+                description: 'A slight flexibility in tempo — slowing or speeding the phrase slightly for expressive effect, then returning to the pulse.',
+                keyPoints: ['Always resolve back to the beat.', 'Use sparingly.', 'The music leads, not the dancer.']
+            },
+            {
+                name: 'Phrase',
+                chip: 'Musicality',
+                description: 'A musical sentence — a unit of music with a beginning, middle, and end. Dancing in phrases means responding to this structure rather than counting individual beats.',
+                keyPoints: ['Identify where phrases begin and end.', 'Movement should breathe with the phrase, not cut across it.']
+            },
+            {
+                name: 'Dynamics',
+                chip: 'Musicality',
+                description: 'The variation of force, speed, and quality within movement. Dynamics are what give dancing texture and prevent it from looking mechanical.',
+                keyPoints: ['Contrast is the key — soft needs sharp to be visible.', 'Listen to the music for dynamic cues.']
+            },
+            {
+                name: 'Accent',
+                chip: 'Musicality',
+                description: 'A point of emphasis in the music or movement. Accents give rhythm its shape and movement its punctuation.',
+                keyPoints: ['Can fall on or off the beat.', 'Match movement accents to musical ones unless deliberately contrasting.']
+            },
+            {
+                name: 'Tempo',
+                chip: 'Musicality',
+                description: 'The speed of the music. In ballet, dancers must be able to adapt technique to a wide range of tempi without losing quality.',
+                keyPoints: ['Slow tempi expose technical weaknesses.', 'Fast tempi require economy of movement.']
+            },
+            {
+                name: 'Allegro',
+                chip: 'Musicality',
+                description: 'Fast, lively movement. In class, allegro exercises develop speed, elevation, and quick footwork.',
+                keyPoints: ['Preparation and landing are as important as the jump itself.', 'Small allegro (petit) and large allegro (grand) require different qualities.']
+            }
+        ]
+    },
+    {
+        id: 'musicality',
+        name: 'Musicality',
+        desc: 'How movement and music become one. Phrasing, dynamics, and the art of dancing with the score rather than to it.',
+        icon: 'learn-pirouette',
+        chips: ['All', 'Rhythm', 'Phrasing', 'Dynamics', 'Style'],
+        action: null,
+        items: [
+            {
+                name: 'Breath before movement',
+                chip: 'Phrasing',
+                description: 'The preparatory breath that initiates movement. In ballet it is both physical and musical — it connects the dancer to the phrase before it begins.',
+                keyPoints: ['The breath is visible in the upper body.', 'It belongs to the music, not just the body.', 'A missed breath makes an entrance feel late even if the feet are on time.']
+            },
+            {
+                name: 'Stillness as punctuation',
+                chip: 'Dynamics',
+                description: 'The deliberate use of stillness to give shape to movement. A pause is not an absence of dancing — it is part of the phrase.',
+                keyPoints: ['Stillness requires as much muscular engagement as movement.', 'The eye goes to what is still.', 'Use it to frame what came before and what comes next.']
+            },
+            {
+                name: 'Finding the beat',
+                chip: 'Rhythm',
+                description: 'The fundamental skill of locating the underlying pulse of the music and anchoring movement to it.',
+                keyPoints: ['Listen for the bass line or percussion.', 'Feel it physically before you move.', 'Content coming soon.']
+            },
+            {
+                name: 'Counting in music',
+                chip: 'Rhythm',
+                description: 'Understanding how music is organised into bars and beats, and how this maps to movement phrases in class.',
+                keyPoints: ['Most ballet music is in 3/4 or 4/4.', 'Count from the preparation, not the first step.', 'Content coming soon.']
+            },
+            {
+                name: 'Musical accents',
+                chip: 'Rhythm',
+                description: 'The points of emphasis within a bar. Identifying and responding to musical accents gives movement clarity and rhythmic interest.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Syncopation',
+                chip: 'Rhythm',
+                description: 'Rhythm that falls between the beats, creating surprise and energy. Used sparingly in classical ballet but common in contemporary work.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'The arc of a phrase',
+                chip: 'Phrasing',
+                description: 'Every musical phrase has a shape — a rise and fall of energy. Dancing the arc means responding to that shape rather than executing steps mechanically.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Dancing through the music',
+                chip: 'Phrasing',
+                description: 'Moving with the music rather than to it — allowing the sound to flow through the body rather than simply marking time.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Soft and sharp contrast',
+                chip: 'Dynamics',
+                description: 'The interplay between sustained, fluid movement and quick, precise action. One of the primary tools for creating expressive texture.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Building to a climax',
+                chip: 'Dynamics',
+                description: 'Shaping a phrase or variation so that energy accumulates towards a peak moment, then releases.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Weight and lightness',
+                chip: 'Dynamics',
+                description: 'The quality of movement — heavy and grounded versus light and aerial. Both are valid and both require control.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Romantic style',
+                chip: 'Style',
+                description: 'The aesthetic of early 19th century ballet — ethereal, soft, and otherworldly. Associated with works like Giselle and La Sylphide.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Neoclassical style',
+                chip: 'Style',
+                description: 'Balanchine\'s reinvention of classical form — leaner, faster, more abstract. Less narrative, more musical.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Soviet school style',
+                chip: 'Style',
+                description: 'The Vaganova-influenced aesthetic of the Bolshoi and Mariinsky — expansive, dramatic, technically rigorous.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Beginning and ending',
+                chip: 'Phrasing',
+                description: 'How a phrase starts and how it finishes. Both are as important as the movement in between.',
+                keyPoints: ['Content coming soon.']
+            }
+        ]
+    },
+    {
+        id: 'conditioning',
+        name: 'Conditioning & drills',
+        desc: 'The work that supports the work. Strength, stability, and the targeted exercises that make technique possible.',
+        icon: 'cat-centre',
+        chips: ['All', 'Strength', 'Flexibility', 'Stability', 'Warm-up'],
+        action: null,
+        items: [
+            {
+                name: 'Theraband foot exercises',
+                chip: 'Strength',
+                description: 'Targeted resistance work for the intrinsic muscles of the foot. Builds the strength needed for a controlled, graduated relevé and a safe pointe.',
+                keyPoints: ['Work through the full range — from flat to three-quarter to full pointe.', 'Resist on the way down.', 'Keep the toes long, not gripped.']
+            },
+            {
+                name: 'Single leg balance',
+                chip: 'Stability',
+                description: 'The foundation of all turns and sustained balances. Trains the ankle, knee, and hip to stack correctly under load.',
+                keyPoints: ['Micro-adjustments are normal — stillness is managed, not frozen.', 'Eyes on a fixed point.', 'Breathe.']
+            },
+            {
+                name: 'Calf raises',
+                chip: 'Strength',
+                description: 'A fundamental exercise for building the calf and Achilles strength required for a high, stable relevé.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Turnout muscle engagement',
+                chip: 'Strength',
+                description: 'Targeted activation of the deep external rotators — the muscles responsible for maintaining turnout without strain.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Core activation',
+                chip: 'Strength',
+                description: 'Engaging the deep abdominal and back muscles that stabilise the spine and pelvis during movement.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Hip flexor stretch',
+                chip: 'Flexibility',
+                description: 'Lengthening the muscles at the front of the hip — essential for a free, high arabesque and a clean attitude derrière.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Hamstring lengthening',
+                chip: 'Flexibility',
+                description: 'Progressive stretching of the hamstrings to support développé height and grand battement.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Back cambrée stretch',
+                chip: 'Flexibility',
+                description: 'Mobilising the thoracic and lumbar spine for port de bras and back bends.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Splits progression',
+                chip: 'Flexibility',
+                description: 'A structured approach to working towards full splits, building flexibility safely over time.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Ankle stability drill',
+                chip: 'Stability',
+                description: 'Exercises targeting the ankle stabilisers — important for pointe work, landings, and balance.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Relevé hold',
+                chip: 'Stability',
+                description: 'Sustaining a relevé position to build the endurance and control needed for pirouette preparation and pointe work.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Proprioception exercises',
+                chip: 'Stability',
+                description: 'Training the body\'s awareness of its own position in space — the foundation of reliable balance.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Joint mobilisation',
+                chip: 'Warm-up',
+                description: 'Gentle movement through the full range of each joint before class to prepare the body and reduce injury risk.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Barre warm-up sequence',
+                chip: 'Warm-up',
+                description: 'A structured sequence of exercises designed to warm the body progressively from feet to spine.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Floor stretch sequence',
+                chip: 'Warm-up',
+                description: 'A mat-based routine for releasing tension and preparing the hips, hamstrings, and back before training.',
+                keyPoints: ['Content coming soon.']
+            }
+        ]
+    },
+    {
+        id: 'repertoire',
+        name: 'Repertoire',
+        desc: 'The ballets, the roles, the choreographers. Context for the steps and the tradition they come from.',
+        icon: 'profile',
+        chips: ['All', 'Classical', 'Romantic', 'Contemporary', 'Composers'],
+        action: null,
+        items: [
+            {
+                name: 'Giselle',
+                chip: 'Romantic',
+                description: 'A two-act ballet by Adolphe Adam, first performed in Paris in 1841. One of the defining works of the Romantic era and a touchstone role for dramatic ballerinas.',
+                keyPoints: ['Choreography: Jean Coralli and Jules Perrot (original); Marius Petipa (later revisions).', 'Music: Adolphe Adam.', 'Notable for the transformation from peasant girl to Wili in Act II, the mime-heavy first act, and the iconic mad scene.']
+            },
+            {
+                name: 'Swan Lake',
+                chip: 'Classical',
+                description: 'A four-act ballet by Tchaikovsky, first performed in Moscow in 1877. The dual role of Odette/Odile is among the most demanding in the classical repertoire.',
+                keyPoints: ['Choreography: Marius Petipa and Lev Ivanov (1895 revival).', 'Music: Pyotr Ilyich Tchaikovsky.', 'Notable for the white acts (II and IV), the black swan pas de deux, and the 32 fouettés.']
+            },
+            {
+                name: 'The Sleeping Beauty',
+                chip: 'Classical',
+                description: 'A three-act ballet considered the pinnacle of the classical style. Petipa\'s choreography and Tchaikovsky\'s score are inseparable.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'The Nutcracker',
+                chip: 'Classical',
+                description: 'A two-act Christmas ballet that has become one of the most performed works in the repertoire worldwide.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Don Quixote',
+                chip: 'Classical',
+                description: 'A virtuosic, character-driven ballet based on Cervantes. Famous for its technically demanding pas de deux and vibrant Spanish flavour.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'La Bayadère',
+                chip: 'Classical',
+                description: 'A grand Petipa ballet set in ancient India. The Kingdom of the Shades scene is one of the most celebrated sequences in classical ballet.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'La Sylphide',
+                chip: 'Romantic',
+                description: 'The work that defined the Romantic era in ballet. White tutus, pointe work as ethereal illusion, and the unattainable ideal.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Coppélia',
+                chip: 'Romantic',
+                description: 'A comic ballet about a toymaker\'s life-size doll. Lighter in tone than most Romantic works, with a happy ending.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Les Sylphides',
+                chip: 'Romantic',
+                description: 'Fokine\'s plotless evocation of the Romantic spirit, set to Chopin. A pivotal work in the transition towards modern ballet.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Romeo and Juliet',
+                chip: 'Contemporary',
+                description: 'Prokofiev\'s score has inspired numerous choreographic versions. MacMillan\'s for the Royal Ballet is among the most celebrated.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Manon',
+                chip: 'Contemporary',
+                description: 'Kenneth MacMillan\'s intensely dramatic full-length ballet, set to Massenet. A demanding dramatic and technical role.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'The Rite of Spring',
+                chip: 'Contemporary',
+                description: 'Stravinsky\'s revolutionary score has been choreographed by dozens of choreographers. Nijinsky\'s original caused a riot; Pina Bausch\'s is among the most powerful reinterpretations.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Tchaikovsky',
+                chip: 'Composers',
+                description: 'Pyotr Ilyich Tchaikovsky (1840–1893). Composer of Swan Lake, The Sleeping Beauty, and The Nutcracker — the three scores that define the classical repertoire.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Prokofiev',
+                chip: 'Composers',
+                description: 'Sergei Prokofiev (1891–1953). Composer of Romeo and Juliet and Cinderella. His scores are rhythmically complex and dramatically vivid.',
+                keyPoints: ['Content coming soon.']
+            },
+            {
+                name: 'Delibes',
+                chip: 'Composers',
+                description: 'Léo Delibes (1836–1891). Composer of Coppélia and Sylvia. Tchaikovsky admired his ballet scores enormously.',
+                keyPoints: ['Content coming soon.']
+            }
+        ]
+    }
     ],
 
     profileCapabilities: [
