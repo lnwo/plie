@@ -2542,10 +2542,10 @@ function renderGoalCreator() {
     }
 
     const typeTabsHtml = `
-        <div class="goal-type-tabs">
-            <button type="button" class="goal-type-tab ${d.goalType === 'skill' ? 'active' : ''}" onmousedown="setGoalType('skill')" ontouchend="event.preventDefault();setGoalType('skill')">a skill</button>
-            <button type="button" class="goal-type-tab ${d.goalType === 'intention' ? 'active' : ''}" onmousedown="setGoalType('intention')" ontouchend="event.preventDefault();setGoalType('intention')">a feeling or state</button>
-            <button type="button" class="goal-type-tab ${d.goalType === 'habit' ? 'active' : ''}" onmousedown="setGoalType('habit')" ontouchend="event.preventDefault();setGoalType('habit')">a habit</button>
+        <div class="goal-type-tabs" id="goal-type-tabs">
+            <button type="button" class="goal-type-tab ${d.goalType === 'skill' ? 'active' : ''}" data-type="skill">a skill</button>
+            <button type="button" class="goal-type-tab ${d.goalType === 'intention' ? 'active' : ''}" data-type="intention">a feeling or state</button>
+            <button type="button" class="goal-type-tab ${d.goalType === 'habit' ? 'active' : ''}" data-type="habit">a habit</button>
         </div>
     `;
 
@@ -2580,7 +2580,7 @@ function renderGoalCreator() {
 
             <div class="session-logger-header">
                 <h2 class="session-logger-title">what are you working toward?</h2>
-                <button class="session-close-btn" onclick="confirmDiscardGoal()">
+                <button type="button" class="session-close-btn" onclick="confirmDiscardGoal()">
                     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                         <line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/>
                     </svg>
@@ -2599,6 +2599,11 @@ function renderGoalCreator() {
             </div>
         </div>
     `;
+
+    // Attach tab listeners via JS — inline handlers inside innerHTML are unreliable in Safari
+    document.querySelectorAll('#goal-type-tabs .goal-type-tab').forEach(btn => {
+        btn.addEventListener('click', () => setGoalType(btn.dataset.type));
+    });
 }
 
 function selectGoalCategory(cat) {
