@@ -5,6 +5,16 @@
    Functions that create/populate each main screen.
    ═══════════════════════════════════════════════════════════════ */
 
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 /* ═══════════════════════════════════════════════════════════════
    SESSION LOGGER
    Stage 2: Full overlay with class type carousel, day picker,
@@ -151,16 +161,94 @@ function formatSessionDateDisplay(dateStr) {
     yest.setDate(yest.getDate() - 1);
     const yesterdayStr = yest.toISOString().split('T')[0];
     const d = new Date(dateStr + 'T12:00:00');
-    const longDate = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    const shortDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
     if (dateStr === todayStr) {
-        return `<span class="date-display-label">Today</span><span class="date-display-sub">${longDate}</span>`;
+        return `<span class="date-display-label">Today</span><span class="date-display-sep">·</span><span class="date-display-sub">${shortDate}</span>`;
     } else if (dateStr === yesterdayStr) {
-        return `<span class="date-display-label">Yesterday</span><span class="date-display-sub">${longDate}</span>`;
+        return `<span class="date-display-label">Yesterday</span><span class="date-display-sep">·</span><span class="date-display-sub">${shortDate}</span>`;
     } else {
-        const dayName = d.toLocaleDateString('en-GB', { weekday: 'long' });
-        const rest    = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-        return `<span class="date-display-label">${dayName}</span><span class="date-display-sub">${rest}</span>`;
+        const dayName = d.toLocaleDateString('en-GB', { weekday: 'short' });
+        return `<span class="date-display-label">${dayName}</span><span class="date-display-sep">·</span><span class="date-display-sub">${shortDate}</span>`;
     }
+}
+
+function toggleDateCalendar() {
+    const existing = document.getElementById('date-calendar-popup');
+    if (existing) { existing.remove(); return; }
+    if (!appState.currentSession) return;
+    renderDateCalendar(appState.currentSession.date);
+}
+
+function renderDateCalendar(selectedDateStr) {
+    const existing = document.getElementById('date-calendar-popup');
+    if (existing) existing.remove();
+
+    const sel = new Date(selectedDateStr + 'T12:00:00');
+    const todayStr = new Date().toISOString().split('T')[0];
+    const viewYear = sel.getFullYear();
+    const viewMonth = sel.getMonth(); // 0-indexed
+
+    const firstDay = new Date(viewYear, viewMonth, 1);
+    const lastDay  = new Date(viewYear, viewMonth + 1, 0);
+    const startDow = (firstDay.getDay() + 6) % 7; // Mon=0
+    const monthLabel = firstDay.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+    // Prev month: only allow if month has days in the past
+    const prevMonthLastDay = new Date(viewYear, viewMonth, 0);
+    const prevMonthLastStr = prevMonthLastDay.toISOString().split('T')[0];
+    const canGoPrev = prevMonthLastStr <= todayStr;
+
+    // Next month: only allow if current month is not the current month
+    const todayD = new Date(todayStr + 'T12:00:00');
+    const canGoNext = viewYear < todayD.getFullYear() || (viewYear === todayD.getFullYear() && viewMonth < todayD.getMonth());
+
+    const dowHeaders = ['M','T','W','T','F','S','S'].map(d => `<div class="date-cal-dow">${d}</div>`).join('');
+
+    let dayCells = '';
+    // Empty cells before first day
+    for (let i = 0; i < startDow; i++) dayCells += `<button class="date-cal-day empty" disabled></button>`;
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+        const dStr = `${viewYear}-${String(viewMonth + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const isSelected = dStr === selectedDateStr;
+        const isToday    = dStr === todayStr;
+        const isFuture   = dStr > todayStr;
+        const cls = ['date-cal-day', isSelected ? 'selected' : '', isToday && !isSelected ? 'today' : '', isFuture ? 'future' : ''].filter(Boolean).join(' ');
+        dayCells += `<button class="${cls}" onmousedown="pickCalendarDate('${dStr}')" ${isFuture ? 'disabled' : ''}>${day}</button>`;
+    }
+
+    const popup = document.createElement('div');
+    popup.id = 'date-calendar-popup';
+    popup.className = 'date-calendar-popup';
+    popup.innerHTML = `
+        <div class="date-cal-header">
+            <button class="date-cal-nav" onmousedown="renderDateCalendar(getCalNavMonth('${selectedDateStr}', -1))" ${canGoPrev ? '' : 'disabled'}>‹</button>
+            <span class="date-cal-month-label">${monthLabel}</span>
+            <button class="date-cal-nav" onmousedown="renderDateCalendar(getCalNavMonth('${selectedDateStr}', 1))" ${canGoNext ? '' : 'disabled'}>›</button>
+        </div>
+        <div class="date-cal-grid">
+            ${dowHeaders}
+            ${dayCells}
+        </div>
+    `;
+
+    const picker = document.querySelector('.session-date-picker');
+    if (picker) picker.appendChild(popup);
+}
+
+function getCalNavMonth(currentSelectedStr, delta) {
+    const d = new Date(currentSelectedStr + 'T12:00:00');
+    const newMonth = d.getMonth() + delta;
+    const newYear  = newMonth < 0 ? d.getFullYear() - 1 : (newMonth > 11 ? d.getFullYear() + 1 : d.getFullYear());
+    const clampedMonth = ((newMonth % 12) + 12) % 12;
+    // Return first day of new month as nav target
+    return `${newYear}-${String(clampedMonth + 1).padStart(2,'0')}-01`;
+}
+
+function pickCalendarDate(dateStr) {
+    if (!appState.currentSession) return;
+    appState.currentSession.date = dateStr;
+    document.getElementById('date-calendar-popup')?.remove();
+    renderSessionLogger();
 }
 
 function stepSessionDate(delta) {
@@ -288,7 +376,7 @@ function renderSessionLogger() {
                         <button class="date-nav-btn" onmousedown="stepSessionDate(-1)" aria-label="Previous day">
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="10 4 6 8 10 12"/></svg>
                         </button>
-                        <div class="date-display">${formatSessionDateDisplay(s.date)}</div>
+                        <div class="date-display" onmousedown="toggleDateCalendar()">${formatSessionDateDisplay(s.date)}</div>
                         <button class="date-nav-btn${s.date === new Date().toISOString().split('T')[0] ? ' date-nav-disabled' : ''}" onmousedown="stepSessionDate(1)" aria-label="Next day" ${s.date === new Date().toISOString().split('T')[0] ? 'disabled' : ''}>
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 4 10 8 6 12"/></svg>
                         </button>

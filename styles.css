@@ -2434,12 +2434,14 @@ h1, h2, .screen-heading {
     background: var(--surface);
     border: 1.5px solid var(--border);
     border-radius: var(--r-md);
-    overflow: hidden;
+    overflow: visible;
     transition: border-color 0.2s ease;
+    position: relative;
 }
 
 .date-nav-btn {
-    width: 48px;
+    width: 40px;
+    min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2450,6 +2452,7 @@ h1, h2, .screen-heading {
     flex-shrink: 0;
     transition: background 0.15s ease, color 0.15s ease;
     -webkit-tap-highlight-color: transparent;
+    border-radius: var(--r-md);
 }
 
 .date-nav-btn:active { background: var(--gold-wash); }
@@ -2463,30 +2466,121 @@ h1, h2, .screen-heading {
 .date-display {
     flex: 1;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
-    padding: var(--sp-md) 0;
+    gap: var(--sp-sm);
+    padding: 0 var(--sp-xs);
+    min-height: 44px;
     border-left: 1px solid var(--border);
     border-right: 1px solid var(--border);
     text-align: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
 }
+
+.date-display:active { background: var(--gold-wash); }
 
 .date-display-label {
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-body);
     font-weight: 600;
     color: var(--ink);
-    line-height: 1.2;
+    line-height: 1;
+}
+
+.date-display-sep {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    color: var(--border);
 }
 
 .date-display-sub {
     font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink-3);
+    line-height: 1;
+}
+
+/* Inline calendar popup */
+
+.date-calendar-popup {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-md);
+    padding: var(--sp-md);
+    z-index: 20;
+    box-shadow: var(--shadow-2);
+}
+
+.date-cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--sp-sm);
+}
+
+.date-cal-month-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.date-cal-nav {
+    background: none;
+    border: none;
+    color: var(--ink-2);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--r-sm);
+    font-size: var(--fs-body);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.date-cal-nav:active { background: var(--gold-wash); }
+.date-cal-nav:disabled { color: var(--ink-4); cursor: default; }
+
+.date-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    text-align: center;
+}
+
+.date-cal-dow {
+    font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-caption);
     color: var(--ink-3);
-    line-height: 1.2;
+    padding: 2px 0;
+    font-weight: 500;
 }
+
+.date-cal-day {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink);
+    padding: 6px 0;
+    cursor: pointer;
+    border-radius: var(--r-sm);
+    background: none;
+    border: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.1s ease;
+}
+
+.date-cal-day:hover { background: var(--gold-wash); }
+.date-cal-day:active { background: var(--gold-soft); }
+.date-cal-day.selected { background: var(--gold-mid); color: white; font-weight: 600; }
+.date-cal-day.today { color: var(--gold); font-weight: 600; }
+.date-cal-day.future,
+.date-cal-day:disabled { color: var(--ink-4); cursor: default; }
+.date-cal-day.future:hover,
+.date-cal-day:disabled:hover { background: none; }
+.date-cal-day.empty { cursor: default; }
 
 /* ── Session select ── */
 
