@@ -700,6 +700,8 @@ function addBlock(focusTitle = false) {
         corrections:    [],
         praiseText:     '',
         reflectionText: '',
+        source:         'correction',
+        isHighlight:    false,
     };
     appState.currentSession.blocks.push(block);
     sortBlocks();
@@ -2196,15 +2198,17 @@ function renderGoalCard(goal, completed) {
 
 function openGoalCreator() {
     appState._goalDraft = {
-        title:         '',
-        body:          '',
-        dueDate:       '',
-        skillId:       null,
-        dimensionId:   null,
-        category:      null,
-        milestones:    [],
-        correctionIds: [],
-        _editId:       null,
+        title:            '',
+        body:             '',
+        dueDate:          '',
+        skillId:          null,
+        dimensionId:      null,
+        category:         null,
+        milestones:       [],
+        correctionIds:    [],
+        _editId:          null,
+        goalType:         null,
+        commitmentPeriod: '',
     };
 
     let overlay = document.getElementById('goal-creator-overlay');
@@ -2224,15 +2228,17 @@ function openGoalCreator() {
 
 function openGoalCreatorWithSuggestion(title, dimensionId, skillId, rationale, milestones = []) {
     appState._goalDraft = {
-        title:         title || '',
-        body:          rationale || '',
-        dueDate:       '',
-        skillId:       skillId || null,
-        dimensionId:   dimensionId || null,
-        category:      null,
-        milestones:    milestones || [],
-        correctionIds: [],
-        _editId:       null,
+        title:            title || '',
+        body:             rationale || '',
+        dueDate:          '',
+        skillId:          skillId || null,
+        dimensionId:      dimensionId || null,
+        category:         null,
+        milestones:       milestones || [],
+        correctionIds:    [],
+        _editId:          null,
+        goalType:         null,
+        commitmentPeriod: '',
     };
 
     let overlay = document.getElementById('goal-creator-overlay');
@@ -2706,21 +2712,23 @@ function saveGoal() {
     const existingGoal = isEdit ? appState.goals.find(g => g.id === d._editId) : null;
 
     const goal = {
-        id:            isEdit ? d._editId : Date.now(),
-        title:         d.title.trim(),
-        body:          d.body?.trim()  || null,
-        createdAt:     existingGoal?.createdAt || Date.now(),
-        dueDate:       d.dueDate       || null,
-        skillId:       d.skillId       || null,
-        dimensionId:   d.dimensionId   || null,
-        category:      d.category      || null,
-        correctionIds: d.correctionIds || [],
-        milestones:    d.milestones.filter(m => m.text.trim()).map(m => ({
+        id:               isEdit ? d._editId : Date.now(),
+        title:            d.title.trim(),
+        body:             d.body?.trim()  || null,
+        createdAt:        existingGoal?.createdAt || Date.now(),
+        dueDate:          d.dueDate       || null,
+        skillId:          d.skillId       || null,
+        dimensionId:      d.dimensionId   || null,
+        category:         d.category      || null,
+        correctionIds:    d.correctionIds || [],
+        milestones:       d.milestones.filter(m => m.text.trim()).map(m => ({
             id:   m.id || Date.now(),
             text: m.text.trim(),
             done: m.done || false,
         })),
-        completedAt: existingGoal?.completedAt || null,
+        completedAt:      existingGoal?.completedAt || null,
+        goalType:         d.goalType         || null,
+        commitmentPeriod: d.commitmentPeriod || null,
     };
 
     if (isEdit) {
