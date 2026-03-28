@@ -1519,6 +1519,12 @@ function saveSession() {
         });
     }
 
+    // Getting started completion hooks
+    markGettingStarted('logClass');
+    if (s.blocks && s.blocks.some(b => b.notes?.trim() || b.corrections?.length > 0)) {
+        markGettingStarted('saveNote');
+    }
+
     appState.currentSession = null;
     closeSessionLogger();
 
@@ -1791,6 +1797,24 @@ function saveReflection() {
 }
 
 
+// ── Getting started helpers ──
+function getGettingStarted() {
+    return storage.load('gettingStarted') || { logClass: false, saveNote: false, setGoal: false, tryPointer: false, exploreLearn: false };
+}
+
+function markGettingStarted(key) {
+    const state = getGettingStarted();
+    if (state[key]) return;
+    state[key] = true;
+    storage.save('gettingStarted', state);
+    if (appState.currentScreen === 'barre-screen') showBarreScreen();
+}
+
+function openLearnPointers() {
+    markGettingStarted('tryPointer');
+    navigateTo('learn');
+}
+
 // ── The Barre ──
 function showBarreScreen() {
     let screen = document.getElementById('barre-screen');
@@ -1802,41 +1826,64 @@ function showBarreScreen() {
     }
 
     const activeSkills = appState.skills.filter(s => s.flagged || s.tracked);
-    const dims = appState.dimensions || {};
-    const dimLabels = { barre: 'Barre', centre: 'Centre', allegro: 'Allegro', turns: 'Turns', flexibility: 'Flexibility' };
-    const coreDims = { barre: dims.barre?.raw ?? null, centre: dims.centre?.raw ?? null, allegro: dims.allegro?.raw ?? null, turns: dims.turns?.raw ?? null, flexibility: dims.flexibility?.raw ?? null };
 
-    // Rotate through weak dimensions on each visit — cycle index stored in appState
-    const assessedDims = Object.entries(coreDims)
-        .filter(([, v]) => v !== null)
-        .sort((a, b) => a[1] - b[1]); // weakest first
-    const weakDimKeys = assessedDims.map(([k]) => k);
+    // Level badge — show persona name if set, otherwise level label
+    const personaNames = { duckling: 'Duckling', deer: 'Deer', swan: 'Swan', firebird: 'Firebird' };
+    const levelLabels = { beginner: 'Beginner', elementary: 'Elementary', improver: 'Improver', intermediate: 'Intermediate', 'upper-intermediate': 'Upper Intermediate', advanced: 'Advanced' };
+    const badgeText = appState.persona
+        ? personaNames[appState.persona]
+        : (appState.level && appState.level !== 'not-assessed' ? levelLabels[appState.level] : null);
+    const levelBadgeHtml = badgeText ? `<span class="barre-level-badge">${badgeText}</span>` : '';
 
-    let contextText = '';
-    let focusDim = null;
-    if (weakDimKeys.length === 0) {
-        contextText = 'Complete your assessment to get personalised focus areas';
-    } else {
-        // Rotate index each visit
-        appState._barreVisitCount = (appState._barreVisitCount || 0) + 1;
-        const rotateIdx = (appState._barreVisitCount - 1) % weakDimKeys.length;
-        focusDim = weakDimKeys[rotateIdx];
-        const dimLabel = dimLabels[focusDim] || focusDim;
-        const stageLabel = dims[focusDim]?.label || '';
-        contextText = `${dimLabel} could use attention${stageLabel ? ` — ${stageLabel}` : ''}`;
-    }
+    // Getting started section
+    const gsState = getGettingStarted();
+    const gsAllDone = Object.values(gsState).every(Boolean);
+    const showGettingStarted = !!appState.level && !gsAllDone;
 
+    const GS_CARDS = [
+        { key: 'logClass',     title: 'Log your first class',  body: 'Notes while they\'re fresh stay with you.',           onclick: 'openSessionLogger()' },
+        { key: 'saveNote',     title: 'Save a note',           body: 'Something your teacher said is worth keeping.',       onclick: 'openSessionLogger()' },
+        { key: 'setGoal',      title: 'Set a goal',            body: 'Give your training a direction.',                     onclick: 'openGoalCreator()' },
+        { key: 'tryPointer',   title: 'Try a pointer',         body: 'Find out what\'s actually holding you back.',         onclick: 'openLearnPointers()' },
+        { key: 'exploreLearn', title: 'Explore Learn',         body: 'The skill library, glossary, and repertoire.',        onclick: 'navigateTo(\'learn\')' },
+    ];
+
+    const gettingStartedHtml = showGettingStarted ? `
+        <div class="barre-section-header">
+            <span class="barre-section-label">get started</span>
+        </div>
+        <div class="getting-started-carousel">
+            ${GS_CARDS.map(card => {
+                const done = gsState[card.key];
+                return `
+                <div class="getting-started-card${done ? ' done' : ''}" ${done ? '' : `onclick="${card.onclick}"`}>
+                    ${done
+                        ? `<svg class="gs-tick" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--sage)" stroke-width="2.5" stroke-linecap="round"><polyline points="3 8 6.5 11.5 13 5"/></svg>`
+                        : ''
+                    }
+                    <div class="gs-card-title${done ? ' done' : ''}">${card.title}</div>
+                    ${done ? '' : `<div class="gs-card-body">${card.body}</div>`}
+                </div>`;
+            }).join('')}
+        </div>
+    ` : '';
+
+    // Corrections in focus
     let activeSkillsHtml = '';
     if (activeSkills.length > 0) {
         activeSkillsHtml = `
+            <div class="barre-section-header">
+                <span class="barre-section-label">corrections in focus</span>
+                <span class="barre-section-count">${activeSkills.length}</span>
+            </div>
             <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);">
-                <h2 class="section-title" style="padding: 0; margin-bottom: var(--sp-md);">Skills in focus</h2>
                 <div style="display: flex; flex-direction: column; gap: var(--sp-sm);" id="active-skills-list">
                     ${activeSkills.map(skill => {
                         const skillCorrections = appState.corrections
                             .filter(c => c.skillId === skill.id)
                             .sort((a, b) => b.createdAt - a.createdAt);
                         const lastCorrection = skillCorrections[0] || null;
+                        const isRecurring = skillCorrections.some(c => c.isRecurring);
                         const lastSessionSkill = appState.sessionSkills
                             .filter(ss => ss.skillId === skill.id)
                             .sort((a, b) => {
@@ -1854,14 +1901,17 @@ function showBarreScreen() {
                                 remove
                             </div>
                             <div class="swipe-content">
-                                <div class="active-skill-card" onclick="showSkillDetail('${skill.id}', 'barre-screen')">
-                                    <div class="active-skill-info">
+                                <div class="active-skill-card${isRecurring ? ' active-skill-recurring' : ''}" onclick="showSkillDetail('${skill.id}', 'barre-screen')">
+                                    <div class="active-skill-top">
                                         <div class="active-skill-name">${skill.french}</div>
-                                        <div class="active-skill-meta">${skill.category}${skill.flagged ? ' · In focus' : ''}</div>
-                                        ${lastCorrection ? `<div class="active-skill-correction">"${lastCorrection.text}"</div>` : ''}
-                                        ${lastSession ? `<div class="active-skill-date">Last worked: ${formatTimelineDate(lastSession.date)}</div>` : ''}
+                                        <div class="active-skill-category">${skill.category}</div>
                                     </div>
-                                    <svg class="active-skill-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 4 10 8 6 12"/></svg>
+                                    ${lastCorrection ? `<div class="active-skill-correction"><em>"${lastCorrection.text}"</em></div>` : ''}
+                                    ${isRecurring ? `<div class="active-skill-recurring-meta"><span class="recurring-dots">···</span> <span class="recurring-label">recurring</span></div>` : ''}
+                                    <div class="active-skill-footer">
+                                        <div class="active-skill-date">${lastSession ? formatTimelineDate(lastSession.date) : ''}</div>
+                                        <div class="active-skill-view">view →</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>`;
@@ -1879,14 +1929,11 @@ function showBarreScreen() {
         `;
     }
 
-    // Context bar is tappable if there's a weak dimension to filter by
-    const contextBarHtml = focusDim
-        ? `<button class="barre-context" onclick="filterSkillsByDimension('${focusDim}'); navigateTo('skill-library');" style="border: none; cursor: pointer; text-align: left; background: none; padding: var(--sp-sm) var(--sp-lg); width: 100%; display: flex; align-items: center; gap: var(--sp-sm); border-bottom: 1px solid var(--gold-soft);"><span class="barre-context-badge">${(appState.level || 'beginner').replace('-', ' ')}</span><span class="barre-context-text">${contextText} →</span></button>`
-        : `<div class="barre-context"><span class="barre-context-badge">${(appState.level || 'beginner').replace('-', ' ')}</span><span class="barre-context-text">${contextText}</span></div>`;
-
     screen.innerHTML = `
-        <div class="profile-header"><h1>The Barre</h1></div>
-        ${contextBarHtml}
+        <div class="barre-header">
+            <h1>The Barre</h1>
+            ${levelBadgeHtml}
+        </div>
         <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);">
             <div class="profile-action-card hero" onclick="openSessionLogger()">
                 <div class="profile-action-label">AFTER CLASS</div>
@@ -1895,6 +1942,7 @@ function showBarreScreen() {
                 <div class="profile-action-arrow">log now →</div>
             </div>
         </div>
+        ${gettingStartedHtml}
         ${activeSkillsHtml}
         <div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
             <h2 class="section-title" style="padding: 0; margin-bottom: var(--sp-md);">Browse by category</h2>
@@ -2738,6 +2786,7 @@ function saveGoal() {
         appState.goals.unshift(goal); // newest first
     }
     storage.save('goals', appState.goals);
+    markGettingStarted('setGoal');
     closeGoalCreator();
 
     if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
@@ -2870,6 +2919,7 @@ function deleteSessionTemplate(templateId) {
 // ── Learn ──
 function showLearnScreen() {
     storage.save('hasVisitedLearn', true);
+    markGettingStarted('exploreLearn');
     let screen = document.getElementById('learn-screen');
     if (!screen) {
         screen = document.createElement('div');
@@ -3355,48 +3405,6 @@ function initProfile() {
                 <div class="profile-action-arrow">set this goal →</div>
             </div>
         `;
-    }
-
-    // Explore cards
-    const exploreEl = document.getElementById('profileExploreCards');
-    const exploreSection = document.getElementById('profileExploreSection');
-    const caps = DATA.profileCapabilities;
-    const allDone = caps.every(c => c.isDone());
-
-    if (allDone) {
-        // Show acknowledgement state on first completion, then hide
-        if (!appState._exploreAllDoneShown) {
-            appState._exploreAllDoneShown = true;
-            savePreferences();
-            exploreEl.innerHTML = `
-                <div class="explore-all-done">
-                    <div class="explore-all-done-text">You've explored everything plié has to offer. Keep going.</div>
-                </div>
-            `;
-            if (exploreSection) exploreSection.style.display = '';
-        } else {
-            if (exploreSection) exploreSection.style.display = 'none';
-        }
-    } else {
-        if (exploreSection) exploreSection.style.display = '';
-    
-        exploreEl.innerHTML = caps.map(cap => {
-            const done = cap.isDone();
-            return `
-            <div class="scroll-card scroll-card-capability ${done ? 'scroll-card-done' : ''}"
-                 onclick="${done ? '' : cap.action}"
-                 style="flex: 0 0 200px; ${done ? 'cursor:default;' : ''}">
-                <div class="scroll-card-capability-status">
-                    ${done
-                        ? `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--success)" stroke-width="2.5" stroke-linecap="round"><polyline points="2 7 5.5 10.5 12 4"/></svg>`
-                        : `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="5.5"/></svg>`
-                    }
-                </div>
-                <div class="scroll-card-category">${cap.label}</div>
-                <div class="scroll-card-title" style="font-size: var(--fs-body);">${done ? cap.doneMessage : cap.title}</div>
-                <div class="scroll-card-description">${done ? '' : cap.description}</div>
-            </div>`;
-        }).join('');
     }
 
     // Timeline — merge stored entries with praise + reflection notes, sort by date desc

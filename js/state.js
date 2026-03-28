@@ -11,6 +11,7 @@ const STORAGE_KEYS = {
     onboardingComplete: 'plie:onboardingComplete',
     hasVisitedLearn:    'plie:hasVisitedLearn',
     preferences:        'plie:preferences',
+    gettingStarted:     'plie:gettingStarted',
 };
 
 const storage = {

@@ -1818,16 +1818,126 @@ h1, h2, .screen-heading {
     line-height: 1.6;
 }
 
-.active-skill-card {
-    background: var(--surface);
-    border-radius: var(--r-md);
-    padding: var(--sp-md) var(--sp-lg);
+/* ── Barre header ── */
+.barre-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-xl) var(--sp-lg) var(--sp-lg);
+    position: sticky;
+    top: 0;
+    background: var(--background);
+    z-index: 10;
+    border-bottom: 1px solid rgba(26,23,20,0.08);
+    margin-bottom: var(--sp-xl);
+}
+
+.barre-header h1 {
+    font-family: Georgia, serif;
+    font-weight: 400;
+    font-size: var(--fs-display);
+    color: var(--ink);
+    line-height: 1.15;
+}
+
+.barre-level-badge {
+    background: var(--gold-wash);
+    color: var(--gold);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: var(--fs-caption);
+    padding: var(--sp-xs) var(--sp-sm);
+    border-radius: 99px;
+    white-space: nowrap;
+}
+
+/* ── Barre section header ── */
+.barre-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 var(--sp-lg);
+    margin-bottom: var(--sp-md);
+}
+
+.barre-section-label {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: var(--fs-caption);
+    font-variant: small-caps;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-5);
+}
+
+.barre-section-count {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    color: var(--ink-5);
+}
+
+/* ── Getting started carousel ── */
+.getting-started-carousel {
+    display: flex;
     gap: var(--sp-md);
-    box-shadow: var(--shadow-1);
-    border: 1px solid var(--border);
+    overflow-x: auto;
+    padding: 0 var(--sp-lg) var(--sp-sm);
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-bottom: var(--sp-xl);
+}
+
+.getting-started-carousel::-webkit-scrollbar { display: none; }
+
+.getting-started-card {
+    flex: 0 0 160px;
+    background: var(--surface);
+    border-radius: 8px;
+    border: 0.5px solid rgba(26,23,20,0.10);
+    padding: var(--sp-lg);
+    scroll-snap-align: start;
     cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-sm);
+    min-height: 96px;
+}
+
+.getting-started-card.done {
+    cursor: default;
+    pointer-events: none;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.gs-card-title {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.3;
+}
+
+.gs-card-title.done { color: var(--ink-5); }
+
+.gs-card-body {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    color: var(--ink-4);
+    line-height: 1.4;
+}
+
+/* ── Active skill card (redesigned) ── */
+.active-skill-card {
+    background: var(--surface);
+    border-radius: 8px;
+    padding: var(--sp-lg);
+    border: 0.5px solid rgba(26,23,20,0.10);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-sm);
     transition: all 0.2s var(--ease-out);
 }
 
@@ -1836,18 +1946,30 @@ h1, h2, .screen-heading {
     border-color: var(--accent);
 }
 
-.active-skill-info { flex: 1; }
-
-.active-skill-name {
-    font-size: var(--fs-body);
-    font-weight: 700; color: var(--ink);
-    color: var(--text);
-    margin-bottom: 2px;
+.active-skill-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--sp-sm);
 }
 
-.active-skill-meta {
+.active-skill-name {
+    font-family: Georgia, serif;
+    font-size: var(--fs-title);
+    font-weight: 400;
+    color: var(--ink);
+    line-height: 1.2;
+}
+
+.active-skill-category {
+    font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-caption);
-    color: var(--ink-3); font-size: 11px;
+    font-variant: small-caps;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--gold);
+    white-space: nowrap;
+    padding-top: 3px;
 }
 
 .active-skill-progress {
@@ -3102,8 +3224,8 @@ input[type="date"].session-input[value=""] {
 
 /* Active skill card — last correction */
 .active-skill-correction {
-    font-size: var(--fs-caption);
-    color: var(--text-secondary);
+    font-size: var(--fs-small);
+    color: var(--ink-3);
     font-style: italic;
     margin-top: 4px;
     line-height: 1.4;
@@ -3113,10 +3235,36 @@ input[type="date"].session-input[value=""] {
     overflow: hidden;
 }
 
-.active-skill-date {
-    font-size: var(--fs-caption);
-    color: var(--text-muted);
+.active-skill-recurring {
+    background: #FDF0EE;
+}
+
+.active-skill-recurring-meta {
+    font-size: var(--fs-small);
+    color: var(--ink-5);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.recurring-dots { color: var(--ink-6); letter-spacing: 2px; }
+
+.active-skill-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-top: 2px;
+}
+
+.active-skill-date {
+    font-size: var(--fs-small);
+    color: var(--ink-5);
+}
+
+.active-skill-view {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--gold);
 }
 
 /* Timeline session entries */
@@ -5077,9 +5225,9 @@ button, a, input, select, textarea,
 }
 
 .fab-action-prompt {
-    font-family: 'Cormorant Garamond', serif;
-    font-weight: 500;
-    font-size: var(--fs-h3);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: var(--fs-body);
     color: var(--ink-3);
     padding: 0 var(--sp-xl) var(--sp-md);
 }
