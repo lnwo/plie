@@ -727,17 +727,19 @@ function renderOrientationQuestion() {
     document.getElementById('orientation-content').innerHTML = `
         <div class="orientation-container">
             <div class="orient-header">
-                <div class="orient-logo">plié</div>
-                <div class="orient-header-right">
-                    <span class="orient-counter">${appState.currentQuestion + 1} / ${ORIENTATION_QUESTIONS.length}</span>
-                    <button class="orient-close-btn" onclick="exitOrientation()">
-                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/></svg>
-                    </button>
+                <div class="orient-header-inner">
+                    <div class="orient-logo">plié</div>
+                    <div class="orient-header-right">
+                        <span class="orient-counter">${appState.currentQuestion + 1} / ${ORIENTATION_QUESTIONS.length}</span>
+                        <button class="orient-close-btn" onclick="exitOrientation()">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/></svg>
+                        </button>
+                    </div>
                 </div>
-            </div>
-            <div class="orient-quiz-subtitle">orientation</div>
-            <div class="orient-progress-track">
-                <div class="orient-progress-bar" style="width:${progress}%"></div>
+                <div class="orient-quiz-subtitle">orientation</div>
+                <div class="orient-progress-track">
+                    <div class="orient-progress-bar" style="width:${progress}%"></div>
+                </div>
             </div>
             <div class="orient-body">
                 ${q.dimension ? `<div class="orient-dimension">${q.dimension}</div>` : ''}
@@ -787,16 +789,19 @@ function showOrientationGoals() {
     document.getElementById('orientation-content').innerHTML = `
         <div class="orientation-container">
             <div class="orient-header">
-                <div class="orient-logo">plié</div>
-                <div class="orient-header-right">
-                    <span class="orient-counter">almost done</span>
-                    <button class="orient-close-btn" onclick="exitOrientation()">
-                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/></svg>
-                    </button>
+                <div class="orient-header-inner">
+                    <div class="orient-logo">plié</div>
+                    <div class="orient-header-right">
+                        <span class="orient-counter">almost done</span>
+                        <button class="orient-close-btn" onclick="exitOrientation()">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/></svg>
+                        </button>
+                    </div>
                 </div>
-            </div>
-            <div class="orient-progress-track">
-                <div class="orient-progress-bar" style="width:96%"></div>
+                <div class="orient-quiz-subtitle">orientation</div>
+                <div class="orient-progress-track">
+                    <div class="orient-progress-bar" style="width:96%"></div>
+                </div>
             </div>
             <div class="orient-body">
                 <div class="orient-question">What are you working toward?</div>
