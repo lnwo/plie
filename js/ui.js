@@ -1941,6 +1941,13 @@ function showBarreScreen() {
         </div>
         ${gettingStartedHtml}
         ${activeSkillsHtml}
+        <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-md);">
+                <h2 class="section-title" style="padding: 0;">Recent activity</h2>
+                <button onclick="showBarreTimelineSheet()" style="background:none;border:none;font-family:var(--font-ui);font-size:var(--fs-small);color:var(--gold);cursor:pointer;">see all →</button>
+            </div>
+            <div id="barre-timeline-inline"></div>
+        </div>
         <div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
             <h2 class="section-title" style="padding: 0; margin-bottom: var(--sp-md);">Browse by category</h2>
             <div style="display: flex; flex-direction: column; gap: var(--sp-sm);">
@@ -1958,6 +1965,15 @@ function showBarreScreen() {
         </div>
     `;
     showScreen('barre-screen');
+
+    // Populate inline timeline
+    const inlineTimeline = document.getElementById('barre-timeline-inline');
+    if (inlineTimeline) {
+        const recentEntries = buildTimelineEntries().slice(0, 3);
+        inlineTimeline.innerHTML = recentEntries.length > 0
+            ? recentEntries.map(renderTimelineEntry).join('')
+            : '<p class="learn-empty">No activity yet \u2014 log your first session.</p>';
+    }
 
     // Attach swipe-to-remove on active skill cards
     screen.querySelectorAll('.swipe-row[data-skill-id]').forEach(row => {
@@ -3560,128 +3576,6 @@ function initProfile() {
         `;
     }
 
-    // Timeline — merge stored entries with praise + reflection notes, sort by date desc
-    const timelineEl = document.getElementById('timeline');
-    if (timelineEl) {
-        const firstEntryText = (level === 'not-assessed' || !appState.level)
-            ? 'Joined plié'
-            : `Completed placement quiz — ${(DATA.levelLabels[level] || 'BEGINNER').charAt(0) + (DATA.levelLabels[level] || 'BEGINNER').slice(1).toLowerCase()}`;
-
-        // SVG icons per entry type
-        const TIMELINE_ICONS = {
-            session:    `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="2" width="10" height="10" rx="1.5"/><line x1="5" y1="5" x2="9" y2="5"/><line x1="5" y1="7.5" x2="9" y2="7.5"/><line x1="5" y1="10" x2="7" y2="10"/></svg>`,
-            milestone:  `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polygon points="7,1.5 8.8,5.2 13,5.7 10,8.6 10.7,12.8 7,10.8 3.3,12.8 4,8.6 1,5.7 5.2,5.2"/></svg>`,
-            assessment: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="2,10 5,6 8,8 12,3"/><line x1="2" y1="12" x2="12" y2="12"/></svg>`,
-            reflection: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 3c0-.6.4-1 1-1h8c.6 0 1 .4 1 1v5c0 .6-.4 1-1 1H6l-3 2.5V9H3c-.6 0-1-.4-1-1V3z"/><line x1="4.5" y1="5.5" x2="9.5" y2="5.5"/></svg>`,
-            praise:     `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polygon points="7,1.5 8.8,5.2 13,5.7 10,8.6 10.7,12.8 7,10.8 3.3,12.8 4,8.6 1,5.7 5.2,5.2"/></svg>`,
-            manual:     `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none"/></svg>`,
-        };
-
-        // Build unified entries: timeline + praise notes + reflection notes
-        const noteEntries = (appState.skillNotes || [])
-            .filter(n => n.isReflection || n.isPraise)
-            .map(n => ({
-                _noteEntry: true,
-                _type:      n.isPraise ? 'praise' : 'reflection',
-                id:         n.id,
-                date:       n.date,
-                createdAt:  n.createdAt,
-                text:       n.text,
-                skillId:    n.skillId,
-            }));
-
-        const allEntries = [
-            ...(appState.timeline || []).map(e => ({ ...e, _noteEntry: false })),
-            ...noteEntries,
-        ].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-
-        // Date grouping helpers
-        const now = new Date();
-        const startOfToday    = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const startOfWeek     = new Date(startOfToday); startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
-        const startOfMonth    = new Date(now.getFullYear(), now.getMonth(), 1);
-        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-
-        function getGroup(dateStr) {
-            const d = new Date(dateStr);
-            if (d >= startOfToday)     return 'Today';
-            if (d >= startOfWeek)      return 'This week';
-            if (d >= startOfMonth)     return 'This month';
-            if (d >= startOfLastMonth) return 'Last month';
-            return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-        }
-
-        // Group entries, preserving order
-        const groups = [];
-        let currentGroup = null;
-        allEntries.forEach(entry => {
-            const g = getGroup(entry.date || new Date(entry.createdAt || 0).toISOString().split('T')[0]);
-            if (g !== currentGroup) {
-                currentGroup = g;
-                groups.push({ label: g, entries: [] });
-            }
-            groups[groups.length - 1].entries.push(entry);
-        });
-
-        function renderTimelineEntry(entry) {
-            if (entry._noteEntry) {
-                const skillRef = entry.skillId ? DATA.skills.find(s => s.id === entry.skillId) : null;
-                const isReflection = entry._type === 'reflection';
-                const typeLabel = isReflection ? 'Reflection' : 'Praise ★';
-                return `
-                <div class="timeline-item timeline-item-${entry._type}">
-                    <div class="timeline-content">
-                        <span class="timeline-type-label">${typeLabel}</span>
-                        <div class="timeline-title ${isReflection ? 'timeline-reflection-text' : 'timeline-praise-text'}">${isReflection ? `"${entry.text}"` : entry.text}</div>
-                        ${skillRef ? `<div class="timeline-subtitle">${skillRef.french}</div>` : ''}
-                        <div class="timeline-note-actions">
-                            <button class="timeline-note-btn" onmousedown="editTimelineNote(${entry.id})">edit</button>
-                            <button class="timeline-note-btn timeline-note-btn-delete" onmousedown="deleteTimelineNote(${entry.id})">delete</button>
-                        </div>
-                    </div>
-                </div>`;
-            }
-            const isPraise   = entry.isPraise;
-            const isTappable = entry.type === 'session' && entry.objectId;
-            const typeKey    = isPraise ? 'praise' : (entry.type || 'manual');
-            const typeLabels = {
-                session:    'Session',
-                milestone:  'Milestone',
-                assessment: 'Assessment',
-                praise:     'Praise ★',
-                manual:     '',
-            };
-            const typeLabel = typeLabels[typeKey] || '';
-            return `
-            <div class="timeline-item timeline-item-${typeKey} ${isTappable ? 'timeline-item-tappable' : ''}"
-                 ${isTappable ? `onclick="showSessionDetail(${entry.objectId})"` : ''}>
-                <div class="timeline-content">
-                    ${typeLabel ? `<span class="timeline-type-label">${typeLabel}</span>` : ''}
-                    <div class="timeline-title ${isPraise ? 'timeline-praise-text' : ''}">${entry.title}</div>
-                    ${entry.body ? `<div class="timeline-subtitle">${entry.body}</div>` : ''}
-                    ${isTappable ? `<div class="timeline-tap-hint">tap to review →</div>` : ''}
-                </div>
-            </div>`;
-        }
-
-        const groupsHtml = groups.map(g => `
-            <div class="timeline-group">
-                <div class="timeline-group-label" id="tg-${g.label.replace(/\s/g,'-').toLowerCase()}">${g.label}</div>
-                ${g.entries.map(renderTimelineEntry).join('')}
-            </div>
-        `).join('');
-
-        timelineEl.innerHTML = `
-            ${groupsHtml}
-            <div class="timeline-group">
-                <div class="timeline-item">
-                    <div class="timeline-content">
-                        <div class="timeline-title">${firstEntryText}</div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
 }
 
 function formatTimelineDate(dateStr) {
@@ -3694,6 +3588,142 @@ function formatTimelineDate(dateStr) {
     if (d.toDateString() === today.toDateString()) return 'Today';
     if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
     return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+// ── Shared timeline helpers ──
+
+function buildTimelineEntries() {
+    const noteEntries = (appState.skillNotes || [])
+        .filter(n => n.isReflection || n.isPraise)
+        .map(n => ({
+            _noteEntry: true,
+            _type:      n.isPraise ? 'praise' : 'reflection',
+            id:         n.id,
+            date:       n.date,
+            createdAt:  n.createdAt,
+            text:       n.text,
+            skillId:    n.skillId,
+        }));
+    return [
+        ...(appState.timeline || []).map(e => ({ ...e, _noteEntry: false })),
+        ...noteEntries,
+    ].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+}
+
+function renderTimelineEntry(entry) {
+    if (entry._noteEntry) {
+        const skillRef = entry.skillId ? DATA.skills.find(s => s.id === entry.skillId) : null;
+        const isReflection = entry._type === 'reflection';
+        const typeLabel = isReflection ? 'Reflection' : 'Praise \u2605';
+        return `
+        <div class="timeline-item timeline-item-${entry._type}">
+            <div class="timeline-content">
+                <span class="timeline-type-label">${typeLabel}</span>
+                <div class="timeline-title ${isReflection ? 'timeline-reflection-text' : 'timeline-praise-text'}">${isReflection ? `"${entry.text}"` : entry.text}</div>
+                ${skillRef ? `<div class="timeline-subtitle">${skillRef.french}</div>` : ''}
+                <div class="timeline-note-actions">
+                    <button class="timeline-note-btn" onmousedown="editTimelineNote(${entry.id})">edit</button>
+                    <button class="timeline-note-btn timeline-note-btn-delete" onmousedown="deleteTimelineNote(${entry.id})">delete</button>
+                </div>
+            </div>
+        </div>`;
+    }
+    const isPraise   = entry.isPraise;
+    const isTappable = entry.type === 'session' && entry.objectId;
+    const typeKey    = isPraise ? 'praise' : (entry.type || 'manual');
+    const typeLabels = { session: 'Session', milestone: 'Milestone', assessment: 'Assessment', praise: 'Praise \u2605', manual: '' };
+    const typeLabel  = typeLabels[typeKey] || '';
+    return `
+    <div class="timeline-item timeline-item-${typeKey} ${isTappable ? 'timeline-item-tappable' : ''}"
+         ${isTappable ? `onclick="showSessionDetail(${entry.objectId})"` : ''}>
+        <div class="timeline-content">
+            ${typeLabel ? `<span class="timeline-type-label">${typeLabel}</span>` : ''}
+            <div class="timeline-title ${isPraise ? 'timeline-praise-text' : ''}">${entry.title}</div>
+            ${entry.body ? `<div class="timeline-subtitle">${entry.body}</div>` : ''}
+            ${isTappable ? `<div class="timeline-tap-hint">tap to review \u2192</div>` : ''}
+        </div>
+    </div>`;
+}
+
+function renderGroupedTimelineHtml(entries, firstEntryText) {
+    const now = new Date();
+    const startOfToday     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek      = new Date(startOfToday); startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
+    const startOfMonth     = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+    function getGroup(dateStr) {
+        const d = new Date(dateStr);
+        if (d >= startOfToday)     return 'Today';
+        if (d >= startOfWeek)      return 'This week';
+        if (d >= startOfMonth)     return 'This month';
+        if (d >= startOfLastMonth) return 'Last month';
+        return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    }
+
+    const groups = [];
+    let currentGroup = null;
+    entries.forEach(entry => {
+        const g = getGroup(entry.date || new Date(entry.createdAt || 0).toISOString().split('T')[0]);
+        if (g !== currentGroup) { currentGroup = g; groups.push({ label: g, entries: [] }); }
+        groups[groups.length - 1].entries.push(entry);
+    });
+
+    const groupsHtml = groups.map(g => `
+        <div class="timeline-group">
+            <div class="timeline-group-label">${g.label}</div>
+            ${g.entries.map(renderTimelineEntry).join('')}
+        </div>
+    `).join('');
+
+    return groupsHtml + `
+        <div class="timeline-group">
+            <div class="timeline-item">
+                <div class="timeline-content">
+                    <div class="timeline-title">${firstEntryText}</div>
+                </div>
+            </div>
+        </div>`;
+}
+
+function showBarreTimelineSheet() {
+    const existing = document.getElementById('barre-timeline-sheet');
+    if (existing) existing.remove();
+
+    const entries = buildTimelineEntries();
+    const level = appState.level || 'not-assessed';
+    const firstEntryText = (level === 'not-assessed' || !appState.level)
+        ? 'Joined pli\u00e9'
+        : `Completed placement quiz \u2014 ${(DATA.levelLabels[level] || 'BEGINNER').charAt(0) + (DATA.levelLabels[level] || 'BEGINNER').slice(1).toLowerCase()}`;
+
+    const sheet = document.createElement('div');
+    sheet.id = 'barre-timeline-sheet';
+    sheet.className = 'session-overlay';
+    sheet.innerHTML = `
+        <div class="session-logger-sheet" style="max-height: 85vh; display: flex; flex-direction: column;">
+            <div class="session-sheet-handle"></div>
+            <div class="session-logger-header" style="flex-shrink: 0;">
+                <div>
+                    <div class="session-logger-eyebrow">The Barre</div>
+                    <h2 class="session-logger-title">Timeline</h2>
+                </div>
+                <button class="session-close-btn" onclick="document.getElementById('barre-timeline-sheet').remove()">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/>
+                    </svg>
+                </button>
+            </div>
+            <div style="padding: 0 var(--sp-lg); overflow-y: auto; flex: 1;">
+                ${entries.length > 0
+                    ? renderGroupedTimelineHtml(entries, firstEntryText)
+                    : '<p class="learn-empty" style="padding: var(--sp-lg) 0;">No activity yet.</p>'}
+                <div style="height: 40px;"></div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(sheet);
+    requestAnimationFrame(() => sheet.classList.add('open'));
+    sheet.addEventListener('click', e => { if (e.target === sheet) sheet.remove(); });
 }
 
 
