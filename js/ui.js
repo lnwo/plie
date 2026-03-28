@@ -1942,14 +1942,16 @@ function showBarreScreen() {
         ${gettingStartedHtml}
         ${activeSkillsHtml}
         <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-md);">
-                <h2 class="section-title" style="padding: 0;">Recent activity</h2>
-                <button onclick="showBarreTimelineSheet()" style="background:none;border:none;font-family:var(--font-ui);font-size:var(--fs-small);color:var(--gold);cursor:pointer;">see all →</button>
+            <div class="barre-section-header">
+                <span class="barre-section-label">recent activity</span>
+                <button onclick="showBarreTimelineSheet()" style="background:none;border:none;font-family:var(--font-ui);font-size:var(--fs-caption);color:var(--gold);cursor:pointer;font-weight:500;">see all →</button>
             </div>
             <div id="barre-timeline-inline"></div>
         </div>
         <div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
-            <h2 class="section-title" style="padding: 0; margin-bottom: var(--sp-md);">Browse by category</h2>
+            <div class="barre-section-header" style="padding: 0; margin-bottom: var(--sp-lg);">
+                <span class="barre-section-label">browse by category</span>
+            </div>
             <div style="display: flex; flex-direction: column; gap: var(--sp-sm);">
                 ${DATA.skillCategories.map(cat => `
                     <div class="skill-category-card" onclick="${cat.onclick}">
