@@ -470,7 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const ORIENTATION_QUESTIONS = [
     {
-        id: 'q1', scored: false, type: 'single',
+        id: 'q1', scored: false, type: 'single', dimension: 'About you',
         text: 'Which best describes you?',
         helper: null,
         options: [
@@ -484,7 +484,7 @@ const ORIENTATION_QUESTIONS = [
         ],
     },
     {
-        id: 'q2', scored: false, type: 'single',
+        id: 'q2', scored: false, type: 'single', dimension: 'Your training',
         text: 'How much time do you spend in class right now?',
         helper: 'Think about a typical week, not your best or worst.',
         options: [
@@ -496,7 +496,7 @@ const ORIENTATION_QUESTIONS = [
         ],
     },
     {
-        id: 'q3', scored: true, type: 'multi',
+        id: 'q3', scored: true, type: 'multi', dimension: 'In class',
         text: 'Which of these generally feel true for you in class?',
         helper: null,
         options: [
@@ -508,7 +508,7 @@ const ORIENTATION_QUESTIONS = [
         ],
     },
     {
-        id: 'q4', scored: true, type: 'multi',
+        id: 'q4', scored: true, type: 'multi', dimension: 'Arms and upper body',
         text: 'Which of these generally feel true about how you use your arms and upper body?',
         helper: 'In ballet, the arms, head, and shoulders working together is called port de bras and épaulement.',
         options: [
@@ -520,9 +520,9 @@ const ORIENTATION_QUESTIONS = [
         ],
     },
     {
-        id: 'q5', scored: true, type: 'multi',
+        id: 'q5', scored: true, type: 'multi', dimension: 'Slow work',
         text: 'Which of these generally feel true about your slow work?',
-        helper: 'Adagio is the slow, sustained section of class — développé, arabesque, attitudes, and held balances.',
+        helper: 'Adagio is the slow, sustained section of class: développé, arabesque, attitudes, and held balances.',
         options: [
             { text: 'I haven\'t done adagio work yet', weight: 0.00 },
             { text: 'I find slow combinations difficult to sustain with control', weight: 0.15 },
@@ -533,7 +533,7 @@ const ORIENTATION_QUESTIONS = [
         ],
     },
     {
-        id: 'q6', scored: true, type: 'multi',
+        id: 'q6', scored: true, type: 'multi', dimension: 'Turns',
         text: 'Which of these generally feel true about your turning?',
         helper: 'This is about pirouettes specifically.',
         options: [
@@ -546,7 +546,7 @@ const ORIENTATION_QUESTIONS = [
         ],
     },
     {
-        id: 'q7', scored: true, type: 'multi',
+        id: 'q7', scored: true, type: 'multi', dimension: 'Jumps',
         text: 'Which of these generally feel true about your jump work?',
         helper: 'Allegro is the jumping section of class. Petit allegro is small fast jumps, grand allegro is larger travelling jumps.',
         options: [
@@ -560,7 +560,7 @@ const ORIENTATION_QUESTIONS = [
         ],
     },
     {
-        id: 'q8', scored: true, type: 'multi',
+        id: 'q8', scored: true, type: 'multi', dimension: 'Musicality',
         text: 'Which of these generally feel true about how you relate to music in class?',
         helper: 'Phrasing means shaping your movement to the musical sentence, not just the beat.',
         options: [
@@ -573,7 +573,7 @@ const ORIENTATION_QUESTIONS = [
         ],
     },
     {
-        id: 'q9', scored: true, type: 'multi',
+        id: 'q9', scored: true, type: 'multi', dimension: 'Outside class',
         text: 'Which of these generally feel true about how you engage with ballet outside class?',
         helper: null,
         options: [
@@ -586,9 +586,9 @@ const ORIENTATION_QUESTIONS = [
         ],
     },
     {
-        id: 'q10', scored: true, type: 'single',
+        id: 'q10', scored: true, type: 'single', dimension: 'Range',
         text: 'How high can you hold your leg in à la seconde with control?',
-        helper: 'À la seconde means to the side. Stand on one leg and lift the other directly out to the side, with control and turnout — not a kick.',
+        helper: 'À la seconde means to the side. Stand on one leg and lift the other directly out to the side, with control and turnout. Not a kick.',
         options: [
             { text: 'Below hip height', weight: 0.10 },
             { text: 'Around hip height', weight: 0.30 },
@@ -598,7 +598,7 @@ const ORIENTATION_QUESTIONS = [
         ],
     },
     {
-        id: 'q11', scored: true, type: 'single',
+        id: 'q11', scored: true, type: 'single', dimension: 'Flexibility',
         text: 'Which of these best describes your overall flexibility?',
         helper: null,
         options: [
@@ -611,7 +611,7 @@ const ORIENTATION_QUESTIONS = [
         ],
     },
     {
-        id: 'q12', scored: true, type: 'multi',
+        id: 'q12', scored: true, type: 'multi', dimension: 'Strength',
         text: 'Which of these generally feel true about your strength and stability in class?',
         helper: null,
         options: [
@@ -623,7 +623,7 @@ const ORIENTATION_QUESTIONS = [
         ],
     },
     {
-        id: 'q13', scored: true, type: 'multi',
+        id: 'q13', scored: true, type: 'multi', dimension: 'Turnout',
         text: 'Which of these generally feel true about your turnout?',
         helper: null,
         options: [
@@ -635,7 +635,7 @@ const ORIENTATION_QUESTIONS = [
         ],
     },
     {
-        id: 'q14', scored: true, type: 'single',
+        id: 'q14', scored: true, type: 'single', dimension: 'Pointe',
         text: 'What\'s your experience with pointe work?',
         helper: null,
         options: [
@@ -737,16 +737,19 @@ function renderOrientationQuestion() {
                     </button>
                 </div>
             </div>
+            <div class="orient-quiz-subtitle">orientation</div>
             <div class="orient-progress-track">
                 <div class="orient-progress-bar" style="width:${progress}%"></div>
             </div>
             <div class="orient-body">
+                ${q.dimension ? `<div class="orient-dimension">${q.dimension}</div>` : ''}
                 <div class="orient-question">${q.text}</div>
                 ${q.helper ? `<div class="orient-helper">${q.helper}</div>` : ''}
                 <div class="orient-options">${optHtml}</div>
             </div>
             <div class="orient-footer">
                 <button class="orient-nav-btn" onclick="orientPrev()" ${appState.currentQuestion === 0 ? 'disabled' : ''}>back</button>
+                <button class="orient-nav-btn orient-footer-skip" onclick="showOrientationLevelPicker()">skip quiz</button>
                 <button class="orient-nav-btn orient-nav-next" onclick="orientNext()">next</button>
             </div>
         </div>
