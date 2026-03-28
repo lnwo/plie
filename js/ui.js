@@ -2543,9 +2543,9 @@ function renderGoalCreator() {
 
     const typeTabsHtml = `
         <div class="goal-type-tabs">
-            <button class="goal-type-tab ${d.goalType === 'skill' ? 'active' : ''}" onclick="setGoalType('skill')">a skill</button>
-            <button class="goal-type-tab ${d.goalType === 'intention' ? 'active' : ''}" onclick="setGoalType('intention')">a feeling or state</button>
-            <button class="goal-type-tab ${d.goalType === 'habit' ? 'active' : ''}" onclick="setGoalType('habit')">a habit</button>
+            <button type="button" class="goal-type-tab ${d.goalType === 'skill' ? 'active' : ''}" onmousedown="setGoalType('skill')" ontouchend="event.preventDefault();setGoalType('skill')">a skill</button>
+            <button type="button" class="goal-type-tab ${d.goalType === 'intention' ? 'active' : ''}" onmousedown="setGoalType('intention')" ontouchend="event.preventDefault();setGoalType('intention')">a feeling or state</button>
+            <button type="button" class="goal-type-tab ${d.goalType === 'habit' ? 'active' : ''}" onmousedown="setGoalType('habit')" ontouchend="event.preventDefault();setGoalType('habit')">a habit</button>
         </div>
     `;
 
