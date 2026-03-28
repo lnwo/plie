@@ -2409,7 +2409,7 @@ function renderGoalCreator() {
                     const isActive = p === 'custom'
                         ? isCustomSelected
                         : d.commitmentPeriod === p;
-                    return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onclick="setGoalPeriod('${p}')">${p}</button>`;
+                    return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onmousedown="setGoalPeriod('${p}')">${p}</button>`;
                 }).join('')}
             </div>
             ${(d.commitmentPeriod === 'custom' || isCustomSelected) ? `
@@ -2424,7 +2424,7 @@ function renderGoalCreator() {
     function skillFormHtml() {
         const skillChipsHtml = (appState.skills || []).map(s => {
             const sel = (d.skillIds || []).includes(s.id);
-            return `<button class="goal-skill-chip ${sel ? 'selected' : ''}" onclick="toggleGoalSkill('${s.id}')">${s.french}</button>`;
+            return `<button class="goal-skill-chip ${sel ? 'selected' : ''}" onmousedown="toggleGoalSkill('${s.id}')">${s.french}</button>`;
         }).join('');
 
         const markersHtml = (d.progressMarkers || []).map((m, i) => `
@@ -2508,7 +2508,7 @@ function renderGoalCreator() {
             if (o === 'set number of times') isActive = isSetNum;
             else if (o === 'free text') isActive = isFreeText;
             else isActive = d.howOften === o;
-            return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onclick="setGoalHowOften('${o}')">${o}</button>`;
+            return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onmousedown="setGoalHowOften('${o}')">${o}</button>`;
         }).join('');
 
         let howOftenExtra = '';
@@ -2574,18 +2574,18 @@ function renderGoalCreator() {
         footerHtml = `
             <div class="goal-discard-confirm">
                 discard this goal?
-                <button class="goal-discard-confirm-yes" onclick="closeGoalCreator()">discard</button>
-                <button class="goal-discard-confirm-no" onclick="appState._goalDraft._confirmingDiscard = false; renderGoalCreator()">keep editing</button>
+                <button class="goal-discard-confirm-yes" onmousedown="closeGoalCreator()">discard</button>
+                <button class="goal-discard-confirm-no" onmousedown="appState._goalDraft._confirmingDiscard = false; renderGoalCreator()">keep editing</button>
             </div>
         `;
     } else if (d.goalType) {
         footerHtml = `
-            <button class="session-discard-btn" onclick="confirmDiscardGoal()">discard</button>
-            <button class="btn-large session-save-btn" onclick="saveGoal()">save goal</button>
+            <button class="session-discard-btn" onmousedown="confirmDiscardGoal()">discard</button>
+            <button class="btn-large session-save-btn" onmousedown="saveGoal()">save goal</button>
         `;
     } else {
         footerHtml = `
-            <button class="session-discard-btn" onclick="confirmDiscardGoal()">discard</button>
+            <button class="session-discard-btn" onmousedown="confirmDiscardGoal()">discard</button>
         `;
     }
 
@@ -2595,7 +2595,7 @@ function renderGoalCreator() {
 
             <div class="session-logger-header">
                 <h2 class="session-logger-title">what are you working toward?</h2>
-                <button type="button" class="session-close-btn" onclick="confirmDiscardGoal()">
+                <button type="button" class="session-close-btn" onmousedown="confirmDiscardGoal()">
                     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                         <line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/>
                     </svg>
