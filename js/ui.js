@@ -1907,11 +1907,8 @@ function showBarreScreen() {
                                         <div class="active-skill-category">${skill.category}</div>
                                     </div>
                                     ${lastCorrection ? `<div class="active-skill-correction"><em>"${lastCorrection.text}"</em></div>` : ''}
-                                    ${isRecurring ? `<div class="active-skill-recurring-meta"><span class="recurring-dots">···</span> <span class="recurring-label">recurring</span></div>` : ''}
-                                    <div class="active-skill-footer">
-                                        <div class="active-skill-date">${lastSession ? formatTimelineDate(lastSession.date) : ''}</div>
-                                        <div class="active-skill-view">view →</div>
-                                    </div>
+                                    ${isRecurring ? `<span class="active-skill-recurring-badge">recurring</span>` : ''}
+                                    ${lastSession ? `<div class="active-skill-date">${formatTimelineDate(lastSession.date)}</div>` : ''}
                                 </div>
                             </div>
                         </div>`;

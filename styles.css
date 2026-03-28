@@ -1221,9 +1221,9 @@ h1, h2, .screen-heading {
 
 .profile-action-label {
     font-size: var(--fs-caption);
-    font-weight: 600;
+    font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 0.08em;
     color: var(--gold);
     margin-bottom: var(--sp-sm);
 }
@@ -1840,18 +1840,17 @@ h1, h2, .screen-heading {
 
 .barre-section-label {
     font-family: 'DM Sans', sans-serif;
-    font-weight: 600;
+    font-weight: 500;
     font-size: var(--fs-caption);
-    font-variant: small-caps;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--ink-5);
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
 }
 
 .barre-section-count {
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-caption);
-    color: var(--ink-5);
+    color: var(--ink-4);
 }
 
 /* ── Getting started carousel ── */
@@ -1932,9 +1931,9 @@ h1, h2, .screen-heading {
 }
 
 .active-skill-name {
-    font-family: Georgia, serif;
-    font-size: var(--fs-title);
-    font-weight: 400;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-body);
+    font-weight: 700;
     color: var(--ink);
     line-height: 1.2;
 }
@@ -1942,10 +1941,9 @@ h1, h2, .screen-heading {
 .active-skill-category {
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-caption);
-    font-variant: small-caps;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--gold);
+    color: var(--ink-3);
     white-space: nowrap;
     padding-top: 3px;
 }
@@ -3205,7 +3203,6 @@ input[type="date"].session-input[value=""] {
     font-size: var(--fs-small);
     color: var(--ink-3);
     font-style: italic;
-    margin-top: 4px;
     line-height: 1.4;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -3214,36 +3211,31 @@ input[type="date"].session-input[value=""] {
 }
 
 .active-skill-recurring {
-    background: #FDF0EE;
+    background: var(--surface);
 }
 
-.active-skill-recurring-meta {
-    font-size: var(--fs-small);
-    color: var(--ink-5);
-    display: flex;
-    align-items: center;
-    gap: 4px;
+.active-skill-recurring-badge {
+    font-size: var(--fs-caption);
+    color: var(--ink-3);
 }
 
-.recurring-dots { color: var(--ink-6); letter-spacing: 2px; }
+.active-skill-recurring-badge::before {
+    content: '↻';
+    color: var(--ink-4);
+    margin-right: 5px;
+}
 
 .active-skill-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 2px;
 }
 
 .active-skill-date {
-    font-size: var(--fs-small);
-    color: var(--ink-5);
+    font-size: var(--fs-caption);
+    color: var(--ink-4);
 }
 
-.active-skill-view {
-    font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
-    color: var(--gold);
-}
 
 /* Timeline session entries */
 .timeline-dot-session {
@@ -3519,14 +3511,14 @@ input[type="date"].session-input[value=""] {
 }
 
 /* Tappable timeline items */
-.timeline-item-tappable { cursor: pointer; }
-
-.timeline-item-tappable .timeline-content {
+.timeline-item-tappable {
+    cursor: pointer;
     transition: box-shadow 0.2s ease, border-color 0.2s ease;
     border: 1px solid transparent;
+    border-radius: var(--r-md);
 }
 
-.timeline-item-tappable:hover .timeline-content {
+.timeline-item-tappable:hover {
     box-shadow: var(--shadow-md);
     border-color: var(--accent-soft);
 }
