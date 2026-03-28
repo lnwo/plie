@@ -474,13 +474,11 @@ const ORIENTATION_QUESTIONS = [
         text: 'Which best describes you?',
         helper: null,
         options: [
-            'Born to dance — Dancing since before I can remember',
-            'Lifelong dancer — Training consistently since childhood',
-            'Finding my feet — I\'ve been dancing for 1 to 3 years',
-            'Building a foundation — I\'ve been dancing for 3 to 7 years',
-            'Coming back — Strong foundation, getting back to it',
-            'After a break — Returning after some time away',
-            'Just starting out — Less than a year of ballet',
+            'Born to dance — Training since childhood',
+            'Building a foundation — Training for 3–7 years',
+            'Finding my feet — Training for 1–3 years',
+            'Just starting out — Less than a year',
+            'Coming back — Returning after a break',
         ],
     },
     {

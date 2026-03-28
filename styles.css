@@ -6763,8 +6763,8 @@ button, a, input, select, textarea,
 .orient-quiz-subtitle {
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-caption);
-    font-variant: small-caps;
-    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     color: var(--ink-3);
     padding: 0 var(--sp-lg) var(--sp-sm);
 }
@@ -6827,8 +6827,9 @@ button, a, input, select, textarea,
 .orient-dimension {
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-caption);
-    font-variant: small-caps;
-    letter-spacing: 0.08em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
     color: var(--gold);
     text-align: center;
     margin-bottom: calc(var(--sp-sm) * -1);
@@ -6906,7 +6907,7 @@ button, a, input, select, textarea,
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-body);
     font-weight: 600;
-    color: var(--ink);
+    color: var(--brown-btn);
     cursor: pointer;
     padding: 10px 0;
     text-transform: lowercase;
@@ -6935,10 +6936,10 @@ button, a, input, select, textarea,
 .orient-adjust-label {
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-caption);
-    font-variant: small-caps;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     color: var(--ink-3);
     margin-top: var(--sp-md);
-    letter-spacing: 0.04em;
 }
 .orient-persona-list {
     display: flex;
@@ -6958,9 +6959,9 @@ button, a, input, select, textarea,
     text-transform: lowercase;
 }
 .orient-persona-btn.active {
-    background: var(--ink);
-    border-color: var(--ink);
-    color: #fff;
+    background: var(--gold-wash);
+    border-color: var(--gold);
+    color: var(--ink);
 }
 
 /* ── Level picker (skip route) ── */
