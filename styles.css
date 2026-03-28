@@ -2426,16 +2426,66 @@ h1, h2, .screen-heading {
 
 .session-input::placeholder { color: var(--ink-3); }
 
-input[type="date"].session-input {
-    color-scheme: light;
-    min-height: 48px;
-    line-height: 1.4;
+/* ── Custom date picker ── */
+
+.session-date-picker {
+    display: flex;
+    align-items: stretch;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    transition: border-color 0.2s ease;
 }
 
-/* Ensure empty date inputs show placeholder-like appearance */
-input[type="date"].session-input:not([value]),
-input[type="date"].session-input[value=""] {
+.date-nav-btn {
+    width: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--ink-2);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease, color 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.date-nav-btn:active { background: var(--gold-wash); }
+
+.date-nav-btn.date-nav-disabled,
+.date-nav-btn:disabled {
     color: var(--ink-4);
+    cursor: default;
+}
+
+.date-display {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: var(--sp-md) 0;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    text-align: center;
+}
+
+.date-display-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.2;
+}
+
+.date-display-sub {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    color: var(--ink-3);
+    line-height: 1.2;
 }
 
 /* ── Session select ── */
@@ -5257,7 +5307,8 @@ button, a, input, select, textarea,
     color: var(--ink);
 }
 
-.fab-action-subtitle {
+.fab-action-subtitle,
+.fab-action-sub {
     font-size: var(--fs-small);
     color: var(--ink-3);
     font-weight: 400;
@@ -7026,6 +7077,15 @@ button, a, input, select, textarea,
 .goal-type-tab.active {
     color: var(--ink);
     border-bottom-color: var(--gold);
+}
+
+.goal-type-hint {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink-3);
+    text-align: center;
+    padding: var(--sp-xl) 0;
+    margin: 0;
 }
 
 /* Commitment period / how-often chips */
