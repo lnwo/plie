@@ -1792,9 +1792,10 @@ h1, h2, .screen-heading {
 
 /* ── Barre header ── */
 .barre-header {
+    position: relative;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     padding: var(--sp-xl) var(--sp-lg) var(--sp-lg);
     position: sticky;
     top: 0;
@@ -1813,6 +1814,8 @@ h1, h2, .screen-heading {
 }
 
 .barre-level-badge {
+    position: absolute;
+    right: var(--sp-lg);
     background: var(--gold-wash);
     color: var(--gold);
     font-family: 'DM Sans', sans-serif;
@@ -1829,7 +1832,7 @@ h1, h2, .screen-heading {
     justify-content: space-between;
     align-items: center;
     padding: 0 var(--sp-lg);
-    margin-bottom: var(--sp-md);
+    margin-bottom: var(--sp-lg);
 }
 
 .barre-section-label {
@@ -1852,7 +1855,7 @@ h1, h2, .screen-heading {
     display: flex;
     gap: var(--sp-md);
     overflow-x: auto;
-    padding: 0 var(--sp-lg) var(--sp-sm);
+    padding: 0 var(--sp-lg) var(--sp-md);
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
@@ -1862,7 +1865,7 @@ h1, h2, .screen-heading {
 .getting-started-carousel::-webkit-scrollbar { display: none; }
 
 .getting-started-card {
-    flex: 0 0 160px;
+    flex: 0 0 148px;
     background: var(--surface);
     border-radius: 8px;
     border: 0.5px solid rgba(26,23,20,0.10);
@@ -5890,6 +5893,9 @@ button, a, input, select, textarea,
 /* ═══════════════════════════════════════════════════════════════
    PROFILE REDESIGN — Status card + focus area stack
    ═══════════════════════════════════════════════════════════════ */
+
+/* ── Profile screen bottom clearance (nav bar) ── */
+#profile { padding-bottom: 120px; }
 
 /* ── Sticky header (replaces old .profile-header) ── */
 .profile-sticky-header {
