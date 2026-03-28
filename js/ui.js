@@ -2155,22 +2155,19 @@ function renderGoalGroup(category, goals) {
 }
 
 function renderGoalCard(goal, completed) {
-    const skill = goal.skillId ? DATA.skills.find(s => s.id === goal.skillId) : null;
-    const dimension = goal.dimensionId ? DIMENSION_OPTIONS.find(d => d.id === goal.dimensionId) : null;
-    const milestones = goal.milestones || [];
-    const doneMilestones = milestones.filter(m => m.done).length;
-    const progress = milestones.length > 0 ? doneMilestones / milestones.length : null;
+    const markers = (goal.progressMarkers || goal.milestones || []);
+    const doneMarkers = markers.filter(m => m.done).length;
+    const progress = markers.length > 0 ? doneMarkers / markers.length : null;
 
     const tagsHtml = [
-        skill      ? `<span class="goal-tag goal-tag-skill">${skill.french}</span>`         : null,
-        dimension  ? `<span class="goal-tag goal-tag-dim">${dimension.label}</span>`         : null,
-        goal.dueDate ? `<span class="goal-tag">by ${formatTimelineDate(goal.dueDate)}</span>` : null,
+        goal.goalType        ? `<span class="goal-tag goal-tag-type">${goal.goalType}</span>`                        : null,
+        goal.commitmentPeriod ? `<span class="goal-tag">${goal.commitmentPeriod}</span>`                              : null,
     ].filter(Boolean).join('');
 
-    const MILESTONE_CAP = 4;
-    const milestonesHtml = milestones.length > 0 ? `
-        <div class="goal-milestones ${milestones.length > MILESTONE_CAP ? 'goal-milestones-scrollable' : ''}">
-            ${milestones.map((m, i) => `
+    const MARKER_CAP = 4;
+    const markersHtml = markers.length > 0 ? `
+        <div class="goal-milestones ${markers.length > MARKER_CAP ? 'goal-milestones-scrollable' : ''}">
+            ${markers.map((m, i) => `
                 <div class="goal-milestone ${m.done ? 'done' : ''}"
                      onclick="toggleMilestone('${goal.id}', ${i})">
                     <div class="goal-milestone-check">
@@ -2180,28 +2177,15 @@ function renderGoalCard(goal, completed) {
                 </div>
             `).join('')}
         </div>
-        ${milestones.length > MILESTONE_CAP ? `<div class="goal-milestones-scroll-hint">${milestones.length} milestones · scroll to see all</div>` : ''}
+        ${markers.length > MARKER_CAP ? `<div class="goal-milestones-scroll-hint">${markers.length} markers · scroll to see all</div>` : ''}
     ` : '';
 
     const progressBarHtml = progress !== null ? `
         <div class="goal-progress-bar">
             <div class="goal-progress-fill" style="width: ${Math.round(progress * 100)}%"></div>
         </div>
-        <div class="goal-progress-label">${doneMilestones} of ${milestones.length} milestones</div>
+        <div class="goal-progress-label">${doneMarkers} of ${markers.length}</div>
     ` : '';
-
-    // Linked corrections
-    const linkedCorrs = (goal.correctionIds || [])
-        .map(id => appState.corrections.find(c => c.id === id))
-        .filter(Boolean);
-    const linkedCorrectionsHtml = linkedCorrs.length > 0 ? `
-        <div class="goal-linked-corrections-display ${completed ? 'goal-corrections-complete' : ''}">
-            ${linkedCorrs.map(c => `
-                <div class="goal-linked-corr-row">
-                    <span class="goal-linked-corr-dash">—</span>
-                    <span class="goal-linked-corr-text">${c.text}</span>
-                </div>`).join('')}
-        </div>` : '';
 
     return `
         <div class="swipe-row" data-goal-id="${goal.id}">
@@ -2220,12 +2204,11 @@ function renderGoalCard(goal, completed) {
             </div>`}
             <div class="swipe-content">
                 <div class="goal-card ${completed ? 'goal-card-completed' : ''}">
-                    ${completed ? `<div class="goal-card-complete-banner">✓ Completed ${formatTimelineDate(new Date(goal.completedAt).toISOString().split('T')[0])}</div>` : ''}
+                    ${completed ? `<div class="goal-card-complete-banner">&#x2713; Completed ${formatTimelineDate(new Date(goal.completedAt).toISOString().split('T')[0])}</div>` : ''}
+                    ${tagsHtml ? `<div class="goal-tags">${tagsHtml}</div>` : ''}
                     <div class="goal-card-title">${goal.title}</div>
                     ${goal.body ? `<div class="goal-card-body">${goal.body}</div>` : ''}
-                    ${tagsHtml ? `<div class="goal-tags">${tagsHtml}</div>` : ''}
-                    ${linkedCorrectionsHtml}
-                    ${milestonesHtml}
+                    ${markersHtml}
                     ${progressBarHtml}
                     <div class="goal-card-footer">
                         <span class="goal-card-date">created ${formatTimelineDate(new Date(goal.createdAt).toISOString().split('T')[0])}</span>
@@ -2257,6 +2240,9 @@ function openGoalCreator() {
         _editId:          null,
         goalType:         null,
         commitmentPeriod: '',
+        progressMarkers:  [],
+        skillIds:         [],
+        howOften:         '',
     };
 
     let overlay = document.getElementById('goal-creator-overlay');
@@ -2287,6 +2273,9 @@ function openGoalCreatorWithSuggestion(title, dimensionId, skillId, rationale, m
         _editId:          null,
         goalType:         null,
         commitmentPeriod: '',
+        progressMarkers:  [],
+        skillIds:         [],
+        howOften:         '',
     };
 
     let overlay = document.getElementById('goal-creator-overlay');
@@ -2338,15 +2327,20 @@ function openGoalEditor(goalId) {
     const goal = appState.goals.find(g => g.id === Number(goalId));
     if (!goal) return;
     appState._goalDraft = {
-        _editId:       goal.id,
-        title:         goal.title || '',
-        body:          goal.body  || '',
-        dueDate:       goal.dueDate || '',
-        skillId:       goal.skillId     || null,
-        dimensionId:   goal.dimensionId || null,
-        category:      goal.category    || null,
-        correctionIds: [...(goal.correctionIds || [])],
-        milestones:    goal.milestones.map(m => ({ ...m })),
+        _editId:          goal.id,
+        title:            goal.title || '',
+        body:             goal.body  || '',
+        dueDate:          goal.dueDate || '',
+        skillId:          goal.skillId     || null,
+        dimensionId:      goal.dimensionId || null,
+        category:         goal.category    || null,
+        correctionIds:    [...(goal.correctionIds || [])],
+        milestones:       (goal.milestones || []).map(m => ({ ...m })),
+        goalType:         goal.goalType         || null,
+        commitmentPeriod: goal.commitmentPeriod || '',
+        progressMarkers:  (goal.milestones || []).map(m => ({ ...m })),
+        skillIds:         [...(goal.skillIds || [])],
+        howOften:         goal.howOften || '',
     };
 
     let overlay = document.getElementById('goal-creator-overlay');
@@ -2383,139 +2377,225 @@ function renderGoalCreator() {
     const d = appState._goalDraft;
     if (!d) return;
 
-    const skillOptions = appState.skills.map(s =>
-        `<option value="${s.id}" ${d.skillId === s.id ? 'selected' : ''}>${s.french}</option>`
-    ).join('');
+    const markerPlaceholders = [
+        'land two pirouettes back to back',
+        'get a correction on it from my teacher',
+        'feel it in centre without thinking about it',
+    ];
 
-    const dimensionOptions = DIMENSION_OPTIONS.map(dim =>
-        `<option value="${dim.id}" ${d.dimensionId === dim.id ? 'selected' : ''}>${dim.label}</option>`
-    ).join('');
+    const periodOptions = ['this week', 'two weeks', 'this month', 'three months', 'custom'];
+    const howOftenOptions = ['every class', 'every week', 'set number of times', 'free text'];
 
-    const milestonesHtml = d.milestones.map((m, i) => `
-        <div class="goal-draft-milestone">
-            <input type="text" class="session-input" style="flex:1; padding: 10px var(--sp-md);"
-                   value="${m.text}"
-                   oninput="appState._goalDraft.milestones[${i}].text = this.value"
-                   onkeydown="handleMilestoneKeydown(event, ${i})"
-                   placeholder="Milestone ${i + 1}" />
-            <button class="block-remove-btn" onmousedown="removeMilestoneDraft(${i})">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                    <line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/>
-                </svg>
-            </button>
+    function periodChipsHtml() {
+        const isCustomSelected = d.commitmentPeriod && !periodOptions.slice(0, -1).includes(d.commitmentPeriod);
+        return `
+            <div class="goal-period-chips">
+                ${periodOptions.map(p => {
+                    const isActive = p === 'custom'
+                        ? isCustomSelected
+                        : d.commitmentPeriod === p;
+                    return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onclick="setGoalPeriod('${p}')">${p}</button>`;
+                }).join('')}
+            </div>
+            ${(d.commitmentPeriod === 'custom' || isCustomSelected) ? `
+                <input type="text" class="session-input" style="margin-top: var(--sp-sm);"
+                       placeholder="e.g. six weeks"
+                       value="${isCustomSelected ? escapeHtml(d.commitmentPeriod) : ''}"
+                       oninput="appState._goalDraft.commitmentPeriod = this.value" />
+            ` : ''}
+        `;
+    }
+
+    function skillFormHtml() {
+        const skillChipsHtml = (appState.skills || []).map(s => {
+            const sel = (d.skillIds || []).includes(s.id);
+            return `<button class="goal-skill-chip ${sel ? 'selected' : ''}" onclick="toggleGoalSkill('${s.id}')">${s.french}</button>`;
+        }).join('');
+
+        const markersHtml = (d.progressMarkers || []).map((m, i) => `
+            <div class="goal-marker-row">
+                <input type="text" class="goal-marker-input"
+                       value="${escapeHtml(m.text)}"
+                       placeholder="${markerPlaceholders[i % markerPlaceholders.length]}"
+                       oninput="appState._goalDraft.progressMarkers[${i}].text = this.value" />
+                <button class="block-remove-btn" onmousedown="removeProgressMarker(${i})">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/>
+                    </svg>
+                </button>
+            </div>
+        `).join('');
+
+        return `
+            <div class="session-field">
+                <label class="session-field-label">goal</label>
+                <input type="text" class="session-input" id="goal-title-input"
+                       placeholder="name it so you'd recognise it in a month"
+                       value="${escapeHtml(d.title)}"
+                       oninput="appState._goalDraft.title = this.value" />
+            </div>
+            <div class="session-field">
+                <label class="session-field-label">what you're working toward</label>
+                <textarea class="session-block-textarea" id="goal-body-input"
+                          placeholder="be specific enough that you'd know if it happened"
+                          rows="3"
+                          oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);">${escapeHtml(d.body || '')}</textarea>
+            </div>
+            <div class="session-field">
+                <label class="session-field-label">linked skill <span class="session-field-optional">optional</span></label>
+                <div class="goal-skill-chips">${skillChipsHtml}</div>
+            </div>
+            <div class="session-field">
+                <label class="session-field-label">progress markers <span class="session-field-optional">optional</span></label>
+                <div id="goal-markers-list">${markersHtml}</div>
+                <button class="add-block-btn" style="margin-top: var(--sp-sm);" onmousedown="addProgressMarker()">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/>
+                    </svg>
+                    + add marker
+                </button>
+            </div>
+            <div class="session-field">
+                <label class="session-field-label">commitment period</label>
+                ${periodChipsHtml()}
+            </div>
+        `;
+    }
+
+    function intentionFormHtml() {
+        return `
+            <div class="session-field">
+                <label class="session-field-label">goal</label>
+                <input type="text" class="session-input" id="goal-title-input"
+                       placeholder="name it so you'd recognise it"
+                       value="${escapeHtml(d.title)}"
+                       oninput="appState._goalDraft.title = this.value" />
+            </div>
+            <div class="session-field">
+                <label class="session-field-label">what you're working toward</label>
+                <textarea class="session-block-textarea" id="goal-body-input"
+                          placeholder="this is yours to judge, not the app's"
+                          rows="3"
+                          oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);">${escapeHtml(d.body || '')}</textarea>
+            </div>
+            <div class="session-field">
+                <label class="session-field-label">commitment period</label>
+                ${periodChipsHtml()}
+            </div>
+        `;
+    }
+
+    function habitFormHtml() {
+        const isSetNum = d.howOften && d.howOften.startsWith('x');
+        const isFreeText = d.howOften && !['every class', 'every week', 'set number of times', 'free text'].includes(d.howOften) && !isSetNum;
+        const howOftenChipsHtml = howOftenOptions.map(o => {
+            let isActive = false;
+            if (o === 'set number of times') isActive = isSetNum;
+            else if (o === 'free text') isActive = isFreeText;
+            else isActive = d.howOften === o;
+            return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onclick="setGoalHowOften('${o}')">${o}</button>`;
+        }).join('');
+
+        let howOftenExtra = '';
+        if (d.howOften === 'set number of times' || isSetNum) {
+            const numVal = isSetNum ? d.howOften.slice(1) : '';
+            howOftenExtra = `
+                <input type="number" class="session-input" style="margin-top: var(--sp-sm); width: 100px;"
+                       placeholder="e.g. 3"
+                       value="${escapeHtml(numVal)}"
+                       oninput="appState._goalDraft.howOften = 'x' + this.value" />
+            `;
+        } else if (d.howOften === 'free text' || isFreeText) {
+            howOftenExtra = `
+                <input type="text" class="session-input" style="margin-top: var(--sp-sm);"
+                       placeholder="e.g. whenever I feel ready"
+                       value="${isFreeText ? escapeHtml(d.howOften) : ''}"
+                       oninput="appState._goalDraft.howOften = this.value" />
+            `;
+        }
+
+        return `
+            <div class="session-field">
+                <label class="session-field-label">goal</label>
+                <input type="text" class="session-input" id="goal-title-input"
+                       placeholder="name it so you'd recognise it"
+                       value="${escapeHtml(d.title)}"
+                       oninput="appState._goalDraft.title = this.value" />
+            </div>
+            <div class="session-field">
+                <label class="session-field-label">what you want to do</label>
+                <textarea class="session-block-textarea" id="goal-body-input"
+                          placeholder="what, specifically"
+                          rows="3"
+                          oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);">${escapeHtml(d.body || '')}</textarea>
+            </div>
+            <div class="session-field">
+                <label class="session-field-label">how often</label>
+                <div class="goal-period-chips">${howOftenChipsHtml}</div>
+                ${howOftenExtra}
+            </div>
+            <div class="session-field">
+                <label class="session-field-label">commitment period</label>
+                ${periodChipsHtml()}
+            </div>
+        `;
+    }
+
+    const typeTabsHtml = `
+        <div class="goal-type-tabs">
+            <button class="goal-type-tab ${d.goalType === 'skill' ? 'active' : ''}" onclick="setGoalType('skill')">a skill</button>
+            <button class="goal-type-tab ${d.goalType === 'intention' ? 'active' : ''}" onclick="setGoalType('intention')">a feeling or state</button>
+            <button class="goal-type-tab ${d.goalType === 'habit' ? 'active' : ''}" onclick="setGoalType('habit')">a habit</button>
         </div>
-    `).join('');
+    `;
+
+    let bodyHtml = '';
+    if (d.goalType === 'skill') bodyHtml = skillFormHtml();
+    else if (d.goalType === 'intention') bodyHtml = intentionFormHtml();
+    else if (d.goalType === 'habit') bodyHtml = habitFormHtml();
+
+    let footerHtml;
+    if (d._confirmingDiscard) {
+        footerHtml = `
+            <div class="goal-discard-confirm">
+                discard this goal?
+                <button class="goal-discard-confirm-yes" onclick="closeGoalCreator()">discard</button>
+                <button class="goal-discard-confirm-no" onclick="appState._goalDraft._confirmingDiscard = false; renderGoalCreator()">keep editing</button>
+            </div>
+        `;
+    } else if (d.goalType) {
+        footerHtml = `
+            <button class="session-discard-btn" onclick="confirmDiscardGoal()">discard</button>
+            <button class="btn-large session-save-btn" onclick="saveGoal()">save goal</button>
+        `;
+    } else {
+        footerHtml = `
+            <button class="session-discard-btn" onclick="confirmDiscardGoal()">discard</button>
+        `;
+    }
 
     overlay.innerHTML = `
         <div class="session-logger-sheet">
             <div class="session-sheet-handle"></div>
 
             <div class="session-logger-header">
-                <div>
-                    <div class="session-logger-eyebrow">${d._editId ? 'Edit goal' : 'New goal'}</div>
-                    <h2 class="session-logger-title">${d._editId ? 'Update your goal' : 'Set a goal'}</h2>
-                </div>
-                <button class="session-close-btn" onclick="closeGoalCreator()">
+                <h2 class="session-logger-title">what are you working toward?</h2>
+                <button class="session-close-btn" onclick="confirmDiscardGoal()">
                     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                         <line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/>
                     </svg>
                 </button>
             </div>
 
+            ${typeTabsHtml}
+
             <div class="session-logger-body">
-
-                <div class="session-field">
-                    <label class="session-field-label">Goal</label>
-                    <textarea class="session-block-title-input" id="goal-title-input"
-                              placeholder="What do you want to achieve?"
-                              rows="1"
-                              oninput="appState._goalDraft.title = this.value; autoResizeTextarea(this); searchGoalCorrections(this.value);"
-                              style="font-size: var(--fs-h3);">${d.title}</textarea>
-                    <textarea class="session-block-textarea" id="goal-body-input"
-                              placeholder="Add more detail… (optional)"
-                              rows="2"
-                              oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);"
-                              style="margin-top: var(--sp-sm);">${d.body}</textarea>
-                    <!-- Correction search results -->
-                    <div id="goal-correction-search-results"></div>
-                </div>
-
-                <!-- Linked corrections -->
-                ${(d.correctionIds || []).length > 0 ? `
-                <div class="session-field">
-                    <label class="session-field-label">Linked corrections</label>
-                    <div id="goal-linked-corrections">
-                        ${renderLinkedCorrectionsHtml(d.correctionIds)}
-                    </div>
-                </div>` : '<div id="goal-linked-corrections-wrapper"></div>'}
-
-                <div class="session-field">
-                    <label class="session-field-label">Category <span class="session-field-optional">optional</span></label>
-                    <div id="goal-category-field">
-                        ${d.category
-                            ? `<div class="goal-category-set">
-                                   <span class="recurrence-chip selected">${d.category}</span>
-                                   <button class="goal-category-clear" onmousedown="clearGoalCategory()">×</button>
-                               </div>`
-                            : `<button class="goal-category-add-btn" onmousedown="openGoalCategoryInput()">
-                                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>
-                                   add category
-                               </button>`}
-                    </div>
-                </div>
-
-                <div class="session-field">
-                    <label class="session-field-label">Link to a skill <span class="session-field-optional">optional</span></label>
-                    <div class="session-select-wrapper">
-                        <select id="goal-skill-select" class="session-select"
-                                onchange="appState._goalDraft.skillId = this.value || null">
-                            <option value="">— no skill —</option>
-                            ${skillOptions}
-                        </select>
-                        <svg class="session-select-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="4 6 8 10 12 6"/>
-                        </svg>
-                    </div>
-                </div>
-
-                <div class="session-field">
-                    <label class="session-field-label">Link to a dimension <span class="session-field-optional">optional</span></label>
-                    <div class="session-select-wrapper">
-                        <select class="session-select"
-                                onchange="appState._goalDraft.dimensionId = this.value || null">
-                            <option value="">— no dimension —</option>
-                            ${dimensionOptions}
-                        </select>
-                        <svg class="session-select-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="4 6 8 10 12 6"/>
-                        </svg>
-                    </div>
-                </div>
-
-                <div class="session-field">
-                    <label class="session-field-label">Due date <span class="session-field-optional">optional</span></label>
-                    <input type="date" class="session-input"
-                           value="${d.dueDate}"
-                           onchange="appState._goalDraft.dueDate = this.value" />
-                </div>
-
-                <div class="session-field">
-                    <label class="session-field-label">Milestones <span class="session-field-optional">optional</span></label>
-                    <div id="goal-milestones-list">${milestonesHtml}</div>
-                    <button class="add-block-btn" style="margin-top: var(--sp-sm);" onmousedown="addMilestoneDraft()">
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                            <line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/>
-                        </svg>
-                        add milestone
-                    </button>
-                </div>
-
-                <div style="height: var(--sp-3xl);"></div>
+                ${bodyHtml}
+                ${bodyHtml ? '<div style="height: var(--sp-3xl);"></div>' : ''}
             </div>
 
             <div class="session-logger-footer">
-                <button class="session-discard-btn" onclick="closeGoalCreator()">discard</button>
-                <button class="btn-large session-save-btn" onclick="saveGoal()">save goal</button>
+                ${footerHtml}
             </div>
         </div>
     `;
@@ -2531,6 +2611,69 @@ function selectGoalCategory(cat) {
                 <span class="recurrence-chip selected">${cat}</span>
                 <button class="goal-category-clear" onmousedown="clearGoalCategory()">×</button>
             </div>`;
+    }
+}
+
+function setGoalType(type) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.goalType = type;
+    d.progressMarkers = [];
+    d.skillIds = [];
+    d.howOften = '';
+    d._confirmingDiscard = false;
+    renderGoalCreator();
+}
+
+function toggleGoalSkill(skillId) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    const idx = d.skillIds.indexOf(skillId);
+    if (idx > -1) d.skillIds.splice(idx, 1);
+    else d.skillIds.push(skillId);
+    renderGoalCreator();
+}
+
+function setGoalPeriod(period) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.commitmentPeriod = period;
+    renderGoalCreator();
+}
+
+function setGoalHowOften(val) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.howOften = val;
+    renderGoalCreator();
+}
+
+function addProgressMarker() {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.progressMarkers.push({ id: Date.now(), text: '', done: false });
+    renderGoalCreator();
+    requestAnimationFrame(() => {
+        const inputs = document.querySelectorAll('.goal-marker-input');
+        if (inputs.length) inputs[inputs.length - 1].focus();
+    });
+}
+
+function removeProgressMarker(i) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.progressMarkers.splice(i, 1);
+    renderGoalCreator();
+}
+
+function confirmDiscardGoal() {
+    const d = appState._goalDraft;
+    if (!d) { closeGoalCreator(); return; }
+    if (d.title.trim() || d.body?.trim() || d.progressMarkers?.length) {
+        d._confirmingDiscard = true;
+        renderGoalCreator();
+    } else {
+        closeGoalCreator();
     }
 }
 
@@ -2769,7 +2912,7 @@ function saveGoal() {
         dimensionId:      d.dimensionId   || null,
         category:         d.category      || null,
         correctionIds:    d.correctionIds || [],
-        milestones:       d.milestones.filter(m => m.text.trim()).map(m => ({
+        milestones:       (d.milestones || []).filter(m => m.text?.trim()).map(m => ({
             id:   m.id || Date.now(),
             text: m.text.trim(),
             done: m.done || false,
@@ -2777,6 +2920,14 @@ function saveGoal() {
         completedAt:      existingGoal?.completedAt || null,
         goalType:         d.goalType         || null,
         commitmentPeriod: d.commitmentPeriod || null,
+        progressMarkers:  (d.progressMarkers || []).filter(m => m.text.trim()).map(m => ({
+            id:   m.id || Date.now(),
+            text: m.text.trim(),
+            done: m.done || false,
+        })),
+        howOften:         d.howOften || null,
+        skillIds:         d.skillIds || [],
+        // TODO(Task5): renewal hook — attach renewal prompt logic here
     };
 
     if (isEdit) {

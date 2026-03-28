@@ -7022,3 +7022,141 @@ button, a, input, select, textarea,
     text-align: center;
     padding: var(--sp-sm) var(--sp-lg);
 }
+
+/* ── Goal creator — type tabs ── */
+.goal-type-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-soft, #EEEBE6);
+    padding: 0 var(--sp-lg);
+    gap: 0;
+}
+.goal-type-tab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 500;
+    color: var(--ink-3);
+    padding: 10px var(--sp-md) 10px 0;
+    cursor: pointer;
+    margin-bottom: -1px;
+    transition: color .15s, border-color .15s;
+    text-transform: lowercase;
+    white-space: nowrap;
+}
+.goal-type-tab.active {
+    color: var(--ink);
+    border-bottom-color: var(--gold);
+}
+
+/* Commitment period / how-often chips */
+.goal-period-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-xs, 6px);
+    margin-top: var(--sp-xs, 6px);
+}
+.goal-period-chip {
+    background: var(--surface);
+    border: 1.5px solid var(--border-mid, #DDD6CF);
+    border-radius: 100px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink);
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: background .12s, border-color .12s;
+    text-transform: lowercase;
+}
+.goal-period-chip.selected {
+    background: var(--gold-wash);
+    border-color: var(--gold);
+}
+
+/* Skill chips in goal creator */
+.goal-skill-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-xs, 6px);
+    margin-top: var(--sp-xs, 6px);
+    max-height: 120px;
+    overflow-y: auto;
+}
+.goal-skill-chip {
+    background: var(--surface);
+    border: 1.5px solid var(--border-mid, #DDD6CF);
+    border-radius: 100px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink);
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: background .12s, border-color .12s;
+    text-transform: lowercase;
+}
+.goal-skill-chip.selected {
+    background: var(--gold-wash);
+    border-color: var(--gold);
+}
+
+/* Progress marker inputs */
+.goal-marker-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-sm);
+    margin-bottom: var(--sp-xs, 6px);
+}
+.goal-marker-input {
+    flex: 1;
+    padding: 10px var(--sp-md);
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-body);
+    border: 1.5px solid var(--border-mid, #DDD6CF);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--ink);
+}
+.goal-marker-input:focus {
+    outline: none;
+    border-color: var(--gold);
+}
+
+/* Type badge on goal card */
+.goal-tag-type {
+    background: var(--surface-warm, #FDF8F3);
+    color: var(--ink-2);
+    border: 1px solid var(--border-soft, #EEEBE6);
+    font-style: italic;
+}
+
+/* Discard confirm state */
+.goal-discard-confirm {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-md);
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink-2);
+}
+.goal-discard-confirm-yes {
+    color: var(--coral, #A84030);
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    text-transform: lowercase;
+}
+.goal-discard-confirm-no {
+    color: var(--ink-3);
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    cursor: pointer;
+    padding: 0;
+    text-transform: lowercase;
+}
