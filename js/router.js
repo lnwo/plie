@@ -31,7 +31,6 @@ function navigateTo(section) {
 
     const routes = {
         barre:   () => showBarreScreen(),
-        assess:  () => showAssessScreen(),
         goals:   () => showGoalsScreen(),
         learn:   () => showLearnScreen(),
         profile: () => { showScreen('profile'); window.scrollTo({ top: 0, behavior: 'smooth' }); }

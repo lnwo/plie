@@ -5,6 +5,16 @@
    Functions that create/populate each main screen.
    ═══════════════════════════════════════════════════════════════ */
 
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 /* ═══════════════════════════════════════════════════════════════
    SESSION LOGGER
    Stage 2: Full overlay with class type carousel, day picker,
@@ -53,14 +63,14 @@ function getBlockTopics() {
     return [...categories, ...skills];
 }
 
-function openSessionLogger() {
+function openSessionLogger(mode) {
     const today = new Date().toISOString().split('T')[0];
     const todayDow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
 
-    // Day-of-week session prediction
-    const predictedTemplate = appState.sessionTemplates.find(t =>
+    // Day-of-week session prediction (only for full session mode)
+    const predictedTemplate = (mode !== 'note') ? (appState.sessionTemplates.find(t =>
         t.days && t.days.includes(todayDow)
-    ) || null;
+    ) || null) : null;
 
     appState.currentSession = {
         id:              Date.now(),
@@ -71,6 +81,7 @@ function openSessionLogger() {
         classType:       predictedTemplate?.classType || null,
         blocks:          [],
         _predicted:      predictedTemplate ? true : false,
+        _mode:           mode || 'session',
     };
 
     // Auto-create first block and focus its title
@@ -82,6 +93,9 @@ function openSessionLogger() {
         overlay.id = 'session-logger-overlay';
         overlay.className = 'session-overlay';
         document.body.appendChild(overlay);
+        overlay.addEventListener('mousedown', (e) => {
+            if (e.target === overlay) closeSessionLogger();
+        });
     }
 
     renderSessionLogger();
@@ -144,12 +158,120 @@ function closeSessionLogger() {
     }, { once: true });
 }
 
+function formatSessionDateDisplay(dateStr) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const yest = new Date();
+    yest.setDate(yest.getDate() - 1);
+    const yesterdayStr = yest.toISOString().split('T')[0];
+    const d = new Date(dateStr + 'T12:00:00');
+    const shortDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    if (dateStr === todayStr) {
+        return `<span class="date-display-label">Today</span><span class="date-display-sep">·</span><span class="date-display-sub">${shortDate}</span>`;
+    } else if (dateStr === yesterdayStr) {
+        return `<span class="date-display-label">Yesterday</span><span class="date-display-sep">·</span><span class="date-display-sub">${shortDate}</span>`;
+    } else {
+        const dayName = d.toLocaleDateString('en-GB', { weekday: 'short' });
+        return `<span class="date-display-label">${dayName}</span><span class="date-display-sep">·</span><span class="date-display-sub">${shortDate}</span>`;
+    }
+}
+
+function toggleDateCalendar() {
+    const existing = document.getElementById('date-calendar-popup');
+    if (existing) { existing.remove(); return; }
+    if (!appState.currentSession) return;
+    renderDateCalendar(appState.currentSession.date);
+}
+
+function renderDateCalendar(selectedDateStr) {
+    const existing = document.getElementById('date-calendar-popup');
+    if (existing) existing.remove();
+
+    const sel = new Date(selectedDateStr + 'T12:00:00');
+    const todayStr = new Date().toISOString().split('T')[0];
+    const viewYear = sel.getFullYear();
+    const viewMonth = sel.getMonth(); // 0-indexed
+
+    const firstDay = new Date(viewYear, viewMonth, 1);
+    const lastDay  = new Date(viewYear, viewMonth + 1, 0);
+    const startDow = (firstDay.getDay() + 6) % 7; // Mon=0
+    const monthLabel = firstDay.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+    // Prev month: only allow if month has days in the past
+    const prevMonthLastDay = new Date(viewYear, viewMonth, 0);
+    const prevMonthLastStr = prevMonthLastDay.toISOString().split('T')[0];
+    const canGoPrev = prevMonthLastStr <= todayStr;
+
+    // Next month: only allow if current month is not the current month
+    const todayD = new Date(todayStr + 'T12:00:00');
+    const canGoNext = viewYear < todayD.getFullYear() || (viewYear === todayD.getFullYear() && viewMonth < todayD.getMonth());
+
+    const dowHeaders = ['M','T','W','T','F','S','S'].map(d => `<div class="date-cal-dow">${d}</div>`).join('');
+
+    let dayCells = '';
+    // Empty cells before first day
+    for (let i = 0; i < startDow; i++) dayCells += `<button class="date-cal-day empty" disabled></button>`;
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+        const dStr = `${viewYear}-${String(viewMonth + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const isSelected = dStr === selectedDateStr;
+        const isToday    = dStr === todayStr;
+        const isFuture   = dStr > todayStr;
+        const cls = ['date-cal-day', isSelected ? 'selected' : '', isToday && !isSelected ? 'today' : '', isFuture ? 'future' : ''].filter(Boolean).join(' ');
+        dayCells += `<button class="${cls}" onmousedown="pickCalendarDate('${dStr}')" ${isFuture ? 'disabled' : ''}>${day}</button>`;
+    }
+
+    const popup = document.createElement('div');
+    popup.id = 'date-calendar-popup';
+    popup.className = 'date-calendar-popup';
+    popup.innerHTML = `
+        <div class="date-cal-header">
+            <button class="date-cal-nav" onmousedown="renderDateCalendar(getCalNavMonth('${selectedDateStr}', -1))" ${canGoPrev ? '' : 'disabled'}>‹</button>
+            <span class="date-cal-month-label">${monthLabel}</span>
+            <button class="date-cal-nav" onmousedown="renderDateCalendar(getCalNavMonth('${selectedDateStr}', 1))" ${canGoNext ? '' : 'disabled'}>›</button>
+        </div>
+        <div class="date-cal-grid">
+            ${dowHeaders}
+            ${dayCells}
+        </div>
+    `;
+
+    const picker = document.querySelector('.session-date-picker');
+    if (picker) picker.appendChild(popup);
+}
+
+function getCalNavMonth(currentSelectedStr, delta) {
+    const d = new Date(currentSelectedStr + 'T12:00:00');
+    const newMonth = d.getMonth() + delta;
+    const newYear  = newMonth < 0 ? d.getFullYear() - 1 : (newMonth > 11 ? d.getFullYear() + 1 : d.getFullYear());
+    const clampedMonth = ((newMonth % 12) + 12) % 12;
+    // Return first day of new month as nav target
+    return `${newYear}-${String(clampedMonth + 1).padStart(2,'0')}-01`;
+}
+
+function pickCalendarDate(dateStr) {
+    if (!appState.currentSession) return;
+    appState.currentSession.date = dateStr;
+    document.getElementById('date-calendar-popup')?.remove();
+    renderSessionLogger();
+}
+
+function stepSessionDate(delta) {
+    if (!appState.currentSession) return;
+    const d = new Date(appState.currentSession.date + 'T12:00:00');
+    d.setDate(d.getDate() + delta);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const newStr = d.toISOString().split('T')[0];
+    if (newStr > todayStr) return; // can't log future sessions
+    appState.currentSession.date = newStr;
+    renderSessionLogger();
+}
+
 function renderSessionLogger() {
     const overlay = document.getElementById('session-logger-overlay');
     if (!overlay) return;
 
     const s = appState.currentSession;
     const templates = appState.sessionTemplates;
+    const isNoteMode = s._mode === 'note';
 
     // Session dropdown options
     const savedOptions = templates.map(t => `
@@ -192,14 +314,53 @@ function renderSessionLogger() {
         ? (templates.find(t => t.id === s.templateId)?.name || '')
         : (s.sessionName || '');
 
+    const templatePreviewHtml = activeTemplate
+        ? `<div class="session-template-preview"><span class="template-preview-text">${renderTemplatePreview(s.templateId)}</span></div>`
+        : '';
+
+    const sessionAndClassFieldsHtml = isNoteMode ? '' : `
+        <div class="session-field">
+            <label class="session-field-label">Session <span class="session-field-optional">optional</span></label>
+            <div class="session-combobox" id="session-combobox">
+                <input
+                    type="text"
+                    class="session-input session-combobox-input"
+                    id="session-name-input"
+                    placeholder="Name this session or choose a saved one…"
+                    value="${sessionInputValue}"
+                    autocomplete="off"
+                    oninput="handleSessionNameInput(this.value)"
+                    onfocus="showSessionDropdown()"
+                />
+                <div class="session-combobox-dropdown" id="session-combobox-dropdown" style="display:none;"></div>
+            </div>
+            ${templatePreviewHtml}
+        </div>
+        <div id="new-session-form-container"></div>
+        <div class="session-field">
+            <label class="session-field-label">Class type <span class="session-field-optional">optional</span></label>
+            <div class="class-type-carousel">
+                ${primaryChips}
+                ${selectedSecondaryChip}
+                <div class="class-type-carousel-item">
+                    <button class="class-type-chip class-type-more" onclick="toggleMoreClassTypes()">
+                        <span class="class-type-chip-label">More…</span>
+                        <span class="class-type-chip-sub">see all types</span>
+                    </button>
+                </div>
+            </div>
+            <div id="more-class-types-panel" style="display:none;"></div>
+        </div>
+    `;
+
     overlay.innerHTML = `
         <div class="session-logger-sheet">
             <div class="session-sheet-handle"></div>
 
             <div class="session-logger-header">
                 <div>
-                    <div class="session-logger-eyebrow">New session</div>
-                    <h2 class="session-logger-title">Log a class</h2>
+                    <div class="session-logger-eyebrow">${isNoteMode ? 'Quick note' : 'New session'}</div>
+                    <h2 class="session-logger-title">${isNoteMode ? 'Add a note' : 'Log a class'}</h2>
                 </div>
                 <button class="session-close-btn" onclick="closeSessionLogger()" aria-label="Close">
                     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -214,51 +375,22 @@ function renderSessionLogger() {
                 <!-- Date -->
                 <div class="session-field">
                     <label class="session-field-label">Date</label>
-                    <input type="date" class="session-input" value="${s.date}"
-                           onchange="updateSessionDate(this.value)" />
-                </div>
-
-                <!-- Session combobox -->
-                <div class="session-field">
-                    <label class="session-field-label">Session <span class="session-field-optional">optional</span></label>
-                    <div class="session-combobox" id="session-combobox">
-                        <input
-                            type="text"
-                            class="session-input session-combobox-input"
-                            id="session-name-input"
-                            placeholder="Name this session or choose a saved one…"
-                            value="${sessionInputValue}"
-                            autocomplete="off"
-                            oninput="handleSessionNameInput(this.value)"
-                            onfocus="showSessionDropdown()"
-                        />
-                        <div class="session-combobox-dropdown" id="session-combobox-dropdown" style="display:none;"></div>
+                    <div class="session-date-picker">
+                        <button class="date-nav-btn" onmousedown="stepSessionDate(-1)" aria-label="Previous day">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="10 4 6 8 10 12"/></svg>
+                        </button>
+                        <div class="date-display" onmousedown="toggleDateCalendar()">${formatSessionDateDisplay(s.date)}</div>
+                        <button class="date-nav-btn${s.date === new Date().toISOString().split('T')[0] ? ' date-nav-disabled' : ''}" onmousedown="stepSessionDate(1)" aria-label="Next day" ${s.date === new Date().toISOString().split('T')[0] ? 'disabled' : ''}>
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 4 10 8 6 12"/></svg>
+                        </button>
                     </div>
-                    ${activeTemplate ? `<div class="session-template-preview"><span class="template-preview-text">${renderTemplatePreview(s.templateId)}</span></div>` : ''}
                 </div>
 
-                <!-- New session form injected here -->
-                <div id="new-session-form-container"></div>
-
-                <!-- Class type -->
-                <div class="session-field">
-                    <label class="session-field-label">Class type <span class="session-field-optional">optional</span></label>
-                    <div class="class-type-carousel">
-                        ${primaryChips}
-                        ${selectedSecondaryChip}
-                        <div class="class-type-carousel-item">
-                            <button class="class-type-chip class-type-more" onclick="toggleMoreClassTypes()">
-                                <span class="class-type-chip-label">More…</span>
-                                <span class="class-type-chip-sub">see all types</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div id="more-class-types-panel" style="display:none;"></div>
-                </div>
+                ${sessionAndClassFieldsHtml}
 
                 <!-- Notes & corrections blocks -->
                 <div class="session-field" style="margin-bottom: var(--sp-sm);">
-                    <label class="session-field-label">Notes &amp; corrections</label>
+                    <label class="session-field-label">${isNoteMode ? 'Notes' : 'Notes &amp; corrections'}</label>
                 </div>
 
                 <div id="session-blocks-container">
@@ -279,7 +411,7 @@ function renderSessionLogger() {
 
             <div class="session-logger-footer">
                 <button class="session-discard-btn" onclick="closeSessionLogger()">discard</button>
-                <button class="btn-large session-save-btn" onclick="saveSession()">save session</button>
+                <button class="btn-large session-save-btn" onclick="saveSession()">${isNoteMode ? 'save note' : 'save session'}</button>
             </div>
         </div>
     `;
@@ -691,15 +823,14 @@ const BLOCK_MODES = ['correction', 'praise', 'reflection'];
 
 function addBlock(focusTitle = false) {
     const block = {
-        id:             Date.now(),
-        topicId:        'general',
-        title:          '',
-        notes:          '',
-        notesOpen:      false,
-        mode:           'correction',
-        corrections:    [],
-        praiseText:     '',
-        reflectionText: '',
+        id:          Date.now(),
+        topicId:     'general',
+        title:       '',
+        text:        '',
+        notes:       '',
+        notesOpen:   false,
+        source:      null,
+        isHighlight: false,
     };
     appState.currentSession.blocks.push(block);
     sortBlocks();
@@ -751,56 +882,32 @@ function renderBlocksOnly() {
 function renderBlockHtml(block, index) {
     const topics = getBlockTopics();
     const isGeneral = block.topicId === 'general';
-    const mode = block.mode || 'correction';
+    const source = block.source || null;
 
-    // Corrections bullet list (mode === 'correction')
-    const corrList = Array.isArray(block.corrections) ? block.corrections : [];
-    const corrBulletsHtml = corrList.map((text, ci) => `
-        <div class="correction-bullet" data-block="${block.id}" data-ci="${ci}">
-            <span class="correction-bullet-dash">—</span>
-            <div class="correction-bullet-input-wrapper">
-                <div class="correction-bullet-input"
-                     contenteditable="true"
-                     data-block="${block.id}"
-                     data-ci="${ci}"
-                     oninput="updateCorrectionBullet(${block.id}, ${ci}, this.innerText)"
-                     onkeydown="handleCorrectionBulletKey(event, ${block.id}, ${ci})"
-                     >${text}</div>
-            </div>
-            <button class="correction-bullet-delete"
-                    onmousedown="deleteCorrectionBullet(${block.id}, ${ci})"
-                    aria-label="Delete">×</button>
-        </div>
-    `).join('');
+    // Migrate legacy content into block.text for display in the editor
+    // (corrections[], praiseText, reflectionText → text)
+    let blockText = block.text || '';
+    if (!blockText) {
+        if (Array.isArray(block.corrections) && block.corrections.length) {
+            blockText = block.corrections.join('\n');
+        } else if (block.praiseText) {
+            blockText = block.praiseText;
+        } else if (block.reflectionText) {
+            blockText = block.reflectionText;
+        }
+    }
 
-    const corrFieldHtml = `
-        <div class="correction-bullets-container" id="correction-bullets-${block.id}">
-            ${corrBulletsHtml}
-            <div class="correction-bullet correction-bullet-new" data-block="${block.id}">
-                <span class="correction-bullet-dash">—</span>
-                <div class="correction-bullet-input-wrapper">
-                    <div class="correction-bullet-input correction-bullet-placeholder"
-                         contenteditable="true"
-                         data-block="${block.id}"
-                         data-ci="${corrList.length}"
-                         oninput="handleNewCorrectionBulletInput(event, ${block.id})"
-                         onkeydown="handleCorrectionBulletKey(event, ${block.id}, ${corrList.length})"
-                         ></div>
-                </div>
-            </div>
+    // Source chips: Correction · Observation
+    const sourcesHtml = `
+        <div class="block-source-chips">
+            <button class="block-source-chip ${source === 'correction' ? 'active' : ''}"
+                    onmousedown="setBlockSource(${block.id}, 'correction')">correction</button>
+            <button class="block-source-chip ${source === 'observation' ? 'active' : ''}"
+                    onmousedown="setBlockSource(${block.id}, 'observation')">observation</button>
         </div>
-        <p class="correction-bullets-hint">Enter to add · Shift+Enter for new line</p>
     `;
 
-    // Reflection field (mode === 'reflection')
-    const reflectionHtml = `
-        <textarea class="session-block-textarea session-block-capped"
-                  placeholder="Note a reflection…"
-                  oninput="updateBlockField(${block.id}, 'reflectionText', this.value); autoResizeCapped(this);"
-                  >${block.reflectionText || ''}</textarea>
-    `;
-
-    // Notes section (collapsible) — wrapped in .block-notes-area for surgical updates
+    // Notes section (collapsible)
     const notesHtml = `
         <div class="block-notes-area">
             ${block.notesOpen || block.notes ? `
@@ -819,30 +926,6 @@ function renderBlockHtml(block, index) {
         </div>
     `;
 
-    // Praise content — free text for what was praised
-    const praiseHtml = `
-        <textarea class="session-block-textarea session-block-capped"
-                  placeholder="What were you praised for? e.g. your arabesque line, timing…"
-                  oninput="updateBlockField(${block.id}, 'praiseText', this.value); autoResizeCapped(this);"
-                  >${block.praiseText || ''}</textarea>
-    `;
-
-    // Mode toggle
-    const modeToggleHtml = `
-        <div class="block-mode-toggle">
-            <button class="block-mode-btn ${mode === 'correction' ? 'active' : ''}"
-                    onmousedown="setBlockMode(${block.id}, 'correction')">Correction</button>
-            <button class="block-mode-btn ${mode === 'praise' ? 'active' : ''}"
-                    onmousedown="setBlockMode(${block.id}, 'praise')">Praise</button>
-            <button class="block-mode-btn ${mode === 'reflection' ? 'active' : ''}"
-                    onmousedown="setBlockMode(${block.id}, 'reflection')">Reflection</button>
-        </div>
-    `;
-
-    const modeClass = mode === 'praise' ? 'block-mode-praise'
-                    : mode === 'reflection' ? 'block-mode-reflection'
-                    : '';
-
     return `
         <div class="swipe-row" data-block-id="${block.id}">
             <div class="swipe-action-left swipe-action-remove">
@@ -850,7 +933,7 @@ function renderBlockHtml(block, index) {
                 remove
             </div>
             <div class="swipe-content">
-                <div class="session-block ${modeClass}" id="block-${block.id}">
+                <div class="session-block" id="block-${block.id}">
 
                     <div class="session-block-header">
                         <div class="session-block-topic-wrapper" id="topic-wrapper-${block.id}">
@@ -866,6 +949,13 @@ function renderBlockHtml(block, index) {
                                    placeholder="Search skill…" />
                             <div class="block-topic-dropdown" id="topic-dropdown-${block.id}" style="display:none;"></div>
                         </div>
+                        <button class="block-star-btn ${block.isHighlight ? 'active' : ''}"
+                                onmousedown="toggleBlockHighlight(${block.id})"
+                                aria-label="Highlight">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="${block.isHighlight ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M8 1.5l1.7 3.4 3.8.55-2.75 2.68.65 3.78L8 10.1 4.6 11.91l.65-3.78L2.5 5.45l3.8-.55z"/>
+                            </svg>
+                        </button>
                         <button class="block-remove-btn" onclick="removeBlock(${block.id})" aria-label="Remove">
                             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                                 <line x1="3" y1="3" x2="11" y2="11"/>
@@ -883,11 +973,12 @@ function renderBlockHtml(block, index) {
                                   onblur="this.placeholder='${isGeneral ? 'Topic or title…' : 'Add a title…'}'"
                                   >${block.title}</textarea>
 
-                        ${modeToggleHtml}
+                        <textarea class="session-block-textarea session-block-capped"
+                                  placeholder="What happened…"
+                                  oninput="updateBlockField(${block.id}, 'text', this.value); autoResizeCapped(this);"
+                                  >${blockText}</textarea>
 
-                        ${mode === 'correction' ? corrFieldHtml : ''}
-                        ${mode === 'praise'     ? praiseHtml    : ''}
-                        ${mode === 'reflection' ? reflectionHtml : ''}
+                        ${sourcesHtml}
 
                         ${notesHtml}
                     </div>
@@ -1113,6 +1204,32 @@ function setBlockMode(blockId, mode) {
     if (!block) return;
     block.mode = mode;
     renderBlocksOnly();
+}
+
+function setBlockSource(blockId, source) {
+    const block = getBlockById(blockId);
+    if (!block) return;
+    // Toggle off if already selected
+    block.source = block.source === source ? null : source;
+    const blockEl = document.getElementById(`block-${blockId}`);
+    if (!blockEl) return;
+    blockEl.querySelectorAll('.block-source-chip').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.trim() === block.source);
+    });
+}
+
+function toggleBlockHighlight(blockId) {
+    const block = getBlockById(blockId);
+    if (!block) return;
+    block.isHighlight = !block.isHighlight;
+    const blockEl = document.getElementById(`block-${blockId}`);
+    if (!blockEl) return;
+    const btn = blockEl.querySelector('.block-star-btn');
+    if (btn) {
+        btn.classList.toggle('active', block.isHighlight);
+        const path = btn.querySelector('path');
+        if (path) path.setAttribute('fill', block.isHighlight ? 'currentColor' : 'none');
+    }
 }
 
 function toggleBlockNotes(blockId) {
@@ -1399,71 +1516,60 @@ function saveSession() {
     s.blocks.forEach(block => {
         const isSkill = block.topicId?.startsWith('skill:');
         const skillId = isSkill ? block.topicId.replace('skill:', '') : null;
-        const mode = block.mode || 'correction';
-
-        // Each non-empty bullet in corrections[] → one Correction object
         const blockCorrectionIds = [];
-        const corrBullets = Array.isArray(block.corrections)
-            ? block.corrections
-            : (block.corrections ? [block.corrections] : []); // backward compat with old string format
 
-        if (mode === 'correction') {
-            corrBullets.filter(t => t?.trim()).forEach(text => {
+        // Resolve block text — new format uses block.text; legacy format uses corrections[]/praiseText/reflectionText
+        const blockText = (block.text?.trim())
+            || (Array.isArray(block.corrections) && block.corrections.filter(t => t?.trim()).join('\n'))
+            || block.praiseText?.trim()
+            || block.reflectionText?.trim()
+            || '';
+
+        const isCorrection = block.source === 'correction' || (!block.source && !!block.mode && block.mode === 'correction');
+
+        // Save as Correction if source is 'correction' (or legacy correction mode with bullets)
+        if (isCorrection && blockText) {
+            // Split multi-line text into individual corrections (legacy bullet compat)
+            const lines = blockText.split('\n').map(l => l.trim()).filter(Boolean);
+            lines.forEach(text => {
                 const correction = {
                     id:          nextId(),
                     skillId:     skillId || null,
-                    text:        text.trim(),
+                    text,
                     createdAt:   now,
                     sessionId:   session.id,
-                    source:      'teacher',
-                    type:        null,
-                    isRecurring: false,
+                    isHighlight: !!block.isHighlight,
                 };
                 appState.corrections.push(correction);
                 blockCorrectionIds.push(correction.id);
                 correctionCount++;
             });
-        }
-
-        // Praise blocks — save praiseText as a skill note, write timeline entry
-        if (mode === 'praise') {
-            const praiseContent = block.praiseText?.trim() || block.title?.trim();
-            if (praiseContent) {
-                appState.skillNotes = appState.skillNotes || [];
-                appState.skillNotes.push({
-                    id:        nextId(),
-                    skillId:   skillId || null,
-                    text:      praiseContent,
-                    date:      session.date,
-                    createdAt: now,
-                    isPraise:  true,
-                });
-                storage.save('skillNotes', appState.skillNotes);
-
-                const skillRef = skillId ? DATA.skills.find(sk => sk.id === skillId) : null;
-                appendTimelineEntry({
-                    type:     'milestone',
-                    objectId: session.id,
-                    title:    praiseContent,
-                    body:     skillRef ? skillRef.french : null,
-                    date:     session.date,
-                    isPraise: true,
-                });
-            }
-        }
-
-        // Reflection blocks — save as a skill note
-        if (mode === 'reflection' && block.reflectionText?.trim()) {
+        } else if (blockText) {
+            // Observation or untagged — save as SkillNote
             appState.skillNotes = appState.skillNotes || [];
             appState.skillNotes.push({
-                id:           nextId(),
-                skillId:      skillId || null,
-                text:         block.reflectionText.trim(),
-                date:         session.date,
-                createdAt:    now,
-                isReflection: true,
+                id:          nextId(),
+                skillId:     skillId || null,
+                text:        blockText,
+                date:        session.date,
+                createdAt:   now,
+                source:      block.source || null,
+                isHighlight: !!block.isHighlight,
             });
             storage.save('skillNotes', appState.skillNotes);
+        }
+
+        // Legacy praise → timeline entry
+        if ((block.mode === 'praise' || block.source === 'observation') && blockText) {
+            const skillRef = skillId ? DATA.skills.find(sk => sk.id === skillId) : null;
+            appendTimelineEntry({
+                type:     'milestone',
+                objectId: session.id,
+                title:    blockText,
+                body:     skillRef ? skillRef.french : null,
+                date:     session.date,
+                isPraise: true,
+            });
         }
 
         // SessionSkill join object — only for skill-topic blocks
@@ -1472,11 +1578,11 @@ function saveSession() {
                 id:            nextId(),
                 sessionId:     session.id,
                 skillId:       skillId,
-                notes:         block.notes?.trim()       || null,
+                notes:         block.notes?.trim() || null,
                 correctionIds: blockCorrectionIds,
                 tracked:       true,
-                blockTitle:    block.title?.trim()        || null,
-                mode:          mode,
+                blockTitle:    block.title?.trim() || null,
+                source:        block.source || null,
             };
             appState.sessionSkills.push(sessionSkill);
             skillCount++;
@@ -1515,6 +1621,12 @@ function saveSession() {
             body:     bodyParts.join(' · ') || null,
             date:     session.date,
         });
+    }
+
+    // Getting started completion hooks
+    markGettingStarted('logClass');
+    if (s.blocks && s.blocks.some(b => b.notes?.trim() || b.corrections?.length > 0)) {
+        markGettingStarted('saveNote');
     }
 
     appState.currentSession = null;
@@ -1789,7 +1901,81 @@ function saveReflection() {
 }
 
 
+// ── Getting started helpers ──
+function getGettingStarted() {
+    return storage.load('gettingStarted') || { logClass: false, saveNote: false, setGoal: false, tryPointer: false, exploreLearn: false };
+}
+
+function markGettingStarted(key) {
+    const state = getGettingStarted();
+    if (state[key]) return;
+    state[key] = true;
+    storage.save('gettingStarted', state);
+    if (appState.currentScreen === 'barre-screen') showBarreScreen();
+}
+
+function openLearnPointers() {
+    markGettingStarted('tryPointer');
+    navigateTo('learn');
+}
+
 // ── The Barre ──
+
+function renderBarreHeroCard() {
+    const today = new Date().toISOString().split('T')[0];
+    const sessions = appState.sessions || [];
+    const loggedToday = sessions.some(s => s.date === today);
+    const lastSession = sessions.length
+        ? sessions.slice().sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))[0]
+        : null;
+    const daysSince = lastSession
+        ? Math.floor((Date.now() - (lastSession.savedAt || Date.now())) / 86400000)
+        : null;
+
+    if (loggedToday) {
+        const activeGoals = (appState.goals || []).filter(g => !g.completedAt);
+        const title = activeGoals.length > 0
+            ? `${activeGoals.length} goal${activeGoals.length > 1 ? 's' : ''} in progress`
+            : 'Session logged';
+        const desc = activeGoals.length > 0
+            ? 'Keep at it.'
+            : 'Add a goal to give your practice direction.';
+        const action = activeGoals.length > 0 ? 'view goals →' : 'set a goal →';
+        const onclick = activeGoals.length > 0 ? "navigateTo('goals')" : 'openGoalCreator()';
+        return `
+            <div class="profile-action-card hero" onclick="${onclick}">
+                <div class="profile-action-label">TODAY</div>
+                <div class="profile-action-title">${title}</div>
+                <div class="profile-action-description">${desc}</div>
+                <div class="profile-action-arrow">${action}</div>
+            </div>`;
+    } else if (!lastSession) {
+        return `
+            <div class="profile-action-card hero" onclick="openSessionLogger()">
+                <div class="profile-action-label">GET STARTED</div>
+                <div class="profile-action-title">Did you go today?</div>
+                <div class="profile-action-description">Log your first session — corrections, what you worked on, how it felt.</div>
+                <div class="profile-action-arrow">log a session →</div>
+            </div>`;
+    } else if (daysSince !== null && daysSince > 13) {
+        return `
+            <div class="profile-action-card hero" onclick="openSessionLogger()">
+                <div class="profile-action-label">WELCOME BACK</div>
+                <div class="profile-action-title">Did you go today?</div>
+                <div class="profile-action-description">It's been a while — jot down what you covered while it's fresh.</div>
+                <div class="profile-action-arrow">log a session →</div>
+            </div>`;
+    } else {
+        return `
+            <div class="profile-action-card hero" onclick="openSessionLogger()">
+                <div class="profile-action-label">AFTER CLASS</div>
+                <div class="profile-action-title">Did you go today?</div>
+                <div class="profile-action-description">Record corrections and what you worked on while they're fresh.</div>
+                <div class="profile-action-arrow">log a session →</div>
+            </div>`;
+    }
+}
+
 function showBarreScreen() {
     let screen = document.getElementById('barre-screen');
     if (!screen) {
@@ -1800,41 +1986,64 @@ function showBarreScreen() {
     }
 
     const activeSkills = appState.skills.filter(s => s.flagged || s.tracked);
-    const dims = appState.dimensions || {};
-    const dimLabels = { barre: 'Barre', centre: 'Centre', allegro: 'Allegro', turns: 'Turns', flexibility: 'Flexibility' };
-    const coreDims = { barre: dims.barre?.raw ?? null, centre: dims.centre?.raw ?? null, allegro: dims.allegro?.raw ?? null, turns: dims.turns?.raw ?? null, flexibility: dims.flexibility?.raw ?? null };
 
-    // Rotate through weak dimensions on each visit — cycle index stored in appState
-    const assessedDims = Object.entries(coreDims)
-        .filter(([, v]) => v !== null)
-        .sort((a, b) => a[1] - b[1]); // weakest first
-    const weakDimKeys = assessedDims.map(([k]) => k);
+    // Level badge — show persona name if set, otherwise level label
+    const personaNames = { duckling: 'Duckling', deer: 'Deer', swan: 'Swan', firebird: 'Firebird' };
+    const levelLabels = { beginner: 'Beginner', elementary: 'Elementary', improver: 'Improver', intermediate: 'Intermediate', 'upper-intermediate': 'Upper Intermediate', advanced: 'Advanced' };
+    const badgeText = appState.persona
+        ? personaNames[appState.persona]
+        : (appState.level && appState.level !== 'not-assessed' ? levelLabels[appState.level] : null);
+    const levelBadgeHtml = badgeText ? `<span class="barre-level-badge">${badgeText}</span>` : '';
 
-    let contextText = '';
-    let focusDim = null;
-    if (weakDimKeys.length === 0) {
-        contextText = 'Complete your assessment to get personalised focus areas';
-    } else {
-        // Rotate index each visit
-        appState._barreVisitCount = (appState._barreVisitCount || 0) + 1;
-        const rotateIdx = (appState._barreVisitCount - 1) % weakDimKeys.length;
-        focusDim = weakDimKeys[rotateIdx];
-        const dimLabel = dimLabels[focusDim] || focusDim;
-        const stageLabel = dims[focusDim]?.label || '';
-        contextText = `${dimLabel} could use attention${stageLabel ? ` — ${stageLabel}` : ''}`;
-    }
+    // Getting started section
+    const gsState = getGettingStarted();
+    const gsAllDone = Object.values(gsState).every(Boolean);
+    const showGettingStarted = !!appState.level && !gsAllDone;
 
+    const GS_CARDS = [
+        { key: 'logClass',     title: 'Log your first class',  body: 'Notes while they\'re fresh stay with you.',           onclick: 'openSessionLogger()' },
+        { key: 'saveNote',     title: 'Save a note',           body: 'Something your teacher said is worth keeping.',       onclick: 'openSessionLogger()' },
+        { key: 'setGoal',      title: 'Set a goal',            body: 'Give your training a direction.',                     onclick: 'openGoalCreator()' },
+        { key: 'tryPointer',   title: 'Try a pointer',         body: 'Find out what\'s actually holding you back.',         onclick: 'openLearnPointers()' },
+        { key: 'exploreLearn', title: 'Explore Learn',         body: 'The skill library, glossary, and repertoire.',        onclick: 'navigateTo(\'learn\')' },
+    ];
+
+    const gettingStartedHtml = showGettingStarted ? `
+        <div class="barre-section-header">
+            <span class="barre-section-label">get started</span>
+        </div>
+        <div class="getting-started-carousel">
+            ${GS_CARDS.map(card => {
+                const done = gsState[card.key];
+                return `
+                <div class="getting-started-card${done ? ' done' : ''}" ${done ? '' : `onclick="${card.onclick}"`}>
+                    ${done
+                        ? `<svg class="gs-tick" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--sage)" stroke-width="2.5" stroke-linecap="round"><polyline points="3 8 6.5 11.5 13 5"/></svg>`
+                        : ''
+                    }
+                    <div class="gs-card-title${done ? ' done' : ''}">${card.title}</div>
+                    ${done ? '' : `<div class="gs-card-body">${card.body}</div>`}
+                </div>`;
+            }).join('')}
+        </div>
+    ` : '';
+
+    // Corrections in focus
     let activeSkillsHtml = '';
     if (activeSkills.length > 0) {
         activeSkillsHtml = `
+            <div class="barre-section-header">
+                <span class="barre-section-label">corrections in focus</span>
+                <span class="barre-section-count">${activeSkills.length}</span>
+            </div>
             <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);">
-                <h2 class="section-title" style="padding: 0; margin-bottom: var(--sp-md);">Skills in focus</h2>
                 <div style="display: flex; flex-direction: column; gap: var(--sp-sm);" id="active-skills-list">
                     ${activeSkills.map(skill => {
                         const skillCorrections = appState.corrections
                             .filter(c => c.skillId === skill.id)
                             .sort((a, b) => b.createdAt - a.createdAt);
                         const lastCorrection = skillCorrections[0] || null;
+                        const isRecurring = skillCorrections.some(c => c.isRecurring);
                         const lastSessionSkill = appState.sessionSkills
                             .filter(ss => ss.skillId === skill.id)
                             .sort((a, b) => {
@@ -1852,14 +2061,17 @@ function showBarreScreen() {
                                 remove
                             </div>
                             <div class="swipe-content">
-                                <div class="active-skill-card" onclick="showSkillDetail('${skill.id}', 'barre-screen')">
-                                    <div class="active-skill-info">
+                                <div class="active-skill-card${isRecurring ? ' active-skill-recurring' : ''}">
+                                    <div class="active-skill-top">
                                         <div class="active-skill-name">${skill.french}</div>
-                                        <div class="active-skill-meta">${skill.category}${skill.flagged ? ' · In focus' : ''}</div>
-                                        ${lastCorrection ? `<div class="active-skill-correction">"${lastCorrection.text}"</div>` : ''}
-                                        ${lastSession ? `<div class="active-skill-date">Last worked: ${formatTimelineDate(lastSession.date)}</div>` : ''}
+                                        <div class="active-skill-category">${skill.category}</div>
                                     </div>
-                                    <svg class="active-skill-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 4 10 8 6 12"/></svg>
+                                    ${lastCorrection ? `<div class="active-skill-correction"><em>"${lastCorrection.text}"</em></div>` : ''}
+                                    <div class="active-skill-footer">
+                                        ${lastSession ? `<span class="active-skill-date">${formatTimelineDate(lastSession.date)}</span>` : ''}
+                                        ${isRecurring ? `<span class="active-skill-recurring-badge">recurring</span>` : ''}
+                                        <button class="active-skill-view-btn" onclick="showSkillDetail('${skill.id}', 'barre-screen')">view →</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>`;
@@ -1877,25 +2089,27 @@ function showBarreScreen() {
         `;
     }
 
-    // Context bar is tappable if there's a weak dimension to filter by
-    const contextBarHtml = focusDim
-        ? `<button class="barre-context" onclick="filterSkillsByDimension('${focusDim}'); navigateTo('skill-library');" style="border: none; cursor: pointer; text-align: left; background: none; padding: var(--sp-sm) var(--sp-lg); width: 100%; display: flex; align-items: center; gap: var(--sp-sm); border-bottom: 1px solid var(--gold-soft);"><span class="barre-context-badge">${(appState.level || 'beginner').replace('-', ' ')}</span><span class="barre-context-text">${contextText} →</span></button>`
-        : `<div class="barre-context"><span class="barre-context-badge">${(appState.level || 'beginner').replace('-', ' ')}</span><span class="barre-context-text">${contextText}</span></div>`;
-
     screen.innerHTML = `
-        <div class="profile-header"><h1>The Barre</h1></div>
-        ${contextBarHtml}
-        <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);">
-            <div class="profile-action-card hero" onclick="openSessionLogger()">
-                <div class="profile-action-label">AFTER CLASS</div>
-                <div class="profile-action-title">Log your session</div>
-                <div class="profile-action-description">Record what you worked on and save any corrections while they're fresh.</div>
-                <div class="profile-action-arrow">log now →</div>
-            </div>
+        <div class="barre-header">
+            <h1>The Barre</h1>
+            ${levelBadgeHtml}
         </div>
+        <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);">
+            ${renderBarreHeroCard()}
+        </div>
+        ${gettingStartedHtml}
         ${activeSkillsHtml}
+        <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);">
+            <div class="barre-section-header">
+                <span class="barre-section-label">recent activity</span>
+                <button onclick="showBarreTimelineSheet()" style="background:none;border:none;font-family:var(--font-ui);font-size:var(--fs-caption);color:var(--gold);cursor:pointer;font-weight:500;">see all →</button>
+            </div>
+            <div id="barre-timeline-inline"></div>
+        </div>
         <div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
-            <h2 class="section-title" style="padding: 0; margin-bottom: var(--sp-md);">Browse by category</h2>
+            <div class="barre-section-header" style="padding: 0; margin-bottom: var(--sp-lg);">
+                <span class="barre-section-label">browse by category</span>
+            </div>
             <div style="display: flex; flex-direction: column; gap: var(--sp-sm);">
                 ${DATA.skillCategories.map(cat => `
                     <div class="skill-category-card" onclick="${cat.onclick}">
@@ -1911,6 +2125,15 @@ function showBarreScreen() {
         </div>
     `;
     showScreen('barre-screen');
+
+    // Populate inline timeline
+    const inlineTimeline = document.getElementById('barre-timeline-inline');
+    if (inlineTimeline) {
+        const recentEntries = buildTimelineEntries().slice(0, 3);
+        inlineTimeline.innerHTML = recentEntries.length > 0
+            ? recentEntries.map(renderTimelineEntry).join('')
+            : '<p class="learn-empty">No activity yet \u2014 log your first session.</p>';
+    }
 
     // Attach swipe-to-remove on active skill cards
     screen.querySelectorAll('.swipe-row[data-skill-id]').forEach(row => {
@@ -2072,6 +2295,7 @@ function renderGoalsScreen() {
                 </svg>
                 set a goal
             </button>
+            ${goals.length > 0 ? `<div style="text-align:center; margin-top: var(--sp-xl);"><button class="text-link-btn" onclick="showAllGoalsScreen()">view past goals →</button></div>` : ''}
         </div>
     `;
 
@@ -2097,6 +2321,82 @@ function renderGoalsScreen() {
     });
 }
 
+function showAllGoalsScreen() {
+    let screen = document.getElementById('all-goals-screen');
+    if (!screen) {
+        screen = document.createElement('div');
+        screen.id = 'all-goals-screen';
+        screen.className = 'screen';
+        document.querySelector('.app-container').appendChild(screen);
+    }
+
+    const goals = [...(appState.goals || [])].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+    // Group by year
+    const byYear = {};
+    goals.forEach(g => {
+        const year = g.createdAt ? new Date(g.createdAt).getFullYear() : 'Unknown';
+        if (!byYear[year]) byYear[year] = [];
+        byYear[year].push(g);
+    });
+
+    const yearsHtml = Object.keys(byYear).sort((a, b) => b - a).map(year => {
+        const yearGoals = byYear[year];
+        const cardsHtml = yearGoals.map(g => {
+            const markers = (g.progressMarkers || g.milestones || []);
+            const done = markers.filter(m => m.done).length;
+            const TYPE_LABELS = { skill: 'a skill', intention: 'a feeling or state', habit: 'a habit' };
+            const typeLabel = TYPE_LABELS[g.goalType] || g.goalType || '';
+            const statusLabel = g.completedAt ? 'completed' : 'active';
+            return `
+                <div class="all-goals-card" onclick="this.classList.toggle('expanded')">
+                    <div class="all-goals-card-header">
+                        <span class="all-goals-card-title">${escapeHtml(g.title)}</span>
+                        <span class="all-goals-card-status ${g.completedAt ? 'done' : 'active'}">${statusLabel}</span>
+                    </div>
+                    <div class="all-goals-card-meta">
+                        ${typeLabel ? `<span>${typeLabel}</span>` : ''}
+                        ${markers.length ? `<span>${done}/${markers.length} markers</span>` : ''}
+                    </div>
+                    <div class="all-goals-card-body">
+                        ${g.body ? `<div class="all-goals-card-desc">${escapeHtml(g.body)}</div>` : ''}
+                        ${markers.length ? `
+                            <ul class="all-goals-markers-list">
+                                ${markers.map(m => `<li class="${m.done ? 'done' : ''}">${escapeHtml(m.text)}</li>`).join('')}
+                            </ul>
+                        ` : ''}
+                        <div class="all-goals-card-date">created ${formatTimelineDate(new Date(g.createdAt).toISOString().split('T')[0])}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        return `
+            <div class="all-goals-year-group">
+                <div class="all-goals-year-label">${year}</div>
+                ${cardsHtml}
+            </div>
+        `;
+    }).join('');
+
+    screen.innerHTML = `
+        <div class="profile-header" style="display:flex;align-items:center;gap:var(--sp-md);">
+            <button class="back-btn" onclick="navigateTo('goals')">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="13 4 7 10 13 16"/></svg>
+            </button>
+            <h1>All goals</h1>
+        </div>
+        <div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
+            ${goals.length === 0
+                ? '<div class="barre-empty-state"><div class="barre-empty-title">No goals yet</div></div>'
+                : yearsHtml
+            }
+        </div>
+    `;
+
+    showScreen('all-goals-screen');
+    appState.currentScreen = 'all-goals-screen';
+}
+
 function renderGoalGroup(category, goals) {
     return `
         ${category ? `<div class="goals-group-label">${category}</div>` : ''}
@@ -2105,22 +2405,39 @@ function renderGoalGroup(category, goals) {
 }
 
 function renderGoalCard(goal, completed) {
-    const skill = goal.skillId ? DATA.skills.find(s => s.id === goal.skillId) : null;
-    const dimension = goal.dimensionId ? DIMENSION_OPTIONS.find(d => d.id === goal.dimensionId) : null;
-    const milestones = goal.milestones || [];
-    const doneMilestones = milestones.filter(m => m.done).length;
-    const progress = milestones.length > 0 ? doneMilestones / milestones.length : null;
+    const markers = (goal.progressMarkers || goal.milestones || []);
+    const doneMarkers = markers.filter(m => m.done).length;
+    const progress = markers.length > 0 ? doneMarkers / markers.length : null;
+
+    const TYPE_LABELS = { skill: 'a skill', intention: 'a feeling or state', habit: 'a habit' };
+    const typeLabel = TYPE_LABELS[goal.goalType] || goal.goalType || null;
+
+    function formatPeriod(p) {
+        if (!p) return null;
+        // ISO date format YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(p)) {
+            const dt = new Date(p + 'T12:00:00');
+            return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+        return p;
+    }
+
+    const linkedSkill = goal.skillId
+        ? (appState.skills || []).find(s => s.id === goal.skillId)
+        : null;
+    const periodDisplay = formatPeriod(goal.commitmentPeriod);
 
     const tagsHtml = [
-        skill      ? `<span class="goal-tag goal-tag-skill">${skill.french}</span>`         : null,
-        dimension  ? `<span class="goal-tag goal-tag-dim">${dimension.label}</span>`         : null,
-        goal.dueDate ? `<span class="goal-tag">by ${formatTimelineDate(goal.dueDate)}</span>` : null,
+        typeLabel ? `<span class="goal-tag goal-tag-type">${typeLabel}</span>` : null,
+        linkedSkill ? `<span class="goal-tag goal-tag-skill">${linkedSkill.french}</span>` : null,
+        periodDisplay ? `<span class="goal-tag">${periodDisplay}</span>` : null,
+        goal.howOften ? `<span class="goal-tag">${goal.howOften.startsWith('x') ? goal.howOften.slice(1) + '× a week' : goal.howOften}</span>` : null,
     ].filter(Boolean).join('');
 
-    const MILESTONE_CAP = 4;
-    const milestonesHtml = milestones.length > 0 ? `
-        <div class="goal-milestones ${milestones.length > MILESTONE_CAP ? 'goal-milestones-scrollable' : ''}">
-            ${milestones.map((m, i) => `
+    const MARKER_CAP = 4;
+    const markersHtml = markers.length > 0 ? `
+        <div class="goal-milestones ${markers.length > MARKER_CAP ? 'goal-milestones-scrollable' : ''}">
+            ${markers.map((m, i) => `
                 <div class="goal-milestone ${m.done ? 'done' : ''}"
                      onclick="toggleMilestone('${goal.id}', ${i})">
                     <div class="goal-milestone-check">
@@ -2130,28 +2447,15 @@ function renderGoalCard(goal, completed) {
                 </div>
             `).join('')}
         </div>
-        ${milestones.length > MILESTONE_CAP ? `<div class="goal-milestones-scroll-hint">${milestones.length} milestones · scroll to see all</div>` : ''}
+        ${markers.length > MARKER_CAP ? `<div class="goal-milestones-scroll-hint">${markers.length} markers · scroll to see all</div>` : ''}
     ` : '';
 
     const progressBarHtml = progress !== null ? `
         <div class="goal-progress-bar">
             <div class="goal-progress-fill" style="width: ${Math.round(progress * 100)}%"></div>
         </div>
-        <div class="goal-progress-label">${doneMilestones} of ${milestones.length} milestones</div>
+        <div class="goal-progress-label">${doneMarkers} of ${markers.length}</div>
     ` : '';
-
-    // Linked corrections
-    const linkedCorrs = (goal.correctionIds || [])
-        .map(id => appState.corrections.find(c => c.id === id))
-        .filter(Boolean);
-    const linkedCorrectionsHtml = linkedCorrs.length > 0 ? `
-        <div class="goal-linked-corrections-display ${completed ? 'goal-corrections-complete' : ''}">
-            ${linkedCorrs.map(c => `
-                <div class="goal-linked-corr-row">
-                    <span class="goal-linked-corr-dash">—</span>
-                    <span class="goal-linked-corr-text">${c.text}</span>
-                </div>`).join('')}
-        </div>` : '';
 
     return `
         <div class="swipe-row" data-goal-id="${goal.id}">
@@ -2170,21 +2474,15 @@ function renderGoalCard(goal, completed) {
             </div>`}
             <div class="swipe-content">
                 <div class="goal-card ${completed ? 'goal-card-completed' : ''}">
-                    ${completed ? `<div class="goal-card-complete-banner">✓ Completed ${formatTimelineDate(new Date(goal.completedAt).toISOString().split('T')[0])}</div>` : ''}
+                    ${completed ? `<div class="goal-card-complete-banner">&#x2713; Completed ${formatTimelineDate(new Date(goal.completedAt).toISOString().split('T')[0])}</div>` : ''}
+                    ${tagsHtml ? `<div class="goal-tags">${tagsHtml}</div>` : ''}
                     <div class="goal-card-title">${goal.title}</div>
                     ${goal.body ? `<div class="goal-card-body">${goal.body}</div>` : ''}
-                    ${tagsHtml ? `<div class="goal-tags">${tagsHtml}</div>` : ''}
-                    ${linkedCorrectionsHtml}
-                    ${milestonesHtml}
+                    ${markersHtml}
                     ${progressBarHtml}
                     <div class="goal-card-footer">
                         <span class="goal-card-date">created ${formatTimelineDate(new Date(goal.createdAt).toISOString().split('T')[0])}</span>
-                        <div style="display:flex;gap:var(--sp-sm);align-items:center;">
-                            ${!completed ? `<button class="goal-edit-btn" onclick="openGoalEditor(${goal.id})">edit</button>` : ''}
-                            ${!completed
-                                ? `<span class="goal-swipe-hint">swipe to complete →</span>`
-                                : `<span class="goal-swipe-hint">swipe to reopen →</span>`}
-                        </div>
+                        ${!completed ? `<button class="goal-edit-btn" onclick="openGoalEditor(${goal.id})">edit</button>` : ''}
                     </div>
                 </div>
             </div>
@@ -2196,15 +2494,20 @@ function renderGoalCard(goal, completed) {
 
 function openGoalCreator() {
     appState._goalDraft = {
-        title:         '',
-        body:          '',
-        dueDate:       '',
-        skillId:       null,
-        dimensionId:   null,
-        category:      null,
-        milestones:    [],
-        correctionIds: [],
-        _editId:       null,
+        title:            '',
+        body:             '',
+        dueDate:          '',
+        skillId:          null,
+        dimensionId:      null,
+        category:         null,
+        milestones:       [],
+        correctionIds:    [],
+        _editId:          null,
+        goalType:         null,
+        commitmentPeriod: '',
+        progressMarkers:  [],
+        skillIds:         [],
+        howOften:         '',
     };
 
     let overlay = document.getElementById('goal-creator-overlay');
@@ -2213,6 +2516,9 @@ function openGoalCreator() {
         overlay.id = 'goal-creator-overlay';
         overlay.className = 'session-overlay'; // reuse sheet styles
         document.body.appendChild(overlay);
+        overlay.addEventListener('mousedown', (e) => {
+            if (e.target === overlay) confirmDiscardGoal();
+        });
     }
 
     renderGoalCreator();
@@ -2224,15 +2530,20 @@ function openGoalCreator() {
 
 function openGoalCreatorWithSuggestion(title, dimensionId, skillId, rationale, milestones = []) {
     appState._goalDraft = {
-        title:         title || '',
-        body:          rationale || '',
-        dueDate:       '',
-        skillId:       skillId || null,
-        dimensionId:   dimensionId || null,
-        category:      null,
-        milestones:    milestones || [],
-        correctionIds: [],
-        _editId:       null,
+        title:            title || '',
+        body:             rationale || '',
+        dueDate:          '',
+        skillId:          skillId || null,
+        dimensionId:      dimensionId || null,
+        category:         null,
+        milestones:       milestones || [],
+        correctionIds:    [],
+        _editId:          null,
+        goalType:         null,
+        commitmentPeriod: '',
+        progressMarkers:  [],
+        skillIds:         [],
+        howOften:         '',
     };
 
     let overlay = document.getElementById('goal-creator-overlay');
@@ -2241,41 +2552,23 @@ function openGoalCreatorWithSuggestion(title, dimensionId, skillId, rationale, m
         overlay.id = 'goal-creator-overlay';
         overlay.className = 'session-overlay';
         document.body.appendChild(overlay);
+        overlay.addEventListener('mousedown', (e) => {
+            if (e.target === overlay) confirmDiscardGoal();
+        });
     }
 
     renderGoalCreator();
 
     document.querySelector('.fab')?.classList.remove('visible');
     document.querySelector('.bottom-nav')?.classList.remove('visible');
-    
+
     requestAnimationFrame(() => {
         overlay.classList.add('open');
-        // Pre-fill all fields immediately
-        const titleInput = document.getElementById('goal-title-input');
-        const bodyInput = document.getElementById('goal-body-input');
-        const dimensionSelect = document.getElementById('goal-dimension-select');
-        const skillSelect = document.getElementById('goal-skill-select');
-        
-        if (titleInput) titleInput.value = title;
-        if (bodyInput) bodyInput.value = rationale;
-        if (dimensionSelect && dimensionId) dimensionSelect.value = dimensionId;
-        if (skillSelect && skillId) skillSelect.value = skillId;
-        
-        // Pre-populate milestones in the DOM if they exist
-        if (milestones.length > 0) {
-            const milestonesContainer = document.getElementById('goal-milestones-container');
-            if (milestonesContainer) {
-                milestonesContainer.innerHTML = '';
-                milestones.forEach(m => {
-                    const mRow = document.createElement('div');
-                    mRow.className = 'milestone-row';
-                    mRow.innerHTML = `
-                        <input type="text" placeholder="Milestone" value="${escapeHtml(m)}" class="milestone-input">
-                        <button class="remove-milestone-btn" onclick="this.parentElement.remove()">✕</button>
-                    `;
-                    milestonesContainer.appendChild(mRow);
-                });
-            }
+        // Pre-fill skill search input if a skillId was provided
+        if (skillId) {
+            const skill = (appState.skills || []).find(s => s.id === skillId);
+            const skillInput = document.getElementById('goal-skill-input');
+            if (skillInput && skill) skillInput.value = skill.french;
         }
     });
 }
@@ -2284,15 +2577,20 @@ function openGoalEditor(goalId) {
     const goal = appState.goals.find(g => g.id === Number(goalId));
     if (!goal) return;
     appState._goalDraft = {
-        _editId:       goal.id,
-        title:         goal.title || '',
-        body:          goal.body  || '',
-        dueDate:       goal.dueDate || '',
-        skillId:       goal.skillId     || null,
-        dimensionId:   goal.dimensionId || null,
-        category:      goal.category    || null,
-        correctionIds: [...(goal.correctionIds || [])],
-        milestones:    goal.milestones.map(m => ({ ...m })),
+        _editId:          goal.id,
+        title:            goal.title || '',
+        body:             goal.body  || '',
+        dueDate:          goal.dueDate || '',
+        skillId:          goal.skillId     || null,
+        dimensionId:      goal.dimensionId || null,
+        category:         goal.category    || null,
+        correctionIds:    [...(goal.correctionIds || [])],
+        milestones:       (goal.milestones || []).map(m => ({ ...m })),
+        goalType:         goal.goalType         || null,
+        commitmentPeriod: goal.commitmentPeriod || '',
+        progressMarkers:  (goal.progressMarkers || goal.milestones || []).map(m => ({ ...m })),
+        skillIds:         [...(goal.skillIds || [])],
+        howOften:         goal.howOften || '',
     };
 
     let overlay = document.getElementById('goal-creator-overlay');
@@ -2301,6 +2599,9 @@ function openGoalEditor(goalId) {
         overlay.id = 'goal-creator-overlay';
         overlay.className = 'session-overlay';
         document.body.appendChild(overlay);
+        overlay.addEventListener('mousedown', (e) => {
+            if (e.target === overlay) confirmDiscardGoal();
+        });
     }
     renderGoalCreator();
     document.querySelector('.fab')?.classList.remove('visible');
@@ -2329,28 +2630,253 @@ function renderGoalCreator() {
     const d = appState._goalDraft;
     if (!d) return;
 
-    const skillOptions = appState.skills.map(s =>
-        `<option value="${s.id}" ${d.skillId === s.id ? 'selected' : ''}>${s.french}</option>`
-    ).join('');
+    const markerPlaceholders = [
+        'land two pirouettes back to back',
+        'get a correction on it from my teacher',
+        'feel it in centre without thinking about it',
+    ];
 
-    const dimensionOptions = DIMENSION_OPTIONS.map(dim =>
-        `<option value="${dim.id}" ${d.dimensionId === dim.id ? 'selected' : ''}>${dim.label}</option>`
-    ).join('');
+    const periodOptions = ['This week', 'Two weeks', 'This month', 'Three months', 'Choose a date'];
+    const howOftenOptions = ['Every class', 'Every week', 'Set number of times', 'Other…'];
 
-    const milestonesHtml = d.milestones.map((m, i) => `
-        <div class="goal-draft-milestone">
-            <input type="text" class="session-input" style="flex:1; padding: 10px var(--sp-md);"
-                   value="${m.text}"
-                   oninput="appState._goalDraft.milestones[${i}].text = this.value"
-                   onkeydown="handleMilestoneKeydown(event, ${i})"
-                   placeholder="Milestone ${i + 1}" />
-            <button class="block-remove-btn" onmousedown="removeMilestoneDraft(${i})">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                    <line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/>
-                </svg>
-            </button>
+    function periodChipsHtml() {
+        const presets = periodOptions.slice(0, -1);
+        const isDateSelected = d.commitmentPeriod && !presets.includes(d.commitmentPeriod) && d.commitmentPeriod !== 'Choose a date';
+        const showDatePicker = d.commitmentPeriod === 'Choose a date' || isDateSelected;
+
+        let dateDisplayHtml = '';
+        if (isDateSelected) {
+            const dt = new Date(d.commitmentPeriod + 'T12:00:00');
+            const formatted = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+            dateDisplayHtml = `<span class="date-display-label">${formatted}</span>`;
+        } else {
+            dateDisplayHtml = `<span class="date-display-label" style="color:var(--ink-3);font-weight:400;">Tap to pick a date</span>`;
+        }
+
+        return `
+            <div class="goal-period-chips">
+                ${periodOptions.map(p => {
+                    const isActive = p === 'Choose a date' ? showDatePicker : d.commitmentPeriod === p;
+                    return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onmousedown="setGoalPeriod('${p}')">${p}</button>`;
+                }).join('')}
+            </div>
+            ${showDatePicker ? `
+                <div class="session-date-picker" id="goal-period-date-picker" style="margin-top: var(--sp-sm);">
+                    <div class="date-display" onmousedown="toggleGoalDateCalendar()" style="border-left:none; border-right:none;">
+                        ${dateDisplayHtml}
+                    </div>
+                </div>
+            ` : ''}
+        `;
+    }
+
+    function skillFormHtml() {
+        const selectedSkill = d.skillId ? (appState.skills || []).find(s => s.id === d.skillId) : null;
+        const selectedSkillLabel = selectedSkill ? selectedSkill.french : '';
+
+        const markersHtml = (d.progressMarkers || []).map((m, i) => `
+            <div class="goal-marker-row">
+                <input type="text" class="goal-marker-input"
+                       value="${escapeHtml(m.text)}"
+                       placeholder="${markerPlaceholders[i % markerPlaceholders.length]}"
+                       oninput="appState._goalDraft.progressMarkers[${i}].text = this.value" />
+                <button class="block-remove-btn" onmousedown="removeProgressMarker(${i})">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/>
+                    </svg>
+                </button>
+            </div>
+        `).join('');
+
+        return `
+            <div class="session-field">
+                <label class="session-field-label">Title</label>
+                <input type="text" class="session-input" id="goal-title-input"
+                       placeholder="Name it so you'd recognise it in a month"
+                       value="${escapeHtml(d.title)}"
+                       oninput="appState._goalDraft.title = this.value; checkGoalTitleForSkills(this.value); searchGoalCorrections(this.value);" />
+                <div id="goal-correction-search-results"></div>
+            </div>
+            ${(d.correctionIds || []).length ? `
+                <div class="session-field">
+                    <label class="session-field-label">Linked corrections</label>
+                    <div id="goal-linked-corrections">
+                        ${renderLinkedCorrectionsHtml(d.correctionIds)}
+                    </div>
+                </div>
+            ` : `<div id="goal-linked-corrections-wrapper"></div>`}
+            <div class="session-field">
+                <label class="session-field-label">What does it look like when it happens? <span class="session-field-optional">optional</span></label>
+                <textarea class="session-input" id="goal-body-input"
+                          placeholder="Be specific enough that you'd know"
+                          rows="2"
+                          style="resize: none;"
+                          oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);">${escapeHtml(d.body || '')}</textarea>
+            </div>
+            <div class="session-field">
+                <label class="session-field-label">Linked skill <span class="session-field-optional">optional</span></label>
+                <div style="position: relative;">
+                    <input class="session-input" id="goal-skill-input"
+                           type="text"
+                           autocomplete="off"
+                           spellcheck="false"
+                           value="${escapeHtml(selectedSkillLabel)}"
+                           oninput="filterGoalSkills(this.value)"
+                           onfocus="filterGoalSkills(this.value)"
+                           onblur="setTimeout(()=>{const el=document.getElementById('goal-skill-dropdown');if(el)el.style.display='none';},200)"
+                           placeholder="Search skill…" />
+                    <div class="block-topic-dropdown" id="goal-skill-dropdown" style="display:none;"></div>
+                </div>
+            </div>
+            <div class="session-field">
+                <label class="session-field-label">Milestones <span class="session-field-optional">optional</span></label>
+                <div id="goal-markers-list">${markersHtml}</div>
+                <button class="add-block-btn" style="margin-top: var(--sp-sm);" onmousedown="addProgressMarker()">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/>
+                    </svg>
+                    add milestone
+                </button>
+            </div>
+            <div class="session-field">
+                <label class="session-field-label">Work on this for</label>
+                ${periodChipsHtml()}
+            </div>
+        `;
+    }
+
+    function intentionFormHtml() {
+        return `
+            <div class="session-field">
+                <label class="session-field-label">Title</label>
+                <input type="text" class="session-input" id="goal-title-input"
+                       placeholder="Name it so you'd recognise it"
+                       value="${escapeHtml(d.title)}"
+                       oninput="appState._goalDraft.title = this.value; searchGoalCorrections(this.value);" />
+                <div id="goal-correction-search-results"></div>
+            </div>
+            ${(d.correctionIds || []).length ? `
+                <div class="session-field">
+                    <label class="session-field-label">Linked corrections</label>
+                    <div id="goal-linked-corrections">
+                        ${renderLinkedCorrectionsHtml(d.correctionIds)}
+                    </div>
+                </div>
+            ` : `<div id="goal-linked-corrections-wrapper"></div>`}
+            <div class="session-field">
+                <label class="session-field-label">Describe it <span class="session-field-optional">optional</span></label>
+                <textarea class="session-input" id="goal-body-input"
+                          placeholder="This is yours to judge, not the app's"
+                          rows="2"
+                          style="resize: none;"
+                          oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);">${escapeHtml(d.body || '')}</textarea>
+            </div>
+            <div class="session-field">
+                <label class="session-field-label">Work on this for</label>
+                ${periodChipsHtml()}
+            </div>
+        `;
+    }
+
+    function habitFormHtml() {
+        const isSetNum = d.howOften && d.howOften.startsWith('x');
+        const presetHowOften = ['Every class', 'Every week', 'Set number of times', 'Other…'];
+        const isOtherHowOften = d.howOften && !presetHowOften.includes(d.howOften) && !isSetNum;
+        const howOftenChipsHtml = howOftenOptions.map(o => {
+            let isActive = false;
+            if (o === 'Set number of times') isActive = isSetNum;
+            else if (o === 'Other…') isActive = isOtherHowOften;
+            else isActive = d.howOften === o;
+            return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onmousedown="setGoalHowOften('${o}')">${o}</button>`;
+        }).join('');
+
+        const numVal = isSetNum ? parseInt(d.howOften.slice(1)) || 1 : 1;
+        let howOftenExtra = '';
+        if (d.howOften === 'Set number of times' || isSetNum) {
+            howOftenExtra = `
+                <div class="goal-number-stepper">
+                    <button class="goal-stepper-btn" onmousedown="adjustGoalHowOftenNum(-1)" ${numVal <= 1 ? 'disabled' : ''}>−</button>
+                    <span class="goal-stepper-value">${numVal}</span>
+                    <button class="goal-stepper-btn" onmousedown="adjustGoalHowOftenNum(1)">+</button>
+                    <span class="goal-stepper-label">times per week</span>
+                </div>
+            `;
+        } else if (d.howOften === 'Other…' || isOtherHowOften) {
+            howOftenExtra = `
+                <input type="text" class="session-input" style="margin-top: var(--sp-sm);"
+                       placeholder="e.g. whenever I feel ready"
+                       value="${isOtherHowOften ? escapeHtml(d.howOften) : ''}"
+                       oninput="appState._goalDraft.howOften = this.value || 'Other…'" />
+            `;
+        }
+
+        return `
+            <div class="session-field">
+                <label class="session-field-label">Title</label>
+                <input type="text" class="session-input" id="goal-title-input"
+                       placeholder="Name it so you'd recognise it"
+                       value="${escapeHtml(d.title)}"
+                       oninput="appState._goalDraft.title = this.value; searchGoalCorrections(this.value);" />
+                <div id="goal-correction-search-results"></div>
+            </div>
+            ${(d.correctionIds || []).length ? `
+                <div class="session-field">
+                    <label class="session-field-label">Linked corrections</label>
+                    <div id="goal-linked-corrections">
+                        ${renderLinkedCorrectionsHtml(d.correctionIds)}
+                    </div>
+                </div>
+            ` : `<div id="goal-linked-corrections-wrapper"></div>`}
+            <div class="session-field">
+                <label class="session-field-label">Describe it <span class="session-field-optional">optional</span></label>
+                <textarea class="session-input" id="goal-body-input"
+                          placeholder="What, specifically"
+                          rows="2"
+                          style="resize: none;"
+                          oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);">${escapeHtml(d.body || '')}</textarea>
+            </div>
+            <div class="session-field">
+                <label class="session-field-label">How often</label>
+                <div class="goal-period-chips">${howOftenChipsHtml}</div>
+                ${howOftenExtra}
+            </div>
+            <div class="session-field">
+                <label class="session-field-label">Work on this for</label>
+                ${periodChipsHtml()}
+            </div>
+        `;
+    }
+
+    const typeTabsHtml = d.goalType ? `
+        <div class="goal-type-tabs" id="goal-type-tabs">
+            <button type="button" class="goal-type-tab ${d.goalType === 'skill' ? 'active' : ''}" data-type="skill">A skill</button>
+            <button type="button" class="goal-type-tab ${d.goalType === 'intention' ? 'active' : ''}" data-type="intention">A feeling or state</button>
+            <button type="button" class="goal-type-tab ${d.goalType === 'habit' ? 'active' : ''}" data-type="habit">A habit</button>
         </div>
-    `).join('');
+    ` : '';
+
+    let bodyHtml = '';
+    if (d.goalType === 'skill') bodyHtml = skillFormHtml();
+    else if (d.goalType === 'intention') bodyHtml = intentionFormHtml();
+    else if (d.goalType === 'habit') bodyHtml = habitFormHtml();
+
+    let footerHtml;
+    if (d._confirmingDiscard) {
+        footerHtml = `
+            <div class="goal-discard-confirm">
+                discard this goal?
+                <button class="goal-discard-confirm-yes" onmousedown="closeGoalCreator()">discard</button>
+                <button class="goal-discard-confirm-no" onmousedown="appState._goalDraft._confirmingDiscard = false; renderGoalCreator()">keep editing</button>
+            </div>
+        `;
+    } else if (d.goalType) {
+        footerHtml = `
+            <button class="session-discard-btn" onmousedown="confirmDiscardGoal()">discard</button>
+            <button class="btn-large session-save-btn" onmousedown="saveGoal()">Save goal</button>
+        `;
+    } else {
+        footerHtml = '';
+    }
 
     overlay.innerHTML = `
         <div class="session-logger-sheet">
@@ -2358,113 +2884,48 @@ function renderGoalCreator() {
 
             <div class="session-logger-header">
                 <div>
-                    <div class="session-logger-eyebrow">${d._editId ? 'Edit goal' : 'New goal'}</div>
-                    <h2 class="session-logger-title">${d._editId ? 'Update your goal' : 'Set a goal'}</h2>
+                    <div class="session-logger-eyebrow">Set a goal</div>
+                    <h2 class="session-logger-title">What are you working toward?</h2>
                 </div>
-                <button class="session-close-btn" onclick="closeGoalCreator()">
+                <button type="button" class="session-close-btn" onmousedown="confirmDiscardGoal()">
                     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                         <line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/>
                     </svg>
                 </button>
             </div>
 
+            ${typeTabsHtml}
+
             <div class="session-logger-body">
-
-                <div class="session-field">
-                    <label class="session-field-label">Goal</label>
-                    <textarea class="session-block-title-input" id="goal-title-input"
-                              placeholder="What do you want to achieve?"
-                              rows="1"
-                              oninput="appState._goalDraft.title = this.value; autoResizeTextarea(this); searchGoalCorrections(this.value);"
-                              style="font-size: var(--fs-h3);">${d.title}</textarea>
-                    <textarea class="session-block-textarea" id="goal-body-input"
-                              placeholder="Add more detail… (optional)"
-                              rows="2"
-                              oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);"
-                              style="margin-top: var(--sp-sm);">${d.body}</textarea>
-                    <!-- Correction search results -->
-                    <div id="goal-correction-search-results"></div>
-                </div>
-
-                <!-- Linked corrections -->
-                ${(d.correctionIds || []).length > 0 ? `
-                <div class="session-field">
-                    <label class="session-field-label">Linked corrections</label>
-                    <div id="goal-linked-corrections">
-                        ${renderLinkedCorrectionsHtml(d.correctionIds)}
+                ${bodyHtml || `
+                    <div class="goal-type-cards">
+                        <button class="goal-type-card" data-type="skill">
+                            <span class="goal-type-card-name">A skill</span>
+                            <span class="goal-type-card-desc">Something specific — a technique, a step, a quality of movement.</span>
+                        </button>
+                        <button class="goal-type-card" data-type="intention">
+                            <span class="goal-type-card-name">A feeling or state</span>
+                            <span class="goal-type-card-desc">Presence, confidence, ease. Harder to measure, worth naming.</span>
+                        </button>
+                        <button class="goal-type-card" data-type="habit">
+                            <span class="goal-type-card-name">A habit</span>
+                            <span class="goal-type-card-desc">A rhythm to build in — conditioning, practice, consistency.</span>
+                        </button>
                     </div>
-                </div>` : '<div id="goal-linked-corrections-wrapper"></div>'}
-
-                <div class="session-field">
-                    <label class="session-field-label">Category <span class="session-field-optional">optional</span></label>
-                    <div id="goal-category-field">
-                        ${d.category
-                            ? `<div class="goal-category-set">
-                                   <span class="recurrence-chip selected">${d.category}</span>
-                                   <button class="goal-category-clear" onmousedown="clearGoalCategory()">×</button>
-                               </div>`
-                            : `<button class="goal-category-add-btn" onmousedown="openGoalCategoryInput()">
-                                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>
-                                   add category
-                               </button>`}
-                    </div>
-                </div>
-
-                <div class="session-field">
-                    <label class="session-field-label">Link to a skill <span class="session-field-optional">optional</span></label>
-                    <div class="session-select-wrapper">
-                        <select id="goal-skill-select" class="session-select"
-                                onchange="appState._goalDraft.skillId = this.value || null">
-                            <option value="">— no skill —</option>
-                            ${skillOptions}
-                        </select>
-                        <svg class="session-select-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="4 6 8 10 12 6"/>
-                        </svg>
-                    </div>
-                </div>
-
-                <div class="session-field">
-                    <label class="session-field-label">Link to a dimension <span class="session-field-optional">optional</span></label>
-                    <div class="session-select-wrapper">
-                        <select class="session-select"
-                                onchange="appState._goalDraft.dimensionId = this.value || null">
-                            <option value="">— no dimension —</option>
-                            ${dimensionOptions}
-                        </select>
-                        <svg class="session-select-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="4 6 8 10 12 6"/>
-                        </svg>
-                    </div>
-                </div>
-
-                <div class="session-field">
-                    <label class="session-field-label">Due date <span class="session-field-optional">optional</span></label>
-                    <input type="date" class="session-input"
-                           value="${d.dueDate}"
-                           onchange="appState._goalDraft.dueDate = this.value" />
-                </div>
-
-                <div class="session-field">
-                    <label class="session-field-label">Milestones <span class="session-field-optional">optional</span></label>
-                    <div id="goal-milestones-list">${milestonesHtml}</div>
-                    <button class="add-block-btn" style="margin-top: var(--sp-sm);" onmousedown="addMilestoneDraft()">
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                            <line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/>
-                        </svg>
-                        add milestone
-                    </button>
-                </div>
-
-                <div style="height: var(--sp-3xl);"></div>
+                `}
+                ${bodyHtml ? '<div style="height: var(--sp-3xl);"></div>' : ''}
             </div>
 
             <div class="session-logger-footer">
-                <button class="session-discard-btn" onclick="closeGoalCreator()">discard</button>
-                <button class="btn-large session-save-btn" onclick="saveGoal()">save goal</button>
+                ${footerHtml}
             </div>
         </div>
     `;
+
+    // Attach tab + type card listeners via JS (inline handlers in innerHTML unreliable in Safari)
+    document.querySelectorAll('#goal-type-tabs .goal-type-tab, .goal-type-card').forEach(btn => {
+        btn.addEventListener('click', () => setGoalType(btn.dataset.type));
+    });
 }
 
 function selectGoalCategory(cat) {
@@ -2477,6 +2938,247 @@ function selectGoalCategory(cat) {
                 <span class="recurrence-chip selected">${cat}</span>
                 <button class="goal-category-clear" onmousedown="clearGoalCategory()">×</button>
             </div>`;
+    }
+}
+
+function setGoalType(type) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.goalType = type;
+    d.progressMarkers = [];
+    d.skillIds = [];
+    d.howOften = '';
+    d._confirmingDiscard = false;
+    renderGoalCreator();
+    requestAnimationFrame(() => document.getElementById('goal-title-input')?.focus());
+}
+
+function toggleGoalSkill(skillId) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    const idx = d.skillIds.indexOf(skillId);
+    if (idx > -1) d.skillIds.splice(idx, 1);
+    else d.skillIds.push(skillId);
+    renderGoalCreator();
+}
+
+function setGoalPeriod(period) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.commitmentPeriod = period;
+    renderGoalCreator();
+    if (period === 'Choose a date') requestAnimationFrame(() => toggleGoalDateCalendar());
+}
+
+function toggleGoalDateCalendar() {
+    const existing = document.getElementById('goal-date-calendar-popup');
+    if (existing) { existing.remove(); return; }
+    const d = appState._goalDraft;
+    if (!d) return;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const presets = ['This week', 'Two weeks', 'This month', 'Three months', 'Choose a date'];
+    const isRealDate = d.commitmentPeriod && !presets.includes(d.commitmentPeriod);
+    renderGoalDateCalendar(isRealDate ? d.commitmentPeriod : todayStr);
+}
+
+function renderGoalDateCalendar(selectedDateStr) {
+    const existing = document.getElementById('goal-date-calendar-popup');
+    if (existing) existing.remove();
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const sel = new Date(selectedDateStr + 'T12:00:00');
+    const viewYear = sel.getFullYear();
+    const viewMonth = sel.getMonth();
+
+    const firstDay = new Date(viewYear, viewMonth, 1);
+    const lastDay  = new Date(viewYear, viewMonth + 1, 0);
+    const startDow = (firstDay.getDay() + 6) % 7; // Mon=0
+    const monthLabel = firstDay.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+    const todayD = new Date(todayStr + 'T12:00:00');
+    const canGoPrev = viewYear > todayD.getFullYear() || (viewYear === todayD.getFullYear() && viewMonth > todayD.getMonth());
+
+    const dowHeaders = ['M','T','W','T','F','S','S'].map(d => `<div class="date-cal-dow">${d}</div>`).join('');
+
+    let dayCells = '';
+    for (let i = 0; i < startDow; i++) dayCells += `<button class="date-cal-day empty" disabled></button>`;
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+        const dStr = `${viewYear}-${String(viewMonth + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const isSelected = dStr === selectedDateStr;
+        const isPast = dStr < todayStr;
+        const isToday = dStr === todayStr;
+        const cls = ['date-cal-day', isSelected ? 'selected' : '', isToday && !isSelected ? 'today' : ''].filter(Boolean).join(' ');
+        dayCells += `<button class="${cls}" onmousedown="pickGoalCalendarDate('${dStr}')" ${isPast ? 'disabled' : ''}>${day}</button>`;
+    }
+
+    const popup = document.createElement('div');
+    popup.id = 'goal-date-calendar-popup';
+    popup.className = 'date-calendar-popup';
+    popup.innerHTML = `
+        <div class="date-cal-header">
+            <button class="date-cal-nav" onmousedown="renderGoalDateCalendar(getCalNavMonth('${selectedDateStr}', -1))" ${canGoPrev ? '' : 'disabled'}>‹</button>
+            <span class="date-cal-month-label">${monthLabel}</span>
+            <button class="date-cal-nav" onmousedown="renderGoalDateCalendar(getCalNavMonth('${selectedDateStr}', 1))">›</button>
+        </div>
+        <div class="date-cal-grid">
+            ${dowHeaders}
+            ${dayCells}
+        </div>
+    `;
+
+    const picker = document.getElementById('goal-period-date-picker');
+    if (picker) picker.appendChild(popup);
+}
+
+function pickGoalCalendarDate(dateStr) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.commitmentPeriod = dateStr;
+    document.getElementById('goal-date-calendar-popup')?.remove();
+    // Update display in-place
+    const display = document.querySelector('#goal-period-date-picker .date-display');
+    if (display) {
+        const dt = new Date(dateStr + 'T12:00:00');
+        const formatted = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+        display.innerHTML = `<span class="date-display-label">${formatted}</span>`;
+    }
+}
+
+function checkGoalTitleForSkills(text) {
+    const matches = detectSkillsInText(text);
+    const container = document.getElementById('goal-title-input')?.closest('.session-field');
+    const existing = document.getElementById('goal-title-skill-hint');
+
+    if (!matches.length) {
+        if (existing) existing.remove();
+        return;
+    }
+
+    const d = appState._goalDraft;
+    const fresh = d ? matches.filter(m => m.topicId.replace('skill:', '') !== d.skillId) : matches;
+
+    if (!fresh.length) {
+        if (existing) existing.remove();
+        return;
+    }
+
+    let el = existing || document.createElement('div');
+    el.id = 'goal-title-skill-hint';
+    el.className = 'skill-suggestion-chip-row';
+    el.innerHTML = fresh.map(m => {
+        const skillId = m.topicId.replace('skill:', '');
+        return `<button class="skill-suggestion-chip"
+            onmousedown="acceptGoalSkillSuggestion('${escapeHtml(skillId)}', '${escapeHtml(m.label).replace(/'/g, "\\'")}')">
+            link to ${escapeHtml(m.label)} →
+        </button>`;
+    }).join('');
+    if (!existing && container) container.appendChild(el);
+}
+
+function acceptGoalSkillSuggestion(skillId, label) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.skillId = skillId;
+    const input = document.getElementById('goal-skill-input');
+    if (input) input.value = label;
+    const hint = document.getElementById('goal-title-skill-hint');
+    if (hint) hint.remove();
+}
+
+function setGoalHowOften(val) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.howOften = val;
+    renderGoalCreator();
+}
+
+function adjustGoalHowOftenNum(delta) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    const current = d.howOften && d.howOften.startsWith('x') ? parseInt(d.howOften.slice(1)) || 1 : 1;
+    const next = Math.max(1, current + delta);
+    d.howOften = `x${next}`;
+    // Update DOM directly to avoid full re-render on stepper taps
+    const valueEl = document.querySelector('.goal-stepper-value');
+    const minusBtn = document.querySelector('.goal-stepper-btn');
+    if (valueEl) valueEl.textContent = next;
+    if (minusBtn) minusBtn.disabled = next <= 1;
+}
+
+function filterGoalSkills(query) {
+    const dropdown = document.getElementById('goal-skill-dropdown');
+    if (!dropdown) return;
+    const q = (query || '').toLowerCase().trim();
+    const skills = appState.skills || [];
+    const matches = q.length >= 1
+        ? skills.filter(s =>
+            s.french.toLowerCase().includes(q) ||
+            (s.english || '').toLowerCase().includes(q) ||
+            (s.aliases || []).some(a => a.toLowerCase().includes(q))
+          )
+        : skills.slice(0, 24);
+
+    if (!matches.length) {
+        dropdown.style.display = 'none';
+        return;
+    }
+
+    dropdown.innerHTML = matches.map(s => `
+        <div class="block-topic-option"
+             onmousedown="selectGoalSkill('${escapeHtml(s.id)}', '${escapeHtml(s.french).replace(/'/g, "\\'")}')">
+            ${escapeHtml(s.french)}${s.english ? `<span class="block-topic-option-sub"> — ${escapeHtml(s.english)}</span>` : ''}
+        </div>
+    `).join('');
+    dropdown.style.display = 'block';
+}
+
+function selectGoalSkill(skillId, label) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.skillId = skillId;
+    const input = document.getElementById('goal-skill-input');
+    if (input) input.value = label;
+    const dropdown = document.getElementById('goal-skill-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+}
+
+function clearGoalSkill() {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.skillId = null;
+    const input = document.getElementById('goal-skill-input');
+    if (input) { input.value = ''; input.focus(); }
+    const dropdown = document.getElementById('goal-skill-dropdown');
+    if (dropdown) { dropdown.style.display = 'none'; }
+    filterGoalSkills('');
+}
+
+function addProgressMarker() {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.progressMarkers.push({ id: Date.now(), text: '', done: false });
+    renderGoalCreator();
+    requestAnimationFrame(() => {
+        const inputs = document.querySelectorAll('.goal-marker-input');
+        if (inputs.length) inputs[inputs.length - 1].focus();
+    });
+}
+
+function removeProgressMarker(i) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.progressMarkers.splice(i, 1);
+    renderGoalCreator();
+}
+
+function confirmDiscardGoal() {
+    const d = appState._goalDraft;
+    if (!d) { closeGoalCreator(); return; }
+    if (d.title.trim() || d.body?.trim() || d.progressMarkers?.length) {
+        d._confirmingDiscard = true;
+        renderGoalCreator();
+    } else {
+        closeGoalCreator();
     }
 }
 
@@ -2706,21 +3408,31 @@ function saveGoal() {
     const existingGoal = isEdit ? appState.goals.find(g => g.id === d._editId) : null;
 
     const goal = {
-        id:            isEdit ? d._editId : Date.now(),
-        title:         d.title.trim(),
-        body:          d.body?.trim()  || null,
-        createdAt:     existingGoal?.createdAt || Date.now(),
-        dueDate:       d.dueDate       || null,
-        skillId:       d.skillId       || null,
-        dimensionId:   d.dimensionId   || null,
-        category:      d.category      || null,
-        correctionIds: d.correctionIds || [],
-        milestones:    d.milestones.filter(m => m.text.trim()).map(m => ({
+        id:               isEdit ? d._editId : Date.now(),
+        title:            d.title.trim(),
+        body:             d.body?.trim()  || null,
+        createdAt:        existingGoal?.createdAt || Date.now(),
+        dueDate:          d.dueDate       || null,
+        skillId:          d.skillId       || null,
+        dimensionId:      d.dimensionId   || null,
+        category:         d.category      || null,
+        correctionIds:    d.correctionIds || [],
+        milestones:       (d.milestones || []).filter(m => m.text?.trim()).map(m => ({
             id:   m.id || Date.now(),
             text: m.text.trim(),
             done: m.done || false,
         })),
-        completedAt: existingGoal?.completedAt || null,
+        completedAt:      existingGoal?.completedAt || null,
+        goalType:         d.goalType         || null,
+        commitmentPeriod: d.commitmentPeriod || null,
+        progressMarkers:  (d.progressMarkers || []).filter(m => m.text.trim()).map(m => ({
+            id:   m.id || Date.now(),
+            text: m.text.trim(),
+            done: m.done || false,
+        })),
+        howOften:         d.howOften || null,
+        skillIds:         d.skillIds || [],
+        // TODO(Task5): renewal hook — attach renewal prompt logic here
     };
 
     if (isEdit) {
@@ -2730,6 +3442,7 @@ function saveGoal() {
         appState.goals.unshift(goal); // newest first
     }
     storage.save('goals', appState.goals);
+    markGettingStarted('setGoal');
     closeGoalCreator();
 
     if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
@@ -2755,8 +3468,9 @@ function saveGoal() {
 
 function toggleMilestone(goalId, milestoneIndex) {
     const goal = appState.goals.find(g => g.id === Number(goalId));
-    if (!goal || !goal.milestones[milestoneIndex]) return;
-    const milestone = goal.milestones[milestoneIndex];
+    const markers = goal && (goal.progressMarkers || goal.milestones);
+    if (!goal || !markers || !markers[milestoneIndex]) return;
+    const milestone = markers[milestoneIndex];
     milestone.done = !milestone.done;
     storage.save('goals', appState.goals);
     // Write timeline entry if milestone just completed
@@ -2862,6 +3576,7 @@ function deleteSessionTemplate(templateId) {
 // ── Learn ──
 function showLearnScreen() {
     storage.save('hasVisitedLearn', true);
+    markGettingStarted('exploreLearn');
     let screen = document.getElementById('learn-screen');
     if (!screen) {
         screen = document.createElement('div');
@@ -3192,7 +3907,7 @@ function openFolder(folderId) {
         detailScreen.innerHTML = `
             <div class="detail-view">
                 <div class="detail-header">
-                    <button class="detail-back-btn" onclick="navigateTo('assess')">←</button>
+                    <button class="detail-back-btn" onclick="navigateTo('profile')">←</button>
                     <div class="detail-title-section">
                         <div class="detail-icon">${ICONS.get(folder.icon, 28)}</div>
                         <div class="detail-title">${folder.title}</div>
@@ -3349,170 +4064,6 @@ function initProfile() {
         `;
     }
 
-    // Explore cards
-    const exploreEl = document.getElementById('profileExploreCards');
-    const exploreSection = document.getElementById('profileExploreSection');
-    const caps = DATA.profileCapabilities;
-    const allDone = caps.every(c => c.isDone());
-
-    if (allDone) {
-        // Show acknowledgement state on first completion, then hide
-        if (!appState._exploreAllDoneShown) {
-            appState._exploreAllDoneShown = true;
-            savePreferences();
-            exploreEl.innerHTML = `
-                <div class="explore-all-done">
-                    <div class="explore-all-done-text">You've explored everything plié has to offer. Keep going.</div>
-                </div>
-            `;
-            if (exploreSection) exploreSection.style.display = '';
-        } else {
-            if (exploreSection) exploreSection.style.display = 'none';
-        }
-    } else {
-        if (exploreSection) exploreSection.style.display = '';
-    
-        exploreEl.innerHTML = caps.map(cap => {
-            const done = cap.isDone();
-            return `
-            <div class="scroll-card scroll-card-capability ${done ? 'scroll-card-done' : ''}"
-                 onclick="${done ? '' : cap.action}"
-                 style="flex: 0 0 200px; ${done ? 'cursor:default;' : ''}">
-                <div class="scroll-card-capability-status">
-                    ${done
-                        ? `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--success)" stroke-width="2.5" stroke-linecap="round"><polyline points="2 7 5.5 10.5 12 4"/></svg>`
-                        : `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="5.5"/></svg>`
-                    }
-                </div>
-                <div class="scroll-card-category">${cap.label}</div>
-                <div class="scroll-card-title" style="font-size: var(--fs-body);">${done ? cap.doneMessage : cap.title}</div>
-                <div class="scroll-card-description">${done ? '' : cap.description}</div>
-            </div>`;
-        }).join('');
-    }
-
-    // Timeline — merge stored entries with praise + reflection notes, sort by date desc
-    const timelineEl = document.getElementById('timeline');
-    if (timelineEl) {
-        const firstEntryText = (level === 'not-assessed' || !appState.level)
-            ? 'Joined plié'
-            : `Completed placement quiz — ${(DATA.levelLabels[level] || 'BEGINNER').charAt(0) + (DATA.levelLabels[level] || 'BEGINNER').slice(1).toLowerCase()}`;
-
-        // SVG icons per entry type
-        const TIMELINE_ICONS = {
-            session:    `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="2" width="10" height="10" rx="1.5"/><line x1="5" y1="5" x2="9" y2="5"/><line x1="5" y1="7.5" x2="9" y2="7.5"/><line x1="5" y1="10" x2="7" y2="10"/></svg>`,
-            milestone:  `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polygon points="7,1.5 8.8,5.2 13,5.7 10,8.6 10.7,12.8 7,10.8 3.3,12.8 4,8.6 1,5.7 5.2,5.2"/></svg>`,
-            assessment: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="2,10 5,6 8,8 12,3"/><line x1="2" y1="12" x2="12" y2="12"/></svg>`,
-            reflection: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 3c0-.6.4-1 1-1h8c.6 0 1 .4 1 1v5c0 .6-.4 1-1 1H6l-3 2.5V9H3c-.6 0-1-.4-1-1V3z"/><line x1="4.5" y1="5.5" x2="9.5" y2="5.5"/></svg>`,
-            praise:     `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polygon points="7,1.5 8.8,5.2 13,5.7 10,8.6 10.7,12.8 7,10.8 3.3,12.8 4,8.6 1,5.7 5.2,5.2"/></svg>`,
-            manual:     `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none"/></svg>`,
-        };
-
-        // Build unified entries: timeline + praise notes + reflection notes
-        const noteEntries = (appState.skillNotes || [])
-            .filter(n => n.isReflection || n.isPraise)
-            .map(n => ({
-                _noteEntry: true,
-                _type:      n.isPraise ? 'praise' : 'reflection',
-                id:         n.id,
-                date:       n.date,
-                createdAt:  n.createdAt,
-                text:       n.text,
-                skillId:    n.skillId,
-            }));
-
-        const allEntries = [
-            ...(appState.timeline || []).map(e => ({ ...e, _noteEntry: false })),
-            ...noteEntries,
-        ].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-
-        // Date grouping helpers
-        const now = new Date();
-        const startOfToday    = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const startOfWeek     = new Date(startOfToday); startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
-        const startOfMonth    = new Date(now.getFullYear(), now.getMonth(), 1);
-        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-
-        function getGroup(dateStr) {
-            const d = new Date(dateStr);
-            if (d >= startOfToday)     return 'Today';
-            if (d >= startOfWeek)      return 'This week';
-            if (d >= startOfMonth)     return 'This month';
-            if (d >= startOfLastMonth) return 'Last month';
-            return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-        }
-
-        // Group entries, preserving order
-        const groups = [];
-        let currentGroup = null;
-        allEntries.forEach(entry => {
-            const g = getGroup(entry.date || new Date(entry.createdAt || 0).toISOString().split('T')[0]);
-            if (g !== currentGroup) {
-                currentGroup = g;
-                groups.push({ label: g, entries: [] });
-            }
-            groups[groups.length - 1].entries.push(entry);
-        });
-
-        function renderTimelineEntry(entry) {
-            if (entry._noteEntry) {
-                const skillRef = entry.skillId ? DATA.skills.find(s => s.id === entry.skillId) : null;
-                const isReflection = entry._type === 'reflection';
-                const typeLabel = isReflection ? 'Reflection' : 'Praise ★';
-                return `
-                <div class="timeline-item timeline-item-${entry._type}">
-                    <div class="timeline-content">
-                        <span class="timeline-type-label">${typeLabel}</span>
-                        <div class="timeline-title ${isReflection ? 'timeline-reflection-text' : 'timeline-praise-text'}">${isReflection ? `"${entry.text}"` : entry.text}</div>
-                        ${skillRef ? `<div class="timeline-subtitle">${skillRef.french}</div>` : ''}
-                        <div class="timeline-note-actions">
-                            <button class="timeline-note-btn" onmousedown="editTimelineNote(${entry.id})">edit</button>
-                            <button class="timeline-note-btn timeline-note-btn-delete" onmousedown="deleteTimelineNote(${entry.id})">delete</button>
-                        </div>
-                    </div>
-                </div>`;
-            }
-            const isPraise   = entry.isPraise;
-            const isTappable = entry.type === 'session' && entry.objectId;
-            const typeKey    = isPraise ? 'praise' : (entry.type || 'manual');
-            const typeLabels = {
-                session:    'Session',
-                milestone:  'Milestone',
-                assessment: 'Assessment',
-                praise:     'Praise ★',
-                manual:     '',
-            };
-            const typeLabel = typeLabels[typeKey] || '';
-            return `
-            <div class="timeline-item timeline-item-${typeKey} ${isTappable ? 'timeline-item-tappable' : ''}"
-                 ${isTappable ? `onclick="showSessionDetail(${entry.objectId})"` : ''}>
-                <div class="timeline-content">
-                    ${typeLabel ? `<span class="timeline-type-label">${typeLabel}</span>` : ''}
-                    <div class="timeline-title ${isPraise ? 'timeline-praise-text' : ''}">${entry.title}</div>
-                    ${entry.body ? `<div class="timeline-subtitle">${entry.body}</div>` : ''}
-                    ${isTappable ? `<div class="timeline-tap-hint">tap to review →</div>` : ''}
-                </div>
-            </div>`;
-        }
-
-        const groupsHtml = groups.map(g => `
-            <div class="timeline-group">
-                <div class="timeline-group-label" id="tg-${g.label.replace(/\s/g,'-').toLowerCase()}">${g.label}</div>
-                ${g.entries.map(renderTimelineEntry).join('')}
-            </div>
-        `).join('');
-
-        timelineEl.innerHTML = `
-            ${groupsHtml}
-            <div class="timeline-group">
-                <div class="timeline-item">
-                    <div class="timeline-content">
-                        <div class="timeline-title">${firstEntryText}</div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
 }
 
 function formatTimelineDate(dateStr) {
@@ -3525,6 +4076,142 @@ function formatTimelineDate(dateStr) {
     if (d.toDateString() === today.toDateString()) return 'Today';
     if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
     return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+// ── Shared timeline helpers ──
+
+function buildTimelineEntries() {
+    const noteEntries = (appState.skillNotes || [])
+        .filter(n => n.isReflection || n.isPraise)
+        .map(n => ({
+            _noteEntry: true,
+            _type:      n.isPraise ? 'praise' : 'reflection',
+            id:         n.id,
+            date:       n.date,
+            createdAt:  n.createdAt,
+            text:       n.text,
+            skillId:    n.skillId,
+        }));
+    return [
+        ...(appState.timeline || []).map(e => ({ ...e, _noteEntry: false })),
+        ...noteEntries,
+    ].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+}
+
+function renderTimelineEntry(entry) {
+    if (entry._noteEntry) {
+        const skillRef = entry.skillId ? DATA.skills.find(s => s.id === entry.skillId) : null;
+        const isReflection = entry._type === 'reflection';
+        const typeLabel = isReflection ? 'Reflection' : 'Praise \u2605';
+        return `
+        <div class="timeline-item timeline-item-${entry._type}">
+            <div class="timeline-content">
+                <span class="timeline-type-label">${typeLabel}</span>
+                <div class="timeline-title ${isReflection ? 'timeline-reflection-text' : 'timeline-praise-text'}">${isReflection ? `"${entry.text}"` : entry.text}</div>
+                ${skillRef ? `<div class="timeline-subtitle">${skillRef.french}</div>` : ''}
+                <div class="timeline-note-actions">
+                    <button class="timeline-note-btn" onmousedown="editTimelineNote(${entry.id})">edit</button>
+                    <button class="timeline-note-btn timeline-note-btn-delete" onmousedown="deleteTimelineNote(${entry.id})">delete</button>
+                </div>
+            </div>
+        </div>`;
+    }
+    const isPraise   = entry.isPraise;
+    const isTappable = entry.type === 'session' && entry.objectId;
+    const typeKey    = isPraise ? 'praise' : (entry.type || 'manual');
+    const typeLabels = { session: 'Session', milestone: 'Milestone', assessment: 'Assessment', praise: 'Praise \u2605', manual: '' };
+    const typeLabel  = typeLabels[typeKey] || '';
+    return `
+    <div class="timeline-item timeline-item-${typeKey} ${isTappable ? 'timeline-item-tappable' : ''}"
+         ${isTappable ? `onclick="showSessionDetail(${entry.objectId})"` : ''}>
+        <div class="timeline-content">
+            ${typeLabel ? `<span class="timeline-type-label">${typeLabel}</span>` : ''}
+            <div class="timeline-title ${isPraise ? 'timeline-praise-text' : ''}">${entry.title}</div>
+            ${entry.body ? `<div class="timeline-subtitle">${entry.body}</div>` : ''}
+            ${isTappable ? `<div class="timeline-tap-hint">tap to review \u2192</div>` : ''}
+        </div>
+    </div>`;
+}
+
+function renderGroupedTimelineHtml(entries, firstEntryText) {
+    const now = new Date();
+    const startOfToday     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek      = new Date(startOfToday); startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
+    const startOfMonth     = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+    function getGroup(dateStr) {
+        const d = new Date(dateStr);
+        if (d >= startOfToday)     return 'Today';
+        if (d >= startOfWeek)      return 'This week';
+        if (d >= startOfMonth)     return 'This month';
+        if (d >= startOfLastMonth) return 'Last month';
+        return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    }
+
+    const groups = [];
+    let currentGroup = null;
+    entries.forEach(entry => {
+        const g = getGroup(entry.date || new Date(entry.createdAt || 0).toISOString().split('T')[0]);
+        if (g !== currentGroup) { currentGroup = g; groups.push({ label: g, entries: [] }); }
+        groups[groups.length - 1].entries.push(entry);
+    });
+
+    const groupsHtml = groups.map(g => `
+        <div class="timeline-group">
+            <div class="timeline-group-label">${g.label}</div>
+            ${g.entries.map(renderTimelineEntry).join('')}
+        </div>
+    `).join('');
+
+    return groupsHtml + `
+        <div class="timeline-group">
+            <div class="timeline-item">
+                <div class="timeline-content">
+                    <div class="timeline-title">${firstEntryText}</div>
+                </div>
+            </div>
+        </div>`;
+}
+
+function showBarreTimelineSheet() {
+    const existing = document.getElementById('barre-timeline-sheet');
+    if (existing) existing.remove();
+
+    const entries = buildTimelineEntries();
+    const level = appState.level || 'not-assessed';
+    const firstEntryText = (level === 'not-assessed' || !appState.level)
+        ? 'Joined pli\u00e9'
+        : `Completed placement quiz \u2014 ${(DATA.levelLabels[level] || 'BEGINNER').charAt(0) + (DATA.levelLabels[level] || 'BEGINNER').slice(1).toLowerCase()}`;
+
+    const sheet = document.createElement('div');
+    sheet.id = 'barre-timeline-sheet';
+    sheet.className = 'session-overlay';
+    sheet.innerHTML = `
+        <div class="session-logger-sheet" style="max-height: 85vh; display: flex; flex-direction: column;">
+            <div class="session-sheet-handle"></div>
+            <div class="session-logger-header" style="flex-shrink: 0;">
+                <div>
+                    <div class="session-logger-eyebrow">The Barre</div>
+                    <h2 class="session-logger-title">Timeline</h2>
+                </div>
+                <button class="session-close-btn" onclick="document.getElementById('barre-timeline-sheet').remove()">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/>
+                    </svg>
+                </button>
+            </div>
+            <div style="padding: 0 var(--sp-lg); overflow-y: auto; flex: 1;">
+                ${entries.length > 0
+                    ? renderGroupedTimelineHtml(entries, firstEntryText)
+                    : '<p class="learn-empty" style="padding: var(--sp-lg) 0;">No activity yet.</p>'}
+                <div style="height: 40px;"></div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(sheet);
+    requestAnimationFrame(() => sheet.classList.add('open'));
+    sheet.addEventListener('click', e => { if (e.target === sheet) sheet.remove(); });
 }
 
 
@@ -3659,33 +4346,27 @@ function renderDetailBlockHtml(sessionSkill) {
     const corrections = (sessionSkill.correctionIds || [])
         .map(id => appState.corrections.find(c => c.id === id))
         .filter(Boolean);
-    const mode = sessionSkill.mode || 'correction';
-    const isPraise = mode === 'praise' || corrections.some(c => c.type === 'praise');
+    const source = sessionSkill.source || sessionSkill.mode || null;
     const hasContent = sessionSkill.blockTitle || sessionSkill.notes || corrections.length > 0;
     if (!hasContent) return '';
 
+    const sourceLabel = source === 'observation' ? 'observation'
+                      : source === 'praise'       ? '★ praise'
+                      : corrections.length > 0    ? `correction${corrections.length > 1 ? 's' : ''}`
+                      : null;
+
     const correctionsHtml = corrections.length > 0 ? `
-        <div class="detail-block-corrections">
-            <span class="detail-block-corrections-label">
-                ${isPraise ? '★ praise' : `correction${corrections.length > 1 ? 's' : ''}`}
-            </span>
-            <ul class="detail-block-correction-list">
-                ${corrections.map(c => `
-                    <li class="${c.isRecurring ? 'is-recurring' : ''}">
-                        ${c.text}
-                        ${c.isRecurring ? '<span class="correction-recurring-badge">recurring</span>' : ''}
-                    </li>
-                `).join('')}
-            </ul>
-        </div>
+        <ul class="detail-block-correction-list">
+            ${corrections.map(c => `<li>${c.text}</li>`).join('')}
+        </ul>
     ` : '';
 
     return `
-        <div class="detail-block ${isPraise ? 'detail-block-praise' : ''} ${mode === 'reflection' ? 'detail-block-reflection' : ''}">
+        <div class="detail-block">
             <div class="detail-block-header">
                 <span class="detail-block-topic">${topicLabel}</span>
                 ${skill ? `<button class="detail-block-skill-link" onclick="showSkillDetail('${sessionSkill.skillId}', appState.currentScreen)">view skill →</button>` : ''}
-                ${isPraise ? '<span class="detail-block-praise-badge">★ praise</span>' : ''}
+                ${sourceLabel ? `<span class="detail-block-source-badge">${sourceLabel}</span>` : ''}
             </div>
             ${sessionSkill.blockTitle ? `<div class="detail-block-title">${sessionSkill.blockTitle}</div>` : ''}
             ${sessionSkill.notes     ? `<div class="detail-block-notes">${sessionSkill.notes}</div>`     : ''}
@@ -4157,13 +4838,12 @@ function toggleSkillFocus(skillId) {
 
 function openGoalCreatorForSkill(skillId) {
     openGoalCreator();
-    // _goalDraft is set by openGoalCreator — update skillId immediately
     if (appState._goalDraft) appState._goalDraft.skillId = skillId;
-    // Also update the select once DOM renders
-    setTimeout(() => {
-        const select = document.getElementById('goal-skill-select');
-        if (select) select.value = skillId || '';
-    }, 50);
+    requestAnimationFrame(() => {
+        const skill = (appState.skills || []).find(s => s.id === skillId);
+        const input = document.getElementById('goal-skill-input');
+        if (input && skill) input.value = skill.french;
+    });
 }
 
 function navigateToGoal(goalId) {

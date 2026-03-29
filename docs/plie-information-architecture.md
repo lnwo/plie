@@ -1,5 +1,5 @@
 # Plié — Information Architecture & Sitemap
-*Supersedes all previous IA documents.*
+*Supersedes all previous IA documents. Last updated: March 2026.*
 
 ---
 
@@ -20,6 +20,7 @@
 - Buttons: all lowercase
 - Language: British English
 - The app is NOT a teacher — it's a companion for outside the studio
+- No em dashes. No AI commentary. No keyboard shortcuts surfaced to users.
 
 ---
 
@@ -28,7 +29,7 @@
 - Hosted on GitHub Pages ✅
 - Storage: localStorage only ✅
 - Cross-device sync / cloud backup ⬜
-- Font: Cormorant Garamond (headings), DM Sans (UI) ✅
+- Font: Georgia (headings), DM Sans (UI) — Cormorant Garamond retired ✅
 - Radius: 4px components, 9999px pills, 12px sheets/cards ✅
 
 ---
@@ -50,10 +51,15 @@
 ### Global Navigation ✅
 - FAB (always visible above nav, hidden during onboarding/quiz/logger)
   - Log a session ✅
-  - Add a goal ✅
-  - Note a reflection ✅
-- Bottom nav: The Barre · Assess · Goals · Learn · Profile ✅
+  - Add a note 📋
+  - Set a goal ✅
+- Bottom nav: The Barre · Goals · Learn · Profile ✅ (4 tabs — Assess dissolved)
 - Both hidden during onboarding, quiz, session logger ✅
+
+### Training States 📋
+- Active — currently attending regular classes
+- Resting — taking a break (goals paused, no prompts)
+- Recovering — injury/illness (goals paused, different messaging)
 
 ### Empty States
 | Screen | Status |
@@ -73,49 +79,44 @@ Auth, login, registration, GDPR, age verification, privacy policy, terms — all
 
 ---
 
-## Onboarding Flow ✅
+## Onboarding Flow 📋
 ```
-Screen 1 — Welcome ✅
-Screen 2 — Know where you stand ✅
-Screen 3 — Your growth starts here ✅
-  ↓ begin / skip
-Placement Quiz (14 questions) ✅
+Screen 1 — Welcome (single screen, no carousel) 📋
+  CTA: "let's go →" / "skip quiz, I want to set my level →"
+  ↓
+Orientation Quiz (14 questions) ✅ (replaces Placement Quiz)
   ↓ complete / skip
-Completion screen ✅
-  ↓ see my results
 Results screen ✅ (level badge, dimension bars, strengths/focus)
   ↓ continue to your profile
 Profile — first-visit launchpad ✅
 ```
 
-### Placement Quiz Amendments 📋
-| Change | Status |
-|--------|--------|
-| Pointe question — add "not interested" option | 📋 |
-| Strength assessment questions | 📋 |
-| Turnout assessment questions | 📋 |
-| New dimension model: Technique / Movement / The Body / Artistry / Pointe | 📋 |
-| contributingDimensions[] added to Skill | 📋 |
-| Knowledge questions moved out of scoring → Learn tab only | 📋 |
+### Orientation Quiz Notes
+- Replaces "placement quiz" — same 14 questions, new framing
+- Accessible from Profile tab (retake) ✅
+- Questions cover: technique, movement, artistry, body, pointe
+- Pointe question: add "not interested" option 📋
+- Strength + turnout questions: deferred 📋
+- New dimension model: Technique / Movement / The Body / Artistry / Pointe 📋
 
 ---
 
 ## Session Logger ✅
 ```
 Session Logger
-  ├── Date (autofills today, editable) ✅
+  ├── Date (autofills today, editable, retrospective dates allowed) ✅
   ├── Session name / saved session dropdown ✅
   │     ├── Saved templates ✅
   │     ├── One-off entry ✅
   │     └── Add new session (name, location, class type, recurrence) ✅
-  ├── Class type carousel ✅
-  └── Notes & corrections blocks ✅
+  ├── Class type (pill chips) 📋 (currently square cards — migrate to pills)
+  └── Note blocks ✅
         Each block:
-          ├── Topic (General / category / specific skill) ✅
-          ├── Title ✅
-          ├── Mode: Correction / Praise / Reflection ✅
-          ├── Correction bullets ✅
-          ├── Notes (collapsible) ✅
+          ├── Skill title (free text) ✅
+          ├── Linked skill (auto-detected or manual) ✅
+          ├── Free text notes ✅
+          ├── Source chips: Correction · Observation 📋 (replaces mode tabs)
+          ├── Highlight star ✅
           └── Swipe to remove ✅
 ```
 On save → writes to: Sessions, SessionSkills, Corrections, SkillNotes, Timeline, Skills ✅
@@ -125,12 +126,12 @@ On save → writes to: Sessions, SessionSkills, Corrections, SkillNotes, Timelin
 ## Tab 1 — The Barre ✅
 ```
 The Barre
-  ├── Context strip (level badge + weakest dimension) ✅
-  ├── Hero action card — "Log your session" ✅
+  ├── Hero card — session CTA ("Did you go today?") 📋
+  │     Variants: Active / Resting / Recovering / named session if scheduled
   ├── Active skills ✅
   │     Each skill card:
-  │       ├── Skill name + category ✅
-  │       ├── Last correction ✅
+  │       ├── Skill name (Georgia) + category ✅
+  │       ├── Last correction (italic, quoted) ✅
   │       ├── Last worked on ✅
   │       ├── Swipe to remove ✅
   │       └── → Skill detail (personal view) ✅
@@ -157,53 +158,59 @@ Skill detail — personal view
 
 ---
 
-## Tab 2 — Assess ✅
-```
-Assess
-  ├── Placement quiz (retake) ✅
-  ├── Footwork & articulation → Folder (5 placeholders) 🔧
-  ├── Splits & extensions → ⬜
-  ├── Core & stamina → ⬜
-  ├── Pirouettes & rotation → ⬜
-  └── Assessment history ⬜
-
-New assessments 📋
-  ├── Strength assessment (2 questions) 📋
-  ├── Turnout assessment (1–2 questions) 📋
-  └── Individual area check-ins (event-triggered) 📋
-```
-
----
-
-## Tab 3 — Goals ✅
+## Tab 2 — Goals ✅
 ```
 Goals
-  ├── Active goals (grouped by category) ✅
+  ├── Active goals (grouped by type) ✅
   │     Each card:
-  │       ├── Title + body ✅
-  │       ├── Linked skill or dimension ✅
-  │       ├── Category tag ✅
+  │       ├── Title ✅
+  │       ├── Goal type label ✅
+  │       ├── Linked skill (name shown) 📋
+  │       ├── Commitment period (friendly display) 📋
+  │       ├── Progress markers with checkboxes ✅
   │       ├── Linked corrections ✅
-  │       ├── Milestones with progress ✅
-  │       ├── Due date ✅
+  │       ├── How often (habit goals) 📋
   │       ├── Swipe right → complete ✅
-  │       ├── Swipe left → delete ✅
+  │       ├── Swipe left → delete (no confirm() dialog) 📋
   │       └── Edit ✅
   ├── Completed goals (collapsible) ✅
+  ├── "view past goals →" link → All Goals page 📋
   ├── [Empty state] 🔧
   └── Goal creator overlay ✅
-        ├── Title + body ✅
-        ├── Category ✅
-        ├── Link to skill ✅
-        ├── Link to dimension ✅
-        ├── Due date ✅
-        ├── Milestones ✅
-        └── Link corrections (search-as-you-type) ✅
+        Entry question: "What are you working toward?"
+        Three types:
+          ├── A skill
+          │     ├── Title ("name it so you'd recognise it in a month") ✅
+          │     ├── What you're working toward ✅
+          │     ├── Linked skill (auto-detect + combobox) ✅
+          │     ├── What does progress look like? (progress markers) ✅
+          │     ├── Commitment period (chips + custom calendar) ✅
+          │     └── Link corrections (search-as-you-type) ✅
+          ├── A feeling or state
+          │     ├── Title ✅
+          │     ├── What you're working toward ✅
+          │     └── Commitment period ✅
+          └── A habit
+                ├── Title ✅
+                ├── What you want to do ✅
+                ├── How often (stepper) ✅
+                └── Commitment period ✅
+
+All Goals page 📋
+  ├── Full history, grouped by year
+  ├── Compact cards (tap to expand)
+  └── Back link
 ```
+
+### Goal Renewal 📋
+- On completion or period end: renewal prompt
+- Prompt echoes goal title only: "'[title]' — how's it going?"
+- Options: renew / archive / view
+- New instance linked to original (goal lineage)
 
 ---
 
-## Tab 4 — Learn 🔧 (partial — MVP scope reduced)
+## Tab 3 — Learn 🔧 (partial — MVP scope reduced)
 
 ### MVP Learn structure
 ```
@@ -222,6 +229,10 @@ Learn
   │           ├── Muscles involved ✅
   │           ├── Builds on / Leads to ✅
   │           └── Warm-up / Drills / Repertoire / Variations ⬜
+  ├── Pointers 📋 (diagnostic content type)
+  │     ├── Filter chip in Learn 📋
+  │     ├── 4 MVP pointer areas 📋
+  │     └── Each pointer: short diagnostic + what to try
   ├── Famous ballets → stub "coming soon" 📋
   ├── Composers → stub "coming soon" ⬜
   ├── Variations → stub "coming soon" ⬜
@@ -235,7 +246,7 @@ Learn
 
 ---
 
-## Tab 5 — Profile 🔧 (built, not verified on device)
+## Tab 4 — Profile 🔧 (built, not verified on device)
 ```
 Profile
   ├── Sticky header + settings icon 🔧
@@ -244,10 +255,13 @@ Profile
   │     ├── Level eyebrow 🔧
   │     ├── Level animal watermark (7% opacity) 🔧
   │     └── Insight sentence (priority queue) 🔧
-  └── Focus area card stack 🔧
-        Order back→front: Pointe · Artistry · The Body · Movement · Technique
-        Card states: fully assessed / partially assessed / unassessed / pointe opt-in
-        Each card → bottom sheet 🔧
+  ├── Signal lines (replace score bars) 📋
+  │     One per dimension: factual count labels, no numeric scores
+  ├── Focus area card stack 🔧
+  │     Order back→front: Pointe · Artistry · The Body · Movement · Technique
+  │     Card states: fully assessed / partially assessed / unassessed / pointe opt-in
+  │     Each card → bottom sheet 🔧
+  └── "Start orientation quiz →" (if not assessed) 📋
 ```
 
 ### Profile Timeline ✅
@@ -271,6 +285,18 @@ Session detail
 
 ---
 
+## Orientation Quiz (formerly Placement Quiz) ✅
+```
+Orientation quiz
+  ├── 14 questions ✅
+  ├── Counter + progress bar ✅
+  ├── calculateResults → level + dimensions ✅
+  └── Accessible from Profile tab (retake) ✅
+```
+Note: "Assessment" / "Assess" language removed throughout. Assess tab dissolved.
+
+---
+
 ## Settings 🔧 (built, not verified on device)
 ```
 Settings
@@ -278,7 +304,8 @@ Settings
   │     ├── Profile picture 🔧 (3 defaults, upload)
   │     └── Display name 🔧
   ├── My training
-  │     └── Pointe toggle 🔧
+  │     ├── Pointe toggle 🔧
+  │     └── Training state (Active / Resting / Recovering) 📋
   ├── Notifications ⬜
   ├── Display ⬜ (dark mode TBD)
   ├── Data
@@ -317,5 +344,5 @@ Settings
 |-----|-------|--------|
 | Level animals | 6 | ✅ embedded |
 | Profile picture defaults | 12 | 🔧 3 done, 9 outstanding |
-| Onboarding hero | 2 | 🔧 basic SVG, needs quality |
+| Onboarding hero | 1 | ⬜ (single welcome screen) |
 | Empty state spot illustrations | 3 | ⬜ |

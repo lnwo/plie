@@ -389,9 +389,7 @@ function nextOnboarding() {
 function completeOnboarding() {
     document.querySelectorAll('.onboarding-screen').forEach(s => s.classList.remove('active'));
     storage.save('onboardingComplete', true);
-    appState.currentQuestion = 0;
-    showScreen('assessment');
-    renderQuestion();
+    showOrientationScreen();
 }
 
 function skipOnboarding() {
@@ -466,8 +464,530 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   5. ASSESSMENT SYSTEM
-   Quiz rendering, scoring, dimension calculation, results.
+   5. ORIENTATION CONVERSATION
+   Replaces the placement quiz. Entry: showOrientationScreen()
+   ═══════════════════════════════════════════════════════════════ */
+
+const ORIENTATION_QUESTIONS = [
+    {
+        id: 'q1', scored: false, type: 'single', dimension: 'About you',
+        text: 'Which best describes you?',
+        helper: null,
+        options: [
+            'Born to dance — Training since childhood',
+            'Building a foundation — Training for 3–7 years',
+            'Finding my feet — Training for 1–3 years',
+            'Just starting out — Less than a year',
+            'Coming back — Returning after a break',
+        ],
+    },
+    {
+        id: 'q2', scored: false, type: 'single', dimension: 'Your training',
+        text: 'How much time do you spend in class right now?',
+        helper: 'Think about a typical week, not your best or worst.',
+        options: [
+            'Not in class at the moment',
+            'Up to 2 hours a week',
+            '2 to 4 hours a week',
+            '4 to 6 hours a week',
+            '6 or more hours a week',
+        ],
+    },
+    {
+        id: 'q3', scored: true, type: 'multi', dimension: 'In class',
+        text: 'Which of these generally feel true for you in class?',
+        helper: null,
+        options: [
+            { text: 'I can get through centre combinations without relying on watching others', weight: 0.50 },
+            { text: 'I work on placement and alignment without needing to be reminded', weight: 0.60 },
+            { text: 'I feel settled and balanced in centre most of the time', weight: 0.50 },
+            { text: 'I find centre work challenging regardless of whether I know the steps', weight: 0.10 },
+            { text: 'I can focus on quality in centre, not just getting through it', weight: 0.80 },
+        ],
+    },
+    {
+        id: 'q4', scored: true, type: 'multi', dimension: 'Arms and upper body',
+        text: 'Which of these generally feel true about how you use your arms and upper body?',
+        helper: 'In ballet, the arms, head, and shoulders working together is called port de bras and épaulement.',
+        options: [
+            { text: 'My arms and legs tend to work as separate problems in class', weight: 0.10 },
+            { text: 'I can follow the port de bras in combinations but it doesn\'t always feel natural', weight: 0.30 },
+            { text: 'My arms and legs generally work together without too much conscious effort', weight: 0.55 },
+            { text: 'I use my head and shoulders as part of how I move through a combination', weight: 0.75 },
+            { text: 'I think about the shape and quality of my arms, not just their position', weight: 0.90 },
+        ],
+    },
+    {
+        id: 'q5', scored: true, type: 'multi', dimension: 'Slow work',
+        text: 'Which of these generally feel true about your slow work?',
+        helper: 'Adagio is the slow, sustained section of class: développé, arabesque, attitudes, and held balances.',
+        options: [
+            { text: 'I haven\'t done adagio work yet', weight: 0.00 },
+            { text: 'I find slow combinations difficult to sustain with control', weight: 0.15 },
+            { text: 'I can hold an arabesque or attitude without losing balance most of the time', weight: 0.45 },
+            { text: 'I can extend my leg with control in slow combinations', weight: 0.60 },
+            { text: 'I can sustain long slow phrases without rushing or losing shape', weight: 0.80 },
+            { text: 'I use the music to shape how I move through adagio', weight: 0.90 },
+        ],
+    },
+    {
+        id: 'q6', scored: true, type: 'multi', dimension: 'Turns',
+        text: 'Which of these generally feel true about your turning?',
+        helper: 'This is about pirouettes specifically.',
+        options: [
+            { text: 'I haven\'t started working on turns yet', weight: 0.00 },
+            { text: 'I\'m working towards a clean single, doing quarter and half turns', weight: 0.15 },
+            { text: 'I\'m landing a single pirouette most of the time', weight: 0.35 },
+            { text: 'I\'m working on doubles', weight: 0.55 },
+            { text: 'I can do reliable doubles', weight: 0.75 },
+            { text: 'I can do more than doubles consistently', weight: 0.95 },
+        ],
+    },
+    {
+        id: 'q7', scored: true, type: 'multi', dimension: 'Jumps',
+        text: 'Which of these generally feel true about your jump work?',
+        helper: 'Allegro is the jumping section of class. Petit allegro is small fast jumps, grand allegro is larger travelling jumps.',
+        options: [
+            { text: 'I haven\'t started jumps yet', weight: 0.00 },
+            { text: 'I find jumps physically demanding more than technically challenging', weight: 0.15 },
+            { text: 'I\'m confident doing basic jumps, sautés, échappés', weight: 0.30 },
+            { text: 'I\'m confident doing petit allegro combinations, changements, assemblés, glissade', weight: 0.50 },
+            { text: 'I\'m confident doing grand jeté', weight: 0.65 },
+            { text: 'I\'m confident doing sissonne and travelling grand allegro combinations', weight: 0.80 },
+            { text: 'I\'m confident getting through complex allegro combinations musically as well as technically', weight: 0.95 },
+        ],
+    },
+    {
+        id: 'q8', scored: true, type: 'multi', dimension: 'Musicality',
+        text: 'Which of these generally feel true about how you relate to music in class?',
+        helper: 'Phrasing means shaping your movement to the musical sentence, not just the beat.',
+        options: [
+            { text: 'I focus on getting the steps right, music comes later', weight: 0.10 },
+            { text: 'I can hear the counts but I don\'t always move with the phrasing', weight: 0.25 },
+            { text: 'I generally stay on the music and can feel when the tempo or mood shifts', weight: 0.50 },
+            { text: 'I naturally accent movements and breathe with the phrasing', weight: 0.70 },
+            { text: 'The music shapes how I dance, I respond to dynamics not just counts', weight: 0.90 },
+            { text: 'I find it easier to be musical in slow work than in allegro', weight: 0.50 },
+        ],
+    },
+    {
+        id: 'q9', scored: true, type: 'multi', dimension: 'Outside class',
+        text: 'Which of these generally feel true about how you engage with ballet outside class?',
+        helper: null,
+        options: [
+            { text: 'I\'m mostly focused on my own training right now', weight: 0.20 },
+            { text: 'I watch performances or recordings when I can', weight: 0.40 },
+            { text: 'I follow dancers or companies I admire', weight: 0.50 },
+            { text: 'I know some of the major works and what makes them significant', weight: 0.65 },
+            { text: 'I read or listen to things about ballet history, technique, or choreography', weight: 0.75 },
+            { text: 'Watching ballet has inspired how I think about movement and music', weight: 0.85 },
+        ],
+    },
+    {
+        id: 'q10', scored: true, type: 'single', dimension: 'Range',
+        text: 'How high can you hold your leg in à la seconde with control?',
+        helper: 'À la seconde means to the side. Stand on one leg and lift the other directly out to the side, with control and turnout. Not a kick.',
+        options: [
+            { text: 'Below hip height', weight: 0.10 },
+            { text: 'Around hip height', weight: 0.30 },
+            { text: 'Between hip and 90 degrees', weight: 0.50 },
+            { text: 'At 90 degrees or close to it', weight: 0.70 },
+            { text: 'Above 90 degrees with control', weight: 0.95 },
+        ],
+    },
+    {
+        id: 'q11', scored: true, type: 'single', dimension: 'Flexibility',
+        text: 'Which of these best describes your overall flexibility?',
+        helper: null,
+        options: [
+            { text: 'Flexibility is a significant challenge for me', weight: 0.10 },
+            { text: 'I have some flexibility but it\'s something I work on', weight: 0.30 },
+            { text: 'I\'m reasonably flexible and can work with what I have', weight: 0.50 },
+            { text: 'I\'m quite flexible, it\'s one of my stronger attributes', weight: 0.70 },
+            { text: 'I\'m very flexible, it rarely limits what I can do', weight: 0.90 },
+            { text: 'I\'m hypermobile — I have a lot of range but stability can be a challenge', weight: 0.75 },
+        ],
+    },
+    {
+        id: 'q12', scored: true, type: 'multi', dimension: 'Strength',
+        text: 'Which of these generally feel true about your strength and stability in class?',
+        helper: null,
+        options: [
+            { text: 'I fatigue noticeably during longer combinations', weight: 0.15 },
+            { text: 'My supporting leg feels stable when I\'m working on it', weight: 0.55 },
+            { text: 'I can hold balances with reasonable consistency', weight: 0.60 },
+            { text: 'My core feels engaged when I need it', weight: 0.65 },
+            { text: 'Strength feels like a bigger limitation for me than flexibility', weight: 0.20 },
+        ],
+    },
+    {
+        id: 'q13', scored: true, type: 'multi', dimension: 'Turnout',
+        text: 'Which of these generally feel true about your turnout?',
+        helper: null,
+        options: [
+            { text: 'I find it hard to maintain turnout through a full combination', weight: 0.15 },
+            { text: 'My turnout feels consistent without me thinking about it constantly', weight: 0.70 },
+            { text: 'I notice my turnout drops when I\'m tired or focusing on something else', weight: 0.35 },
+            { text: 'My turnout feels like a physical limitation rather than something I can train', weight: 0.10 },
+            { text: 'I\'ve improved my turnout noticeably through training', weight: 0.60 },
+        ],
+    },
+    {
+        id: 'q14', scored: true, type: 'single', dimension: 'Pointe',
+        text: 'What\'s your experience with pointe work?',
+        helper: null,
+        options: [
+            { text: 'I haven\'t started and I\'m not interested right now', weight: 0.10 },
+            { text: 'I haven\'t started but I\'m working towards starting', weight: 0.30 },
+            { text: 'I\'ve been on pointe for less than a year', weight: 0.50 },
+            { text: 'I\'ve been on pointe for 1 to 3 years', weight: 0.70 },
+            { text: 'I\'ve been on pointe for 3 years or more', weight: 0.90 },
+        ],
+    },
+];
+
+const ORIENTATION_GOALS_OPTIONS = [
+    'Getting back into ballet',
+    'Building a regular practice',
+    'Working towards pointe',
+    'Improving my technique',
+    'Preparing for a performance',
+    'Enjoying ballet as part of my life',
+];
+
+const PERSONAS = {
+    duckling: {
+        level: 'beginner',
+        name: 'Duckling',
+        description: 'You\'re building the foundations. Ballet is still relatively new to you, whether you\'ve just started or you\'re finding your footing after a long break. You\'re learning how the vocabulary works, what your body can do, and how to listen to your teacher. Classes might feel like a lot to take in at once, and that\'s exactly where you should be.',
+    },
+    deer: {
+        level: 'improver',
+        name: 'Deer',
+        description: 'You know your way around a class. You\'ve got the basics under your feet and you\'re starting to work on the details. You can follow combinations without watching someone else for every step, and you\'re beginning to notice the difference between getting through something and doing it well. You\'re in the part of the journey where things start to connect.',
+    },
+    swan: {
+        level: 'intermediate',
+        name: 'Swan',
+        description: 'You\'re working with real depth now. You\'ve been training long enough that the foundations are solid and you\'re building on top of them. You bring attention to quality, not just execution. You know what you\'re working on and why. Classes feel like a place to develop, not just survive.',
+    },
+    firebird: {
+        level: 'advanced',
+        name: 'Firebird',
+        description: 'Ballet is a serious part of your life. You\'ve been at this for a long time. Your technique has real consistency, you\'re musical, and you have a clear sense of what you\'re reaching for. You might still be working on the same things you\'ve always worked on — that\'s the nature of ballet — but you\'re doing it with depth and intention.',
+    },
+};
+
+function showOrientationScreen() {
+    appState.currentQuestion     = 0;
+    appState._orientationAnswers = {};
+    appState._assessmentWritten  = false;
+    showScreen('assessment');
+    document.getElementById('orientation-content').innerHTML = `
+        <div class="orientation-opening">
+            <div class="orient-logo">plié</div>
+            <h1 class="orient-display-title">Find your starting point</h1>
+            <p class="orient-opening-body">A few questions to help shape what Plié gives you along the way.</p>
+            <div class="orient-opening-actions">
+                <button class="btn-orient-primary" onclick="startOrientationQuiz()">let's go →</button>
+                <button class="orient-text-link" onclick="showOrientationLevelPicker()">skip quiz, I want to set my level →</button>
+            </div>
+        </div>
+    `;
+}
+
+function startOrientationQuiz() {
+    appState.currentQuestion     = 0;
+    appState._orientationAnswers = {};
+    renderOrientationQuestion();
+}
+
+function renderOrientationQuestion() {
+    if (appState.currentQuestion >= ORIENTATION_QUESTIONS.length) {
+        showOrientationGoals();
+        return;
+    }
+
+    const q        = ORIENTATION_QUESTIONS[appState.currentQuestion];
+    const answers  = appState._orientationAnswers || {};
+    const current  = answers[q.id];
+    const progress = ((appState.currentQuestion + 1) / (ORIENTATION_QUESTIONS.length + 1)) * 100;
+
+    const optHtml = q.options.map((opt, i) => {
+        const text = typeof opt === 'string' ? opt : opt.text;
+        const sel  = q.type === 'single'
+            ? current === i
+            : Array.isArray(current) && current.includes(i);
+        const fn   = q.type === 'single'
+            ? `orientSelectOption('${q.id}', ${i})`
+            : `orientToggleMulti('${q.id}', ${i})`;
+        return `<button class="orient-option${sel ? ' selected' : ''}" onclick="${fn}">${text}</button>`;
+    }).join('');
+
+    document.getElementById('orientation-content').innerHTML = `
+        <div class="orientation-container">
+            <div class="orient-header">
+                <div class="orient-header-inner">
+                    <div class="orient-logo">plié</div>
+                    <div class="orient-header-right">
+                        <span class="orient-counter">${appState.currentQuestion + 1} / ${ORIENTATION_QUESTIONS.length}</span>
+                        <button class="orient-close-btn" onclick="exitOrientation()">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="orient-quiz-subtitle">orientation</div>
+                <div class="orient-progress-track">
+                    <div class="orient-progress-bar" style="width:${progress}%"></div>
+                </div>
+            </div>
+            <div class="orient-body">
+                ${q.dimension ? `<div class="orient-dimension">${q.dimension}</div>` : ''}
+                <div class="orient-question">${q.text}</div>
+                ${q.helper ? `<div class="orient-helper">${q.helper}</div>` : ''}
+                <div class="orient-options">${optHtml}</div>
+            </div>
+            <div class="orient-footer">
+                <button class="orient-nav-btn" onclick="orientPrev()" ${appState.currentQuestion === 0 ? 'disabled' : ''}>back</button>
+                <button class="orient-nav-btn orient-footer-skip" onclick="showOrientationLevelPicker()">skip quiz</button>
+                <button class="orient-nav-btn orient-nav-next" onclick="orientNext()">next</button>
+            </div>
+        </div>
+    `;
+}
+
+function orientSelectOption(qId, idx) {
+    if (!appState._orientationAnswers) appState._orientationAnswers = {};
+    const current = appState._orientationAnswers[qId];
+    appState._orientationAnswers[qId] = current === idx ? undefined : idx;
+    renderOrientationQuestion();
+}
+
+function orientToggleMulti(qId, idx) {
+    if (!appState._orientationAnswers) appState._orientationAnswers = {};
+    if (!Array.isArray(appState._orientationAnswers[qId])) appState._orientationAnswers[qId] = [];
+    const arr = appState._orientationAnswers[qId];
+    const pos = arr.indexOf(idx);
+    if (pos > -1) arr.splice(pos, 1); else arr.push(idx);
+
+    // Patch just the options to avoid full re-render flicker
+    const q = ORIENTATION_QUESTIONS[appState.currentQuestion];
+    const container = document.querySelector('.orient-options');
+    if (!container) return;
+    container.innerHTML = q.options.map((opt, i) => {
+        const text = typeof opt === 'string' ? opt : opt.text;
+        const sel  = appState._orientationAnswers[qId].includes(i);
+        return `<button class="orient-option${sel ? ' selected' : ''}" onclick="orientToggleMulti('${qId}', ${i})">${text}</button>`;
+    }).join('');
+}
+
+function orientNext() { appState.currentQuestion++; renderOrientationQuestion(); }
+function orientPrev() { if (appState.currentQuestion > 0) { appState.currentQuestion--; renderOrientationQuestion(); } }
+
+function showOrientationGoals() {
+    const current = appState._orientationAnswers['goals'] || [];
+    document.getElementById('orientation-content').innerHTML = `
+        <div class="orientation-container">
+            <div class="orient-header">
+                <div class="orient-header-inner">
+                    <div class="orient-logo">plié</div>
+                    <div class="orient-header-right">
+                        <span class="orient-counter">almost done</span>
+                        <button class="orient-close-btn" onclick="exitOrientation()">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="orient-quiz-subtitle">orientation</div>
+                <div class="orient-progress-track">
+                    <div class="orient-progress-bar" style="width:96%"></div>
+                </div>
+            </div>
+            <div class="orient-body">
+                <div class="orient-question">What are you working toward?</div>
+                <div class="orient-options" id="orient-goals-options">
+                    ${ORIENTATION_GOALS_OPTIONS.map((opt, i) => {
+                        const sel = current.includes(i);
+                        return `<button class="orient-option${sel ? ' selected' : ''}" onclick="orientToggleGoal(${i})">${opt}</button>`;
+                    }).join('')}
+                </div>
+            </div>
+            <div class="orient-footer">
+                <button class="orient-nav-btn" onclick="orientPrev()">back</button>
+                <button class="orient-nav-btn orient-nav-next" onclick="finishOrientationQuiz()">done →</button>
+            </div>
+        </div>
+    `;
+}
+
+function orientToggleGoal(idx) {
+    if (!appState._orientationAnswers) appState._orientationAnswers = {};
+    if (!Array.isArray(appState._orientationAnswers['goals'])) appState._orientationAnswers['goals'] = [];
+    const arr = appState._orientationAnswers['goals'];
+    const pos = arr.indexOf(idx);
+    if (pos > -1) arr.splice(pos, 1); else arr.push(idx);
+    const container = document.getElementById('orient-goals-options');
+    if (!container) return;
+    container.innerHTML = ORIENTATION_GOALS_OPTIONS.map((opt, i) => {
+        const sel = appState._orientationAnswers['goals'].includes(i);
+        return `<button class="orient-option${sel ? ' selected' : ''}" onclick="orientToggleGoal(${i})">${opt}</button>`;
+    }).join('');
+}
+
+function finishOrientationQuiz() {
+    const persona = scoreOrientation(appState._orientationAnswers || {});
+    showOrientationResults(persona);
+}
+
+function scoreOrientation(answers) {
+    const scored = ORIENTATION_QUESTIONS.filter(q => q.scored);
+    let total = 0, count = 0;
+
+    scored.forEach(q => {
+        const ans = answers[q.id];
+        if (ans === undefined || ans === null) return;
+
+        if (q.type === 'single') {
+            const opt = q.options[ans];
+            if (opt && typeof opt.weight === 'number') { total += opt.weight; count++; }
+        } else {
+            const sel = Array.isArray(ans) ? ans : [];
+            if (!sel.length) return;
+            const avg = sel.reduce((s, i) => s + (q.options[i]?.weight ?? 0), 0) / sel.length;
+            total += avg; count++;
+        }
+    });
+
+    if (!count) return 'duckling';
+    const score = total / count;
+    if (score >= 0.70) return 'firebird';
+    if (score >= 0.48) return 'swan';
+    if (score >= 0.28) return 'deer';
+    return 'duckling';
+}
+
+function showOrientationResults(suggestedPersona) {
+    appState._suggestedPersona = suggestedPersona;
+    const p = PERSONAS[suggestedPersona];
+
+    document.getElementById('orientation-content').innerHTML = `
+        <div class="orientation-container">
+            <div class="orient-body orient-results-body">
+                <h1 class="orient-result-name">${p.name}</h1>
+                <p class="orient-result-desc">${p.description}</p>
+                <div class="orient-adjust-label">adjust your level</div>
+                <div class="orient-persona-list">
+                    ${Object.entries(PERSONAS).map(([key, persona]) => `
+                        <button class="orient-persona-btn${key === suggestedPersona ? ' active' : ''}"
+                                onclick="selectResultPersona('${key}')">
+                            ${persona.name}
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+            <div class="orient-footer">
+                <button class="orient-nav-btn orient-nav-next" onclick="confirmOrientationLevel('${suggestedPersona}')">this is me →</button>
+            </div>
+        </div>
+    `;
+}
+
+function selectResultPersona(key) {
+    appState._suggestedPersona = key;
+    showOrientationResults(key);
+    // Update confirm button to use new selection
+    const confirmBtn = document.querySelector('.orient-nav-next');
+    if (confirmBtn) confirmBtn.setAttribute('onclick', `confirmOrientationLevel('${key}')`);
+}
+
+function confirmOrientationLevel(personaKey) {
+    const persona = PERSONAS[personaKey];
+    if (!persona) return;
+
+    appState.persona = personaKey;
+    appState.level   = persona.level;
+
+    if (!appState._assessmentWritten) {
+        const assessment = {
+            id:          Date.now(),
+            type:        'placement',
+            date:        new Date().toISOString().split('T')[0],
+            completedAt: Date.now(),
+            answers:     { ...(appState._orientationAnswers || {}) },
+            level:       persona.level,
+            persona:     personaKey,
+            levelLabel:  persona.name,
+        };
+        appState.assessments = appState.assessments || [];
+        appState.assessments.push(assessment);
+        storage.save('assessments', appState.assessments);
+
+        appendTimelineEntry({
+            type:     'assessment',
+            objectId: assessment.id,
+            title:    `Completed orientation`,
+            body:     persona.name,
+            date:     assessment.date,
+        });
+        appState._assessmentWritten = true;
+    }
+
+    // TODO: account creation — no backend yet, proceed directly
+    storage.save('onboardingComplete', true);
+    showScreen('profile');
+    document.querySelector('.bottom-nav')?.classList.add('visible');
+    document.querySelector('.fab')?.classList.add('visible');
+    navigateTo('barre');
+}
+
+function showOrientationLevelPicker() {
+    showScreen('assessment');
+    document.getElementById('orientation-content').innerHTML = `
+        <div class="orientation-container">
+            <div class="orient-header">
+                <div class="orient-logo">plié</div>
+                <button class="orient-close-btn" onclick="exitOrientation()">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/></svg>
+                </button>
+            </div>
+            <div class="orient-body">
+                <div class="orient-question">Choose your level</div>
+                <p class="orient-helper" style="margin-bottom: var(--sp-xl);">This is your starting point. Your training picture fills in as you log sessions.</p>
+                <div class="orient-persona-picker">
+                    ${Object.entries(PERSONAS).map(([key, p]) => `
+                        <button class="orient-persona-pick-btn" onclick="confirmOrientationLevel('${key}')">
+                            <div class="orient-persona-pick-name">${p.name}</div>
+                            <div class="orient-persona-pick-desc">${p.description}</div>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function exitOrientation() {
+    const answers = appState._orientationAnswers || {};
+    const hasAnswers = Object.values(answers).some(v =>
+        v !== undefined && (!Array.isArray(v) || v.length > 0));
+
+    if (hasAnswers) {
+        confirmOrientationLevel(scoreOrientation(answers));
+    } else {
+        appState.level = 'not-assessed';
+        storage.save('onboardingComplete', true);
+        if (!appState.timeline?.length) {
+            appendTimelineEntry({ type: 'manual', title: 'Joined plié', body: null, date: new Date().toISOString().split('T')[0] });
+        }
+        showScreen('profile');
+        document.querySelector('.bottom-nav')?.classList.add('visible');
+        document.querySelector('.fab')?.classList.add('visible');
+        navigateTo('barre');
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   5b. LEGACY ASSESSMENT SYSTEM (superseded — kept for reference)
    ═══════════════════════════════════════════════════════════════ */
 
 function startPlacementQuiz() {
@@ -831,6 +1351,7 @@ function skipToProfile() {
     const latest = placements[placements.length - 1];
     if (latest) {
         appState.level      = latest.level;
+        appState.persona    = latest.persona || null;
         appState.dimensions = latest.dimensions;
         appState.answers    = latest.answers;
     }
@@ -900,8 +1421,9 @@ function renderProfileStatus() {
         .filter(a => a.type === 'placement')
         .slice(-1)[0];
     const assessedText = latestAssessment
-        ? `from your placement quiz · ${formatTimelineDate(latestAssessment.date)}`
+        ? `orientation quiz · ${formatTimelineDate(latestAssessment.date)}`
         : null;
+    const isAssessed = level !== 'not-assessed';
 
     el.innerHTML = `
         ${animalSrc ? `
@@ -930,6 +1452,13 @@ function renderProfileStatus() {
             </div>
         </div>
     `;
+
+    // Append orientation quiz CTA button via DOM (not inline HTML)
+    const quizBtn = document.createElement('button');
+    quizBtn.className = isAssessed ? 'profile-quiz-cta profile-quiz-retake' : 'profile-quiz-cta';
+    quizBtn.textContent = isAssessed ? 'retake orientation quiz →' : 'start orientation quiz →';
+    quizBtn.addEventListener('click', () => startOrientationQuiz());
+    el.appendChild(quizBtn);
 }
 
 function defaultAvatarSvg() {
