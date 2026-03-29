@@ -2023,21 +2023,35 @@ function renderBarreHeroCard() {
         : null;
 
     if (loggedToday) {
-        const activeGoals = (appState.goals || []).filter(g => !g.completedAt);
-        const title = activeGoals.length > 0
-            ? `${activeGoals.length} goal${activeGoals.length > 1 ? 's' : ''} in progress`
-            : 'Session logged';
-        const desc = activeGoals.length > 0
-            ? 'Keep at it.'
-            : 'Add a goal to give your practice direction.';
-        const action = activeGoals.length > 0 ? 'view goals →' : 'set a goal →';
-        const onclick = activeGoals.length > 0 ? "navigateTo('goals')" : 'openGoalCreator()';
+        const activeGoals = (appState.goals || []).filter(g => g.status === 'active');
+        if (activeGoals.length > 0) {
+            // Surface the most recently touched active goal
+            const scored = activeGoals.map(goal => {
+                let lastActivity = goal.updatedAt || goal.createdAt || 0;
+                if (goal.skillId) {
+                    (appState.sessionSkills || [])
+                        .filter(ss => ss.skillId === goal.skillId)
+                        .forEach(ss => {
+                            const sess = (appState.sessions || []).find(s => s.id === ss.sessionId);
+                            if (sess) lastActivity = Math.max(lastActivity, sess.savedAt || 0);
+                        });
+                }
+                return { goal, lastActivity };
+            });
+            const topGoal = scored.sort((a, b) => b.lastActivity - a.lastActivity)[0].goal;
+            return `
+                <div class="profile-action-card hero" onclick="navigateTo('goals')">
+                    <div class="profile-action-label">TODAY</div>
+                    <div class="profile-action-title">${escapeHtml(topGoal.title)}</div>
+                    <div class="profile-action-arrow">view goals →</div>
+                </div>`;
+        }
         return `
-            <div class="profile-action-card hero" onclick="${onclick}">
+            <div class="profile-action-card hero" onclick="openGoalCreator()">
                 <div class="profile-action-label">TODAY</div>
-                <div class="profile-action-title">${title}</div>
-                <div class="profile-action-description">${desc}</div>
-                <div class="profile-action-arrow">${action}</div>
+                <div class="profile-action-title">Session logged</div>
+                <div class="profile-action-description">Add a goal to give your training direction.</div>
+                <div class="profile-action-arrow">set a goal →</div>
             </div>`;
     } else if (!lastSession) {
         return `
@@ -2050,9 +2064,9 @@ function renderBarreHeroCard() {
     } else if (daysSince !== null && daysSince > 13) {
         return `
             <div class="profile-action-card hero" onclick="openSessionLogger()">
-                <div class="profile-action-label">WELCOME BACK</div>
+                <div class="profile-action-label">LAST SESSION · ${daysSince} DAY${daysSince !== 1 ? 'S' : ''} AGO</div>
                 <div class="profile-action-title">Did you go today?</div>
-                <div class="profile-action-description">It's been a while — jot down what you covered while it's fresh.</div>
+                <div class="profile-action-description">Anything worth logging?</div>
                 <div class="profile-action-arrow">log a session →</div>
             </div>`;
     } else {
