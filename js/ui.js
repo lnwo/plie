@@ -1920,6 +1920,62 @@ function openLearnPointers() {
 }
 
 // ── The Barre ──
+
+function renderBarreHeroCard() {
+    const today = new Date().toISOString().split('T')[0];
+    const sessions = appState.sessions || [];
+    const loggedToday = sessions.some(s => s.date === today);
+    const lastSession = sessions.length
+        ? sessions.slice().sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))[0]
+        : null;
+    const daysSince = lastSession
+        ? Math.floor((Date.now() - (lastSession.savedAt || Date.now())) / 86400000)
+        : null;
+
+    if (loggedToday) {
+        const activeGoals = (appState.goals || []).filter(g => !g.completedAt);
+        const title = activeGoals.length > 0
+            ? `${activeGoals.length} goal${activeGoals.length > 1 ? 's' : ''} in progress`
+            : 'Session logged';
+        const desc = activeGoals.length > 0
+            ? 'Keep at it.'
+            : 'Add a goal to give your practice direction.';
+        const action = activeGoals.length > 0 ? 'view goals →' : 'set a goal →';
+        const onclick = activeGoals.length > 0 ? "navigateTo('goals')" : 'openGoalCreator()';
+        return `
+            <div class="profile-action-card hero" onclick="${onclick}">
+                <div class="profile-action-label">TODAY</div>
+                <div class="profile-action-title">${title}</div>
+                <div class="profile-action-description">${desc}</div>
+                <div class="profile-action-arrow">${action}</div>
+            </div>`;
+    } else if (!lastSession) {
+        return `
+            <div class="profile-action-card hero" onclick="openSessionLogger()">
+                <div class="profile-action-label">GET STARTED</div>
+                <div class="profile-action-title">Did you go today?</div>
+                <div class="profile-action-description">Log your first session — corrections, what you worked on, how it felt.</div>
+                <div class="profile-action-arrow">log a session →</div>
+            </div>`;
+    } else if (daysSince !== null && daysSince > 13) {
+        return `
+            <div class="profile-action-card hero" onclick="openSessionLogger()">
+                <div class="profile-action-label">WELCOME BACK</div>
+                <div class="profile-action-title">Did you go today?</div>
+                <div class="profile-action-description">It's been a while — jot down what you covered while it's fresh.</div>
+                <div class="profile-action-arrow">log a session →</div>
+            </div>`;
+    } else {
+        return `
+            <div class="profile-action-card hero" onclick="openSessionLogger()">
+                <div class="profile-action-label">AFTER CLASS</div>
+                <div class="profile-action-title">Did you go today?</div>
+                <div class="profile-action-description">Record corrections and what you worked on while they're fresh.</div>
+                <div class="profile-action-arrow">log a session →</div>
+            </div>`;
+    }
+}
+
 function showBarreScreen() {
     let screen = document.getElementById('barre-screen');
     if (!screen) {
@@ -2005,14 +2061,17 @@ function showBarreScreen() {
                                 remove
                             </div>
                             <div class="swipe-content">
-                                <div class="active-skill-card${isRecurring ? ' active-skill-recurring' : ''}" onclick="showSkillDetail('${skill.id}', 'barre-screen')">
+                                <div class="active-skill-card${isRecurring ? ' active-skill-recurring' : ''}">
                                     <div class="active-skill-top">
                                         <div class="active-skill-name">${skill.french}</div>
                                         <div class="active-skill-category">${skill.category}</div>
                                     </div>
                                     ${lastCorrection ? `<div class="active-skill-correction"><em>"${lastCorrection.text}"</em></div>` : ''}
-                                    ${isRecurring ? `<span class="active-skill-recurring-badge">recurring</span>` : ''}
-                                    ${lastSession ? `<div class="active-skill-date">${formatTimelineDate(lastSession.date)}</div>` : ''}
+                                    <div class="active-skill-footer">
+                                        ${lastSession ? `<span class="active-skill-date">${formatTimelineDate(lastSession.date)}</span>` : ''}
+                                        ${isRecurring ? `<span class="active-skill-recurring-badge">recurring</span>` : ''}
+                                        <button class="active-skill-view-btn" onclick="showSkillDetail('${skill.id}', 'barre-screen')">view →</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>`;
@@ -2036,12 +2095,7 @@ function showBarreScreen() {
             ${levelBadgeHtml}
         </div>
         <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);">
-            <div class="profile-action-card hero" onclick="openSessionLogger()">
-                <div class="profile-action-label">AFTER CLASS</div>
-                <div class="profile-action-title">Log your session</div>
-                <div class="profile-action-description">Record what you worked on and save any corrections while they're fresh.</div>
-                <div class="profile-action-arrow">log now →</div>
-            </div>
+            ${renderBarreHeroCard()}
         </div>
         ${gettingStartedHtml}
         ${activeSkillsHtml}

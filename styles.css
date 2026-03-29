@@ -1932,9 +1932,9 @@ h1, h2, .screen-heading {
 }
 
 .active-skill-name {
-    font-family: 'DM Sans', sans-serif;
+    font-family: Georgia, serif;
     font-size: var(--fs-body);
-    font-weight: 600;
+    font-weight: 400;
     color: var(--ink);
     line-height: 1.2;
 }
@@ -3428,12 +3428,26 @@ h1, h2, .screen-heading {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-top: var(--sp-xs);
+    gap: var(--sp-sm);
 }
 
 .active-skill-date {
     font-size: var(--fs-caption);
     color: var(--ink-4);
+    flex: 1;
 }
+
+.active-skill-view-btn {
+    all: unset;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    font-weight: 500;
+    color: var(--ink-3);
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+.active-skill-view-btn:hover { color: var(--ink); }
 
 
 /* Timeline session entries */
