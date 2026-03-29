@@ -46,6 +46,9 @@
     --success:       #4A7038;
     --error:         #A84030;
 
+    /* ── Primary button fill (separate from --ink text colour) ── */
+    --btn-primary:   #2C2420;
+
     /* ── Brown (buttons, FAB, active tabs) ── */
     --brown-btn:     #5A4030;
     --brown:         #6B4F3A;
@@ -53,8 +56,9 @@
     /* ── Surfaces ── */
     --background:    #FAFAF8;   /* near-white — app background */
     --surface:       #FFFFFF;   /* cards, sheets */
-    --surface-warm:  #FDF8F3;   /* block shells */
-    --input-bg:      #F9F5F0;   /* input fields — off-white */
+    --surface-warm:   #FDF8F3;   /* block shells */
+    --surface-raised: #FAF5EE;   /* completed goal cards */
+    --input-bg:       #F9F5F0;   /* input fields — off-white */
 
     /* ── Borders ── */
     --border:        rgba(26, 23, 20, 0.12);
@@ -63,6 +67,7 @@
 
     /* ── Typography scale ── */
     --fs-display: 2.5rem;    /* 40px */
+    --fs-title:   1.5rem;    /* 24px — Georgia italic. Skill name heading, session title. */
     --fs-h1:      1.625rem;  /* 26px — Georgia */
     --fs-h2:      1.25rem;   /* 20px — Georgia */
     --fs-h3:      1.0625rem; /* 17px */
@@ -322,9 +327,9 @@ h1, h2, .screen-heading {
 
 .btn-large {
     width: 100%;
-    background: var(--ink);
+    background: var(--btn-primary);
     color: #fff;
-    border: 1px solid var(--ink);
+    border: 1px solid var(--btn-primary);
     border-radius: var(--r-md);
     padding: 14px var(--sp-xl);
     font-size: var(--fs-body);
@@ -341,9 +346,9 @@ h1, h2, .screen-heading {
 .btn-large:active { background: var(--ink-2); }
 
 .btn-primary {
-    background: var(--ink);
+    background: var(--btn-primary);
     color: #fff;
-    border: 1px solid var(--ink);
+    border: 1px solid var(--btn-primary);
     border-radius: var(--r-md);
     padding: 10px 18px;
     font-size: var(--fs-small);
@@ -843,6 +848,19 @@ h1, h2, .screen-heading {
     color: var(--ink);
 }
 
+/* Screen h1 titles — italic, softer ink */
+.barre-header h1,
+.profile-header h1 {
+    font-style: italic;
+    color: var(--ink-2);
+}
+
+/* Skill name headings — italic, ink unchanged */
+.active-skill-name,
+.skill-detail-title {
+    font-style: italic;
+}
+
 .level-badge {
     display: inline-block;
     background: var(--gold-wash);
@@ -1015,7 +1033,7 @@ h1, h2, .screen-heading {
 }
 
 .difficulty-beginner {
-    background: var(--sage-soft);  color: var(--sage);
+    background: var(--gold-wash);  color: #8A5E0A;
 }
 .difficulty-improver {
     background: var(--gold-wash);  color: var(--gold);
@@ -1811,9 +1829,10 @@ h1, h2, .screen-heading {
 
 .barre-header h1 {
     font-family: Georgia, serif;
+    font-style: italic;
     font-weight: 500;
     font-size: var(--fs-display);
-    color: var(--ink);
+    color: var(--ink-2);
     line-height: 1.15;
 }
 
@@ -1853,6 +1872,43 @@ h1, h2, .screen-heading {
     font-size: var(--fs-caption);
     color: var(--ink-4);
 }
+
+.barre-see-all-btn {
+    all: unset;
+    font-family: var(--font-ui);
+    font-size: var(--fs-caption);
+    color: var(--gold);
+    cursor: pointer;
+    font-weight: 500;
+}
+
+/* Passive focus nudge */
+.focus-nudge {
+    margin: 0 var(--sp-lg) var(--sp-xl);
+    background: var(--gold-wash);
+    border-radius: 10px;
+    padding: var(--sp-md) var(--sp-lg);
+}
+.focus-nudge-text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink-3);
+    margin: 0 0 var(--sp-sm);
+    line-height: 1.5;
+}
+.focus-nudge-actions {
+    display: flex;
+    gap: var(--sp-md);
+}
+.focus-nudge-actions button {
+    all: unset;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 500;
+    cursor: pointer;
+}
+.focus-nudge-actions button:first-child { color: var(--gold); }
+.focus-nudge-actions button:last-child  { color: var(--ink-4); }
 
 /* ── Getting started carousel ── */
 .getting-started-carousel {
@@ -1927,24 +1983,27 @@ h1, h2, .screen-heading {
 .active-skill-top {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--sp-sm);
 }
 
 .active-skill-name {
     font-family: Georgia, serif;
-    font-size: var(--fs-body);
+    font-style: italic;
+    font-size: var(--fs-title);
     font-weight: 400;
     color: var(--ink);
     line-height: 1.2;
+    flex: 1;
 }
 
 .active-skill-category {
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-caption);
-    text-transform: uppercase;
+    font-variant: small-caps;
+    text-transform: none;
     letter-spacing: 0.04em;
-    color: var(--ink-3);
+    color: var(--gold);
     white-space: nowrap;
     padding-top: 3px;
 }
@@ -2012,6 +2071,24 @@ h1, h2, .screen-heading {
     color: var(--ink-3);
     font-size: 16px;
     opacity: 0.4;
+}
+
+.skill-category-card--muted {
+    cursor: default;
+    box-shadow: none;
+}
+.skill-category-card--muted:hover {
+    box-shadow: none;
+    border-color: var(--border-light);
+}
+.skill-category-card--muted .skill-category-name {
+    color: var(--ink-5);
+}
+.skill-category-card--muted .skill-category-count {
+    color: var(--ink-6);
+}
+.skill-category-card--muted .skill-category-icon {
+    opacity: 0.5;
 }
 
 /* ── Learn screen ── */
@@ -3195,6 +3272,48 @@ h1, h2, .screen-heading {
 
 .session-block-field {}
 
+/* Block bullet entry — contenteditable with live dash prefix per line */
+.block-bullet-entry {
+    width: 100%;
+    min-height: 60px;
+    background: var(--surface-warm);
+    border: 1px solid var(--border-light);
+    border-radius: var(--r-sm);
+    padding: 10px var(--sp-md);
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink);
+    line-height: 1.55;
+    outline: none;
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
+}
+
+.block-bullet-entry:focus {
+    border-color: var(--gold-mid);
+}
+
+/* Each line (div) gets a dash prefix via ::before */
+.block-bullet-entry > div {
+    position: relative;
+    padding-left: 1.4em;
+}
+
+.block-bullet-entry > div::before {
+    content: "—";
+    position: absolute;
+    left: 0;
+    color: var(--ink-4);
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Placeholder: single empty div shows hint text */
+.block-bullet-entry > div:only-child:empty::before {
+    content: "— What happened…";
+    color: var(--ink-4);
+}
+
 .session-block-label {
     display: block;
     font-size: var(--fs-caption);
@@ -3397,16 +3516,18 @@ h1, h2, .screen-heading {
 .block-highlight-btn:hover { color: var(--gold-mid); }
 .block-highlight-btn.active { color: var(--gold-mid); }
 
-/* Active skill card — last correction */
+/* Active skill card — corrections preview */
 .active-skill-correction {
     font-size: var(--fs-small);
     color: var(--ink-3);
     font-style: italic;
     line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+}
+
+.active-skill-correction--truncate {
     overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .active-skill-recurring {
@@ -3425,29 +3546,21 @@ h1, h2, .screen-heading {
 }
 
 .active-skill-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     margin-top: var(--sp-xs);
-    gap: var(--sp-sm);
 }
 
 .active-skill-date {
-    font-size: var(--fs-caption);
-    color: var(--ink-4);
-    flex: 1;
+    font-size: var(--fs-small);
+    color: var(--ink-5);
 }
 
-.active-skill-view-btn {
-    all: unset;
-    font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-caption);
-    font-weight: 500;
-    color: var(--ink-3);
-    cursor: pointer;
-    transition: color 0.15s ease;
+.active-skill-arrow {
+    font-size: 1.25rem;
+    color: var(--ink-5);
+    line-height: 1;
+    flex-shrink: 0;
+    user-select: none;
 }
-.active-skill-view-btn:hover { color: var(--ink); }
 
 
 /* Timeline session entries */
@@ -3459,6 +3572,11 @@ h1, h2, .screen-heading {
     font-size: var(--fs-small);
     color: var(--ink-3);
     margin-top: 2px;
+}
+
+.timeline-star {
+    color: var(--gold);
+    font-size: var(--fs-caption);
 }
 
 /* ═══════════════════════════════════════
@@ -3579,6 +3697,158 @@ h1, h2, .screen-heading {
     flex-direction: column;
     gap: var(--sp-md);
 }
+
+/* ─── Note blocks (T21) ─── */
+.note-block {
+    background: var(--surface);
+    border: 0.5px solid rgba(26,23,20,0.10);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.note-block--correction  { border-left: 2.5px solid var(--coral); }
+.note-block--observation { border-left: 2.5px solid var(--ink-6); }
+.note-block--highlight   { border-left: 2.5px solid var(--gold); }
+.note-block--gold-bg     { background: var(--gold-wash); }
+
+.note-block-skill-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-sm);
+    padding: 7px 12px 6px;
+    border-bottom: 0.5px solid rgba(26,23,20,0.07);
+}
+.note-block--highlight .note-block-skill-row {
+    border-bottom-color: rgba(196,144,12,0.15);
+}
+
+.note-block-skill-name {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink);
+    flex: 1;
+    line-height: 1.3;
+}
+
+.note-block-skill-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.note-block-view-link {
+    all: unset;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    color: var(--ink-5);
+    cursor: pointer;
+}
+
+.note-block-star {
+    all: unset;
+    font-size: 13px;
+    color: var(--gold);
+    cursor: pointer;
+    line-height: 1;
+}
+
+.note-block-highlight-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-sm);
+    padding: 7px 12px 6px;
+    background: var(--gold-wash);
+    border-bottom: 0.5px solid rgba(196,144,12,0.15);
+}
+
+.note-block-highlight-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #8A5E0A;
+}
+
+.note-block-body {
+    padding: 9px 12px 8px;
+    border-bottom: 0.5px solid rgba(26,23,20,0.07);
+}
+.note-block--highlight .note-block-body {
+    border-bottom-color: rgba(196,144,12,0.15);
+}
+
+.note-block-body-text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--ink-2);
+    line-height: 1.55;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.note-block-body-text.expanded {
+    display: block;
+    overflow: visible;
+}
+
+.note-block-see-more {
+    all: unset;
+    display: block;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    color: var(--ink-5);
+    cursor: pointer;
+    margin-top: 4px;
+}
+
+/* Generic truncatable text — used for skill notes, goal body, and any long free text */
+.text-clamped {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.text-clamped.expanded {
+    display: block;
+    overflow: visible;
+}
+
+.note-block-bullets {
+    padding: 8px 12px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.note-block-bullet {
+    display: flex;
+    gap: 7px;
+    align-items: flex-start;
+}
+
+.note-block-dash {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--coral);
+    flex-shrink: 0;
+    line-height: 1.5;
+}
+
+.note-block-bullet-text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--ink-3);
+    font-style: italic;
+    line-height: 1.5;
+}
+
+.note-block-bullet--obs .note-block-dash       { color: var(--ink-6); }
+.note-block-bullet--obs .note-block-bullet-text { color: var(--ink-5); font-style: normal; }
+/* ─── end note blocks ─── */
 
 .detail-block {
     background: var(--surface);
@@ -4346,6 +4616,50 @@ h1, h2, .screen-heading {
 
 .skill-correction-source:hover { color: var(--gold); }
 
+/* Grouped corrections */
+.skill-corr-group {
+    padding: var(--sp-sm) 0;
+}
+
+.skill-corr-group + .skill-corr-group {
+    border-top: 0.5px solid var(--border-light);
+}
+
+.skill-corr-group-date {
+    font-size: var(--fs-small);
+    color: var(--ink-5);
+    margin-bottom: var(--sp-xs);
+}
+
+.skill-corr-item {
+    border-left: 2.5px solid var(--coral);
+    padding: 1px 0 1px var(--sp-sm);
+}
+
+.skill-corr-item.is-recurring {
+    border-left-color: var(--coral-soft);
+}
+
+.skill-corr-text {
+    font-size: var(--fs-body);
+    color: var(--ink);
+    line-height: 1.55;
+}
+
+.skill-corr-source {
+    display: inline-block;
+    margin-top: var(--sp-xs);
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink-5);
+    cursor: pointer;
+    padding: 0;
+}
+
+.skill-corr-source:hover { color: var(--gold); }
+
 /* See more button */
 .skill-see-more-btn {
     background: none;
@@ -4749,6 +5063,29 @@ mark.search-highlight {
 /* ═══════════════════════════════════════
    SKILL KNOWLEDGE PAGE
    ═══════════════════════════════════════ */
+
+.skill-know-meta-row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: var(--sp-md);
+}
+.skill-know-meta-row .skill-detail-phonetic,
+.skill-know-meta-row .skill-detail-english {
+    margin-bottom: 0;
+}
+.skill-know-meta-dot {
+    font-size: var(--fs-small);
+    color: var(--ink-6);
+}
+
+.skill-know-difficulty {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    font-size: var(--fs-small);
+    color: var(--ink-5);
+}
 
 .skill-know-personal-btn {
     background: none;
@@ -5210,9 +5547,18 @@ mark.search-highlight {
    ═══════════════════════════════════════ */
 
 .goal-card-completed {
-    opacity: 0.65;
-    background: var(--border);
-    border-color: transparent;
+    background: var(--surface-raised);
+}
+
+.goal-card-completed .goal-card-title {
+    opacity: 0.55;
+}
+
+.goal-complete-tick {
+    color: var(--sage);
+    font-size: var(--fs-small);
+    margin-right: var(--sp-xs);
+    flex-shrink: 0;
 }
 
 .goal-card-date::before {
@@ -5223,20 +5569,35 @@ mark.search-highlight {
     border-bottom: none;
 }
 
-.goal-card-completed .goal-card-title {
-    text-decoration: line-through;
-    color: var(--ink-3);
+/* Completed goals section */
+.goals-completed-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: var(--sp-sm) 0;
+    margin-top: var(--sp-xl);
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 600;
+    font-variant: small-caps;
+    color: var(--ink-5);
+    letter-spacing: 0.04em;
+    text-align: left;
 }
 
-.goal-card-complete-banner {
-    font-size: var(--fs-caption);
-    font-weight: 600;
-    color: var(--success);
-    background: rgba(139, 158, 107, 0.1);
-    border-radius: var(--r-sm);
-    padding: 4px var(--sp-sm);
-    margin-bottom: var(--sp-sm);
-    display: inline-block;
+.goals-completed-count {
+    font-variant: normal;
+    font-weight: 400;
+    color: var(--ink-4);
+    font-size: var(--fs-small);
+}
+
+.goals-completed-body.collapsed {
+    display: none;
 }
 
 .goal-card-footer {
@@ -5260,6 +5621,13 @@ mark.search-highlight {
     opacity: 0.7;
 }
 
+/* Reactivate swipe action (All Goals — paused/letgo) */
+.swipe-action-reactivate {
+    background: rgba(74, 112, 56, 0.15);
+    color: var(--sage);
+    font-weight: 400;
+}
+
 /* Reopen swipe action */
 .swipe-action-reopen {
     background: var(--brown);  color: #fff;
@@ -5267,6 +5635,64 @@ mark.search-highlight {
     right: 0;
     justify-content: flex-end;
     padding-right: var(--sp-lg);
+}
+
+/* Goal swipe — two-button left reveal */
+.goal-swipe-left {
+    /* override shared .swipe-action-left padding/gap */
+    padding: 0;
+    gap: 0;
+    width: 176px;   /* pause (80) + let it go (96) */
+    right: 0;
+    left: auto;
+    justify-content: flex-end;
+    overflow: hidden;
+}
+
+.goal-swipe-left.goal-swipe-revealed {
+    pointer-events: auto;
+}
+
+.goal-swipe-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 400;
+    border: none;
+    cursor: pointer;
+    height: 100%;
+    padding: 0;
+    white-space: nowrap;
+}
+
+.goal-swipe-pause {
+    width: 80px;
+    background: var(--surface-warm);
+    color: var(--ink-4);
+}
+
+.goal-swipe-letgo {
+    width: 96px;
+    background: #F0EAE4;
+    color: var(--ink-3);
+}
+
+/* Delete button inside goal edit sheet */
+.goal-delete-btn {
+    background: none;
+    border: none;
+    color: var(--coral);
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 400;
+    padding: var(--sp-sm) 0;
+    cursor: pointer;
+    display: block;
+    width: 100%;
+    text-align: center;
 }
 
 /* Goal category UX */
@@ -5650,15 +6076,17 @@ button, a, input, select, textarea,
 .text-link-btn:hover { color: var(--ink); }
 
 /* All Goals screen */
-.all-goals-year-group { margin-bottom: var(--sp-xl); }
+.all-goals-year-group,
+.all-goals-group { margin-bottom: var(--sp-xl); }
 
-.all-goals-year-label {
+.all-goals-year-label,
+.all-goals-group-label {
     font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-caption);
+    font-size: var(--fs-small);
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--ink-3);
+    font-variant: small-caps;
+    letter-spacing: 0.04em;
+    color: var(--ink-5);
     margin-bottom: var(--sp-sm);
     padding: 0 var(--sp-xs);
 }
@@ -5885,9 +6313,9 @@ button, a, input, select, textarea,
 }
 
 .post-save-btn {
-    background: var(--ink);
+    background: var(--btn-primary);
     color: #fff;
-    border: 1px solid var(--ink);
+    border: 1px solid var(--btn-primary);
     border-radius: var(--r-md);
     padding: 7px 14px;
     font-family: 'DM Sans', sans-serif;
@@ -6116,6 +6544,35 @@ button, a, input, select, textarea,
     background: var(--ink);
     border-color: var(--ink);
     color: #fff;
+}
+
+/* Hero in-focus toggle button */
+.skill-hero-focus-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--gold-wash);
+    color: #8A5E0A;
+    border: none;
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: var(--sp-sm);
+    transition: background 0.15s ease;
+}
+.skill-hero-focus-btn.active {
+    background: var(--gold-wash);
+    color: #8A5E0A;
+}
+.skill-hero-focus-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--gold);
+    flex-shrink: 0;
 }
 
 /* ═══════════════════════════════════════
@@ -6374,14 +6831,14 @@ button, a, input, select, textarea,
     border: none;
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-small);
-    font-weight: 500;
+    font-weight: 400;
     color: var(--ink-2);
     cursor: pointer;
     padding: 0;
     transition: color 0.15s ease;
 }
 .profile-quiz-cta:hover { color: var(--ink); }
-.profile-quiz-retake { color: var(--ink-3); font-weight: 400; }
+.profile-quiz-retake { color: var(--ink); }
 
 .status-meta {
     display: flex;
@@ -7181,6 +7638,16 @@ button, a, input, select, textarea,
     line-height: 1.5;
 }
 
+.orient-select-hint {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--ink-5);
+    margin-bottom: var(--sp-md);
+    text-align: center;
+}
+
 /* Options — matches .assessment-options / .assessment-option */
 .orient-options {
     display: flex;
@@ -7396,8 +7863,9 @@ button, a, input, select, textarea,
     -webkit-tap-highlight-color: transparent;
 }
 .goal-period-chip.selected {
-    background: var(--gold-wash);
-    border-color: var(--gold);
+    background: var(--ink);
+    border-color: var(--ink);
+    color: #fff;
 }
 
 /* Skill chips in goal creator */
@@ -7421,8 +7889,9 @@ button, a, input, select, textarea,
     transition: background .12s, border-color .12s;
 }
 .goal-skill-chip.selected {
-    background: var(--gold-wash);
-    border-color: var(--gold);
+    background: var(--ink);
+    border-color: var(--ink);
+    color: #fff;
 }
 
 /* Progress marker inputs */
@@ -7552,32 +8021,31 @@ button, a, input, select, textarea,
 }
 
 /* Discard confirm state */
-.goal-discard-confirm {
+.goal-discard-banner {
+    background: var(--surface-warm);
+    border-top: 0.5px solid rgba(26, 23, 20, 0.10);
+    padding: 12px 16px;
     display: flex;
     align-items: center;
     gap: var(--sp-md);
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-small);
-    color: var(--ink-2);
-}
-.goal-discard-confirm-yes {
-    color: var(--coral, #A84030);
-    background: none;
-    border: none;
-    font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
-    font-weight: 600;
-    cursor: pointer;
-    padding: 0;
-    text-transform: lowercase;
-}
-.goal-discard-confirm-no {
+    font-weight: 400;
     color: var(--ink-3);
+    transform: translateY(100%);
+    transition: transform 200ms ease;
+}
+.goal-discard-banner.visible {
+    transform: translateY(0);
+}
+.goal-discard-banner button {
     background: none;
     border: none;
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-small);
+    font-weight: 400;
     cursor: pointer;
     padding: 0;
-    text-transform: lowercase;
 }
+.goal-discard-banner button:first-of-type { color: var(--coral); }
+.goal-discard-banner button:last-of-type  { color: var(--ink-4); }
