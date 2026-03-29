@@ -2431,7 +2431,7 @@ function renderGoalCard(goal, completed) {
         typeLabel ? `<span class="goal-tag goal-tag-type">${typeLabel}</span>` : null,
         linkedSkill ? `<span class="goal-tag goal-tag-skill">${linkedSkill.french}</span>` : null,
         periodDisplay ? `<span class="goal-tag">${periodDisplay}</span>` : null,
-        goal.howOften ? `<span class="goal-tag">${goal.howOften.replace('x', '')}× a week</span>` : null,
+        goal.howOften ? `<span class="goal-tag">${goal.howOften.startsWith('x') ? goal.howOften.slice(1) + '× a week' : goal.howOften}</span>` : null,
     ].filter(Boolean).join('');
 
     const MARKER_CAP = 4;
