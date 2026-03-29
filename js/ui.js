@@ -93,6 +93,9 @@ function openSessionLogger(mode) {
         overlay.id = 'session-logger-overlay';
         overlay.className = 'session-overlay';
         document.body.appendChild(overlay);
+        overlay.addEventListener('mousedown', (e) => {
+            if (e.target === overlay) closeSessionLogger();
+        });
     }
 
     renderSessionLogger();
@@ -820,17 +823,14 @@ const BLOCK_MODES = ['correction', 'praise', 'reflection'];
 
 function addBlock(focusTitle = false) {
     const block = {
-        id:             Date.now(),
-        topicId:        'general',
-        title:          '',
-        notes:          '',
-        notesOpen:      false,
-        mode:           'correction',
-        corrections:    [],
-        praiseText:     '',
-        reflectionText: '',
-        source:         'correction',
-        isHighlight:    false,
+        id:          Date.now(),
+        topicId:     'general',
+        title:       '',
+        text:        '',
+        notes:       '',
+        notesOpen:   false,
+        source:      null,
+        isHighlight: false,
     };
     appState.currentSession.blocks.push(block);
     sortBlocks();
@@ -882,56 +882,32 @@ function renderBlocksOnly() {
 function renderBlockHtml(block, index) {
     const topics = getBlockTopics();
     const isGeneral = block.topicId === 'general';
-    const mode = block.mode || 'correction';
+    const source = block.source || null;
 
-    // Corrections bullet list (mode === 'correction')
-    const corrList = Array.isArray(block.corrections) ? block.corrections : [];
-    const corrBulletsHtml = corrList.map((text, ci) => `
-        <div class="correction-bullet" data-block="${block.id}" data-ci="${ci}">
-            <span class="correction-bullet-dash">—</span>
-            <div class="correction-bullet-input-wrapper">
-                <div class="correction-bullet-input"
-                     contenteditable="true"
-                     data-block="${block.id}"
-                     data-ci="${ci}"
-                     oninput="updateCorrectionBullet(${block.id}, ${ci}, this.innerText)"
-                     onkeydown="handleCorrectionBulletKey(event, ${block.id}, ${ci})"
-                     >${text}</div>
-            </div>
-            <button class="correction-bullet-delete"
-                    onmousedown="deleteCorrectionBullet(${block.id}, ${ci})"
-                    aria-label="Delete">×</button>
-        </div>
-    `).join('');
+    // Migrate legacy content into block.text for display in the editor
+    // (corrections[], praiseText, reflectionText → text)
+    let blockText = block.text || '';
+    if (!blockText) {
+        if (Array.isArray(block.corrections) && block.corrections.length) {
+            blockText = block.corrections.join('\n');
+        } else if (block.praiseText) {
+            blockText = block.praiseText;
+        } else if (block.reflectionText) {
+            blockText = block.reflectionText;
+        }
+    }
 
-    const corrFieldHtml = `
-        <div class="correction-bullets-container" id="correction-bullets-${block.id}">
-            ${corrBulletsHtml}
-            <div class="correction-bullet correction-bullet-new" data-block="${block.id}">
-                <span class="correction-bullet-dash">—</span>
-                <div class="correction-bullet-input-wrapper">
-                    <div class="correction-bullet-input correction-bullet-placeholder"
-                         contenteditable="true"
-                         data-block="${block.id}"
-                         data-ci="${corrList.length}"
-                         oninput="handleNewCorrectionBulletInput(event, ${block.id})"
-                         onkeydown="handleCorrectionBulletKey(event, ${block.id}, ${corrList.length})"
-                         ></div>
-                </div>
-            </div>
+    // Source chips: Correction · Observation
+    const sourcesHtml = `
+        <div class="block-source-chips">
+            <button class="block-source-chip ${source === 'correction' ? 'active' : ''}"
+                    onmousedown="setBlockSource(${block.id}, 'correction')">correction</button>
+            <button class="block-source-chip ${source === 'observation' ? 'active' : ''}"
+                    onmousedown="setBlockSource(${block.id}, 'observation')">observation</button>
         </div>
-        <p class="correction-bullets-hint">Enter to add · Shift+Enter for new line</p>
     `;
 
-    // Reflection field (mode === 'reflection')
-    const reflectionHtml = `
-        <textarea class="session-block-textarea session-block-capped"
-                  placeholder="Note a reflection…"
-                  oninput="updateBlockField(${block.id}, 'reflectionText', this.value); autoResizeCapped(this);"
-                  >${block.reflectionText || ''}</textarea>
-    `;
-
-    // Notes section (collapsible) — wrapped in .block-notes-area for surgical updates
+    // Notes section (collapsible)
     const notesHtml = `
         <div class="block-notes-area">
             ${block.notesOpen || block.notes ? `
@@ -950,30 +926,6 @@ function renderBlockHtml(block, index) {
         </div>
     `;
 
-    // Praise content — free text for what was praised
-    const praiseHtml = `
-        <textarea class="session-block-textarea session-block-capped"
-                  placeholder="What were you praised for? e.g. your arabesque line, timing…"
-                  oninput="updateBlockField(${block.id}, 'praiseText', this.value); autoResizeCapped(this);"
-                  >${block.praiseText || ''}</textarea>
-    `;
-
-    // Mode toggle
-    const modeToggleHtml = `
-        <div class="block-mode-toggle">
-            <button class="block-mode-btn ${mode === 'correction' ? 'active' : ''}"
-                    onmousedown="setBlockMode(${block.id}, 'correction')">Correction</button>
-            <button class="block-mode-btn ${mode === 'praise' ? 'active' : ''}"
-                    onmousedown="setBlockMode(${block.id}, 'praise')">Praise</button>
-            <button class="block-mode-btn ${mode === 'reflection' ? 'active' : ''}"
-                    onmousedown="setBlockMode(${block.id}, 'reflection')">Reflection</button>
-        </div>
-    `;
-
-    const modeClass = mode === 'praise' ? 'block-mode-praise'
-                    : mode === 'reflection' ? 'block-mode-reflection'
-                    : '';
-
     return `
         <div class="swipe-row" data-block-id="${block.id}">
             <div class="swipe-action-left swipe-action-remove">
@@ -981,7 +933,7 @@ function renderBlockHtml(block, index) {
                 remove
             </div>
             <div class="swipe-content">
-                <div class="session-block ${modeClass}" id="block-${block.id}">
+                <div class="session-block" id="block-${block.id}">
 
                     <div class="session-block-header">
                         <div class="session-block-topic-wrapper" id="topic-wrapper-${block.id}">
@@ -997,6 +949,13 @@ function renderBlockHtml(block, index) {
                                    placeholder="Search skill…" />
                             <div class="block-topic-dropdown" id="topic-dropdown-${block.id}" style="display:none;"></div>
                         </div>
+                        <button class="block-star-btn ${block.isHighlight ? 'active' : ''}"
+                                onmousedown="toggleBlockHighlight(${block.id})"
+                                aria-label="Highlight">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="${block.isHighlight ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M8 1.5l1.7 3.4 3.8.55-2.75 2.68.65 3.78L8 10.1 4.6 11.91l.65-3.78L2.5 5.45l3.8-.55z"/>
+                            </svg>
+                        </button>
                         <button class="block-remove-btn" onclick="removeBlock(${block.id})" aria-label="Remove">
                             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                                 <line x1="3" y1="3" x2="11" y2="11"/>
@@ -1014,11 +973,12 @@ function renderBlockHtml(block, index) {
                                   onblur="this.placeholder='${isGeneral ? 'Topic or title…' : 'Add a title…'}'"
                                   >${block.title}</textarea>
 
-                        ${modeToggleHtml}
+                        <textarea class="session-block-textarea session-block-capped"
+                                  placeholder="What happened…"
+                                  oninput="updateBlockField(${block.id}, 'text', this.value); autoResizeCapped(this);"
+                                  >${blockText}</textarea>
 
-                        ${mode === 'correction' ? corrFieldHtml : ''}
-                        ${mode === 'praise'     ? praiseHtml    : ''}
-                        ${mode === 'reflection' ? reflectionHtml : ''}
+                        ${sourcesHtml}
 
                         ${notesHtml}
                     </div>
@@ -1244,6 +1204,32 @@ function setBlockMode(blockId, mode) {
     if (!block) return;
     block.mode = mode;
     renderBlocksOnly();
+}
+
+function setBlockSource(blockId, source) {
+    const block = getBlockById(blockId);
+    if (!block) return;
+    // Toggle off if already selected
+    block.source = block.source === source ? null : source;
+    const blockEl = document.getElementById(`block-${blockId}`);
+    if (!blockEl) return;
+    blockEl.querySelectorAll('.block-source-chip').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.trim() === block.source);
+    });
+}
+
+function toggleBlockHighlight(blockId) {
+    const block = getBlockById(blockId);
+    if (!block) return;
+    block.isHighlight = !block.isHighlight;
+    const blockEl = document.getElementById(`block-${blockId}`);
+    if (!blockEl) return;
+    const btn = blockEl.querySelector('.block-star-btn');
+    if (btn) {
+        btn.classList.toggle('active', block.isHighlight);
+        const path = btn.querySelector('path');
+        if (path) path.setAttribute('fill', block.isHighlight ? 'currentColor' : 'none');
+    }
 }
 
 function toggleBlockNotes(blockId) {
@@ -1530,71 +1516,60 @@ function saveSession() {
     s.blocks.forEach(block => {
         const isSkill = block.topicId?.startsWith('skill:');
         const skillId = isSkill ? block.topicId.replace('skill:', '') : null;
-        const mode = block.mode || 'correction';
-
-        // Each non-empty bullet in corrections[] → one Correction object
         const blockCorrectionIds = [];
-        const corrBullets = Array.isArray(block.corrections)
-            ? block.corrections
-            : (block.corrections ? [block.corrections] : []); // backward compat with old string format
 
-        if (mode === 'correction') {
-            corrBullets.filter(t => t?.trim()).forEach(text => {
+        // Resolve block text — new format uses block.text; legacy format uses corrections[]/praiseText/reflectionText
+        const blockText = (block.text?.trim())
+            || (Array.isArray(block.corrections) && block.corrections.filter(t => t?.trim()).join('\n'))
+            || block.praiseText?.trim()
+            || block.reflectionText?.trim()
+            || '';
+
+        const isCorrection = block.source === 'correction' || (!block.source && !!block.mode && block.mode === 'correction');
+
+        // Save as Correction if source is 'correction' (or legacy correction mode with bullets)
+        if (isCorrection && blockText) {
+            // Split multi-line text into individual corrections (legacy bullet compat)
+            const lines = blockText.split('\n').map(l => l.trim()).filter(Boolean);
+            lines.forEach(text => {
                 const correction = {
                     id:          nextId(),
                     skillId:     skillId || null,
-                    text:        text.trim(),
+                    text,
                     createdAt:   now,
                     sessionId:   session.id,
-                    source:      'teacher',
-                    type:        null,
-                    isRecurring: false,
+                    isHighlight: !!block.isHighlight,
                 };
                 appState.corrections.push(correction);
                 blockCorrectionIds.push(correction.id);
                 correctionCount++;
             });
-        }
-
-        // Praise blocks — save praiseText as a skill note, write timeline entry
-        if (mode === 'praise') {
-            const praiseContent = block.praiseText?.trim() || block.title?.trim();
-            if (praiseContent) {
-                appState.skillNotes = appState.skillNotes || [];
-                appState.skillNotes.push({
-                    id:        nextId(),
-                    skillId:   skillId || null,
-                    text:      praiseContent,
-                    date:      session.date,
-                    createdAt: now,
-                    isPraise:  true,
-                });
-                storage.save('skillNotes', appState.skillNotes);
-
-                const skillRef = skillId ? DATA.skills.find(sk => sk.id === skillId) : null;
-                appendTimelineEntry({
-                    type:     'milestone',
-                    objectId: session.id,
-                    title:    praiseContent,
-                    body:     skillRef ? skillRef.french : null,
-                    date:     session.date,
-                    isPraise: true,
-                });
-            }
-        }
-
-        // Reflection blocks — save as a skill note
-        if (mode === 'reflection' && block.reflectionText?.trim()) {
+        } else if (blockText) {
+            // Observation or untagged — save as SkillNote
             appState.skillNotes = appState.skillNotes || [];
             appState.skillNotes.push({
-                id:           nextId(),
-                skillId:      skillId || null,
-                text:         block.reflectionText.trim(),
-                date:         session.date,
-                createdAt:    now,
-                isReflection: true,
+                id:          nextId(),
+                skillId:     skillId || null,
+                text:        blockText,
+                date:        session.date,
+                createdAt:   now,
+                source:      block.source || null,
+                isHighlight: !!block.isHighlight,
             });
             storage.save('skillNotes', appState.skillNotes);
+        }
+
+        // Legacy praise → timeline entry
+        if ((block.mode === 'praise' || block.source === 'observation') && blockText) {
+            const skillRef = skillId ? DATA.skills.find(sk => sk.id === skillId) : null;
+            appendTimelineEntry({
+                type:     'milestone',
+                objectId: session.id,
+                title:    blockText,
+                body:     skillRef ? skillRef.french : null,
+                date:     session.date,
+                isPraise: true,
+            });
         }
 
         // SessionSkill join object — only for skill-topic blocks
@@ -1603,11 +1578,11 @@ function saveSession() {
                 id:            nextId(),
                 sessionId:     session.id,
                 skillId:       skillId,
-                notes:         block.notes?.trim()       || null,
+                notes:         block.notes?.trim() || null,
                 correctionIds: blockCorrectionIds,
                 tracked:       true,
-                blockTitle:    block.title?.trim()        || null,
-                mode:          mode,
+                blockTitle:    block.title?.trim() || null,
+                source:        block.source || null,
             };
             appState.sessionSkills.push(sessionSkill);
             skillCount++;
@@ -2303,9 +2278,29 @@ function renderGoalCard(goal, completed) {
     const doneMarkers = markers.filter(m => m.done).length;
     const progress = markers.length > 0 ? doneMarkers / markers.length : null;
 
+    const TYPE_LABELS = { skill: 'a skill', intention: 'a feeling or state', habit: 'a habit' };
+    const typeLabel = TYPE_LABELS[goal.goalType] || goal.goalType || null;
+
+    function formatPeriod(p) {
+        if (!p) return null;
+        // ISO date format YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(p)) {
+            const dt = new Date(p + 'T12:00:00');
+            return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+        return p;
+    }
+
+    const linkedSkill = goal.skillId
+        ? (appState.skills || []).find(s => s.id === goal.skillId)
+        : null;
+    const periodDisplay = formatPeriod(goal.commitmentPeriod);
+
     const tagsHtml = [
-        goal.goalType        ? `<span class="goal-tag goal-tag-type">${goal.goalType}</span>`                        : null,
-        goal.commitmentPeriod ? `<span class="goal-tag">${goal.commitmentPeriod}</span>`                              : null,
+        typeLabel ? `<span class="goal-tag goal-tag-type">${typeLabel}</span>` : null,
+        linkedSkill ? `<span class="goal-tag goal-tag-skill">${linkedSkill.french}</span>` : null,
+        periodDisplay ? `<span class="goal-tag">${periodDisplay}</span>` : null,
+        goal.howOften ? `<span class="goal-tag">${goal.howOften.replace('x', '')}× a week</span>` : null,
     ].filter(Boolean).join('');
 
     const MARKER_CAP = 4;
@@ -2356,12 +2351,7 @@ function renderGoalCard(goal, completed) {
                     ${progressBarHtml}
                     <div class="goal-card-footer">
                         <span class="goal-card-date">created ${formatTimelineDate(new Date(goal.createdAt).toISOString().split('T')[0])}</span>
-                        <div style="display:flex;gap:var(--sp-sm);align-items:center;">
-                            ${!completed ? `<button class="goal-edit-btn" onclick="openGoalEditor(${goal.id})">edit</button>` : ''}
-                            ${!completed
-                                ? `<span class="goal-swipe-hint">swipe to complete →</span>`
-                                : `<span class="goal-swipe-hint">swipe to reopen →</span>`}
-                        </div>
+                        ${!completed ? `<button class="goal-edit-btn" onclick="openGoalEditor(${goal.id})">edit</button>` : ''}
                     </div>
                 </div>
             </div>
@@ -2395,6 +2385,9 @@ function openGoalCreator() {
         overlay.id = 'goal-creator-overlay';
         overlay.className = 'session-overlay'; // reuse sheet styles
         document.body.appendChild(overlay);
+        overlay.addEventListener('mousedown', (e) => {
+            if (e.target === overlay) confirmDiscardGoal();
+        });
     }
 
     renderGoalCreator();
@@ -2428,41 +2421,23 @@ function openGoalCreatorWithSuggestion(title, dimensionId, skillId, rationale, m
         overlay.id = 'goal-creator-overlay';
         overlay.className = 'session-overlay';
         document.body.appendChild(overlay);
+        overlay.addEventListener('mousedown', (e) => {
+            if (e.target === overlay) confirmDiscardGoal();
+        });
     }
 
     renderGoalCreator();
 
     document.querySelector('.fab')?.classList.remove('visible');
     document.querySelector('.bottom-nav')?.classList.remove('visible');
-    
+
     requestAnimationFrame(() => {
         overlay.classList.add('open');
-        // Pre-fill all fields immediately
-        const titleInput = document.getElementById('goal-title-input');
-        const bodyInput = document.getElementById('goal-body-input');
-        const dimensionSelect = document.getElementById('goal-dimension-select');
-        const skillSelect = document.getElementById('goal-skill-select');
-        
-        if (titleInput) titleInput.value = title;
-        if (bodyInput) bodyInput.value = rationale;
-        if (dimensionSelect && dimensionId) dimensionSelect.value = dimensionId;
-        if (skillSelect && skillId) skillSelect.value = skillId;
-        
-        // Pre-populate milestones in the DOM if they exist
-        if (milestones.length > 0) {
-            const milestonesContainer = document.getElementById('goal-milestones-container');
-            if (milestonesContainer) {
-                milestonesContainer.innerHTML = '';
-                milestones.forEach(m => {
-                    const mRow = document.createElement('div');
-                    mRow.className = 'milestone-row';
-                    mRow.innerHTML = `
-                        <input type="text" placeholder="Milestone" value="${escapeHtml(m)}" class="milestone-input">
-                        <button class="remove-milestone-btn" onclick="this.parentElement.remove()">✕</button>
-                    `;
-                    milestonesContainer.appendChild(mRow);
-                });
-            }
+        // Pre-fill skill search input if a skillId was provided
+        if (skillId) {
+            const skill = (appState.skills || []).find(s => s.id === skillId);
+            const skillInput = document.getElementById('goal-skill-input');
+            if (skillInput && skill) skillInput.value = skill.french;
         }
     });
 }
@@ -2482,7 +2457,7 @@ function openGoalEditor(goalId) {
         milestones:       (goal.milestones || []).map(m => ({ ...m })),
         goalType:         goal.goalType         || null,
         commitmentPeriod: goal.commitmentPeriod || '',
-        progressMarkers:  (goal.milestones || []).map(m => ({ ...m })),
+        progressMarkers:  (goal.progressMarkers || goal.milestones || []).map(m => ({ ...m })),
         skillIds:         [...(goal.skillIds || [])],
         howOften:         goal.howOften || '',
     };
@@ -2493,6 +2468,9 @@ function openGoalEditor(goalId) {
         overlay.id = 'goal-creator-overlay';
         overlay.className = 'session-overlay';
         document.body.appendChild(overlay);
+        overlay.addEventListener('mousedown', (e) => {
+            if (e.target === overlay) confirmDiscardGoal();
+        });
     }
     renderGoalCreator();
     document.querySelector('.fab')?.classList.remove('visible');
@@ -2527,33 +2505,43 @@ function renderGoalCreator() {
         'feel it in centre without thinking about it',
     ];
 
-    const periodOptions = ['this week', 'two weeks', 'this month', 'three months', 'other…'];
-    const howOftenOptions = ['every class', 'every week', 'set number of times', 'other…'];
+    const periodOptions = ['This week', 'Two weeks', 'This month', 'Three months', 'Choose a date'];
+    const howOftenOptions = ['Every class', 'Every week', 'Set number of times', 'Other…'];
 
     function periodChipsHtml() {
-        const presets = periodOptions.slice(0, -1); // all except 'other…'
-        const isOtherSelected = d.commitmentPeriod && !presets.includes(d.commitmentPeriod);
+        const presets = periodOptions.slice(0, -1);
+        const isDateSelected = d.commitmentPeriod && !presets.includes(d.commitmentPeriod) && d.commitmentPeriod !== 'Choose a date';
+        const showDatePicker = d.commitmentPeriod === 'Choose a date' || isDateSelected;
+
+        let dateDisplayHtml = '';
+        if (isDateSelected) {
+            const dt = new Date(d.commitmentPeriod + 'T12:00:00');
+            const formatted = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+            dateDisplayHtml = `<span class="date-display-label">${formatted}</span>`;
+        } else {
+            dateDisplayHtml = `<span class="date-display-label" style="color:var(--ink-3);font-weight:400;">Tap to pick a date</span>`;
+        }
+
         return `
             <div class="goal-period-chips">
                 ${periodOptions.map(p => {
-                    const isActive = p === 'other…' ? isOtherSelected : d.commitmentPeriod === p;
+                    const isActive = p === 'Choose a date' ? showDatePicker : d.commitmentPeriod === p;
                     return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onmousedown="setGoalPeriod('${p}')">${p}</button>`;
                 }).join('')}
             </div>
-            ${(d.commitmentPeriod === 'other…' || isOtherSelected) ? `
-                <input type="text" class="session-input goal-period-other-input" style="margin-top: var(--sp-sm);"
-                       placeholder="e.g. six weeks"
-                       value="${isOtherSelected && d.commitmentPeriod !== 'other…' ? escapeHtml(d.commitmentPeriod) : ''}"
-                       oninput="appState._goalDraft.commitmentPeriod = this.value || 'other…'" />
+            ${showDatePicker ? `
+                <div class="session-date-picker" id="goal-period-date-picker" style="margin-top: var(--sp-sm);">
+                    <div class="date-display" onmousedown="toggleGoalDateCalendar()" style="border-left:none; border-right:none;">
+                        ${dateDisplayHtml}
+                    </div>
+                </div>
             ` : ''}
         `;
     }
 
     function skillFormHtml() {
-        const skillChipsHtml = (appState.skills || []).map(s => {
-            const sel = (d.skillIds || []).includes(s.id);
-            return `<button class="goal-skill-chip ${sel ? 'selected' : ''}" onmousedown="toggleGoalSkill('${s.id}')">${s.french}</button>`;
-        }).join('');
+        const selectedSkill = d.skillId ? (appState.skills || []).find(s => s.id === d.skillId) : null;
+        const selectedSkillLabel = selectedSkill ? selectedSkill.french : '';
 
         const markersHtml = (d.progressMarkers || []).map((m, i) => `
             <div class="goal-marker-row">
@@ -2571,35 +2559,56 @@ function renderGoalCreator() {
 
         return `
             <div class="session-field">
-                <label class="session-field-label">title</label>
+                <label class="session-field-label">Title</label>
                 <input type="text" class="session-input" id="goal-title-input"
-                       placeholder="name it so you'd recognise it in a month"
+                       placeholder="Name it so you'd recognise it in a month"
                        value="${escapeHtml(d.title)}"
-                       oninput="appState._goalDraft.title = this.value" />
+                       oninput="appState._goalDraft.title = this.value; checkGoalTitleForSkills(this.value); searchGoalCorrections(this.value);" />
+                <div id="goal-correction-search-results"></div>
             </div>
+            ${(d.correctionIds || []).length ? `
+                <div class="session-field">
+                    <label class="session-field-label">Linked corrections</label>
+                    <div id="goal-linked-corrections">
+                        ${renderLinkedCorrectionsHtml(d.correctionIds)}
+                    </div>
+                </div>
+            ` : `<div id="goal-linked-corrections-wrapper"></div>`}
             <div class="session-field">
-                <label class="session-field-label">what does it look like when it happens? <span class="session-field-optional">optional</span></label>
-                <textarea class="session-block-textarea" id="goal-body-input"
-                          placeholder="be specific enough that you'd know"
+                <label class="session-field-label">What does it look like when it happens? <span class="session-field-optional">optional</span></label>
+                <textarea class="session-input" id="goal-body-input"
+                          placeholder="Be specific enough that you'd know"
                           rows="2"
+                          style="resize: none;"
                           oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);">${escapeHtml(d.body || '')}</textarea>
             </div>
             <div class="session-field">
-                <label class="session-field-label">linked skill <span class="session-field-optional">optional</span></label>
-                <div class="goal-skill-chips">${skillChipsHtml}</div>
+                <label class="session-field-label">Linked skill <span class="session-field-optional">optional</span></label>
+                <div style="position: relative;">
+                    <input class="session-input" id="goal-skill-input"
+                           type="text"
+                           autocomplete="off"
+                           spellcheck="false"
+                           value="${escapeHtml(selectedSkillLabel)}"
+                           oninput="filterGoalSkills(this.value)"
+                           onfocus="filterGoalSkills(this.value)"
+                           onblur="setTimeout(()=>{const el=document.getElementById('goal-skill-dropdown');if(el)el.style.display='none';},200)"
+                           placeholder="Search skill…" />
+                    <div class="block-topic-dropdown" id="goal-skill-dropdown" style="display:none;"></div>
+                </div>
             </div>
             <div class="session-field">
-                <label class="session-field-label">milestones <span class="session-field-optional">optional</span></label>
+                <label class="session-field-label">Milestones <span class="session-field-optional">optional</span></label>
                 <div id="goal-markers-list">${markersHtml}</div>
                 <button class="add-block-btn" style="margin-top: var(--sp-sm);" onmousedown="addProgressMarker()">
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                         <line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/>
                     </svg>
-                    + add milestone
+                    add milestone
                 </button>
             </div>
             <div class="session-field">
-                <label class="session-field-label">work on this for</label>
+                <label class="session-field-label">Work on this for</label>
                 ${periodChipsHtml()}
             </div>
         `;
@@ -2608,21 +2617,31 @@ function renderGoalCreator() {
     function intentionFormHtml() {
         return `
             <div class="session-field">
-                <label class="session-field-label">title</label>
+                <label class="session-field-label">Title</label>
                 <input type="text" class="session-input" id="goal-title-input"
-                       placeholder="name it so you'd recognise it"
+                       placeholder="Name it so you'd recognise it"
                        value="${escapeHtml(d.title)}"
-                       oninput="appState._goalDraft.title = this.value" />
+                       oninput="appState._goalDraft.title = this.value; searchGoalCorrections(this.value);" />
+                <div id="goal-correction-search-results"></div>
             </div>
+            ${(d.correctionIds || []).length ? `
+                <div class="session-field">
+                    <label class="session-field-label">Linked corrections</label>
+                    <div id="goal-linked-corrections">
+                        ${renderLinkedCorrectionsHtml(d.correctionIds)}
+                    </div>
+                </div>
+            ` : `<div id="goal-linked-corrections-wrapper"></div>`}
             <div class="session-field">
-                <label class="session-field-label">describe it <span class="session-field-optional">optional</span></label>
-                <textarea class="session-block-textarea" id="goal-body-input"
-                          placeholder="this is yours to judge, not the app's"
+                <label class="session-field-label">Describe it <span class="session-field-optional">optional</span></label>
+                <textarea class="session-input" id="goal-body-input"
+                          placeholder="This is yours to judge, not the app's"
                           rows="2"
+                          style="resize: none;"
                           oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);">${escapeHtml(d.body || '')}</textarea>
             </div>
             <div class="session-field">
-                <label class="session-field-label">work on this for</label>
+                <label class="session-field-label">Work on this for</label>
                 ${periodChipsHtml()}
             </div>
         `;
@@ -2630,68 +2649,80 @@ function renderGoalCreator() {
 
     function habitFormHtml() {
         const isSetNum = d.howOften && d.howOften.startsWith('x');
-        const presetHowOften = ['every class', 'every week', 'set number of times', 'other…'];
+        const presetHowOften = ['Every class', 'Every week', 'Set number of times', 'Other…'];
         const isOtherHowOften = d.howOften && !presetHowOften.includes(d.howOften) && !isSetNum;
         const howOftenChipsHtml = howOftenOptions.map(o => {
             let isActive = false;
-            if (o === 'set number of times') isActive = isSetNum;
-            else if (o === 'other…') isActive = isOtherHowOften;
+            if (o === 'Set number of times') isActive = isSetNum;
+            else if (o === 'Other…') isActive = isOtherHowOften;
             else isActive = d.howOften === o;
             return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onmousedown="setGoalHowOften('${o}')">${o}</button>`;
         }).join('');
 
+        const numVal = isSetNum ? parseInt(d.howOften.slice(1)) || 1 : 1;
         let howOftenExtra = '';
-        if (d.howOften === 'set number of times' || isSetNum) {
-            const numVal = isSetNum ? d.howOften.slice(1) : '';
+        if (d.howOften === 'Set number of times' || isSetNum) {
             howOftenExtra = `
-                <input type="number" class="session-input" style="margin-top: var(--sp-sm); width: 100px;"
-                       placeholder="e.g. 3"
-                       value="${escapeHtml(numVal)}"
-                       oninput="appState._goalDraft.howOften = 'x' + this.value" />
+                <div class="goal-number-stepper">
+                    <button class="goal-stepper-btn" onmousedown="adjustGoalHowOftenNum(-1)" ${numVal <= 1 ? 'disabled' : ''}>−</button>
+                    <span class="goal-stepper-value">${numVal}</span>
+                    <button class="goal-stepper-btn" onmousedown="adjustGoalHowOftenNum(1)">+</button>
+                    <span class="goal-stepper-label">times per week</span>
+                </div>
             `;
-        } else if (d.howOften === 'other…' || isOtherHowOften) {
+        } else if (d.howOften === 'Other…' || isOtherHowOften) {
             howOftenExtra = `
                 <input type="text" class="session-input" style="margin-top: var(--sp-sm);"
                        placeholder="e.g. whenever I feel ready"
                        value="${isOtherHowOften ? escapeHtml(d.howOften) : ''}"
-                       oninput="appState._goalDraft.howOften = this.value || 'other…'" />
+                       oninput="appState._goalDraft.howOften = this.value || 'Other…'" />
             `;
         }
 
         return `
             <div class="session-field">
-                <label class="session-field-label">title</label>
+                <label class="session-field-label">Title</label>
                 <input type="text" class="session-input" id="goal-title-input"
-                       placeholder="name it so you'd recognise it"
+                       placeholder="Name it so you'd recognise it"
                        value="${escapeHtml(d.title)}"
-                       oninput="appState._goalDraft.title = this.value" />
+                       oninput="appState._goalDraft.title = this.value; searchGoalCorrections(this.value);" />
+                <div id="goal-correction-search-results"></div>
             </div>
+            ${(d.correctionIds || []).length ? `
+                <div class="session-field">
+                    <label class="session-field-label">Linked corrections</label>
+                    <div id="goal-linked-corrections">
+                        ${renderLinkedCorrectionsHtml(d.correctionIds)}
+                    </div>
+                </div>
+            ` : `<div id="goal-linked-corrections-wrapper"></div>`}
             <div class="session-field">
-                <label class="session-field-label">describe it <span class="session-field-optional">optional</span></label>
-                <textarea class="session-block-textarea" id="goal-body-input"
-                          placeholder="what, specifically"
+                <label class="session-field-label">Describe it <span class="session-field-optional">optional</span></label>
+                <textarea class="session-input" id="goal-body-input"
+                          placeholder="What, specifically"
                           rows="2"
+                          style="resize: none;"
                           oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);">${escapeHtml(d.body || '')}</textarea>
             </div>
             <div class="session-field">
-                <label class="session-field-label">how often</label>
+                <label class="session-field-label">How often</label>
                 <div class="goal-period-chips">${howOftenChipsHtml}</div>
                 ${howOftenExtra}
             </div>
             <div class="session-field">
-                <label class="session-field-label">work on this for</label>
+                <label class="session-field-label">Work on this for</label>
                 ${periodChipsHtml()}
             </div>
         `;
     }
 
-    const typeTabsHtml = `
+    const typeTabsHtml = d.goalType ? `
         <div class="goal-type-tabs" id="goal-type-tabs">
-            <button type="button" class="goal-type-tab ${d.goalType === 'skill' ? 'active' : ''}" data-type="skill">a skill</button>
-            <button type="button" class="goal-type-tab ${d.goalType === 'intention' ? 'active' : ''}" data-type="intention">a feeling or state</button>
-            <button type="button" class="goal-type-tab ${d.goalType === 'habit' ? 'active' : ''}" data-type="habit">a habit</button>
+            <button type="button" class="goal-type-tab ${d.goalType === 'skill' ? 'active' : ''}" data-type="skill">A skill</button>
+            <button type="button" class="goal-type-tab ${d.goalType === 'intention' ? 'active' : ''}" data-type="intention">A feeling or state</button>
+            <button type="button" class="goal-type-tab ${d.goalType === 'habit' ? 'active' : ''}" data-type="habit">A habit</button>
         </div>
-    `;
+    ` : '';
 
     let bodyHtml = '';
     if (d.goalType === 'skill') bodyHtml = skillFormHtml();
@@ -2710,7 +2741,7 @@ function renderGoalCreator() {
     } else if (d.goalType) {
         footerHtml = `
             <button class="session-discard-btn" onmousedown="confirmDiscardGoal()">discard</button>
-            <button class="btn-large session-save-btn" onmousedown="saveGoal()">save goal</button>
+            <button class="btn-large session-save-btn" onmousedown="saveGoal()">Save goal</button>
         `;
     } else {
         footerHtml = '';
@@ -2723,7 +2754,7 @@ function renderGoalCreator() {
             <div class="session-logger-header">
                 <div>
                     <div class="session-logger-eyebrow">Set a goal</div>
-                    <h2 class="session-logger-title">what are you working toward?</h2>
+                    <h2 class="session-logger-title">What are you working toward?</h2>
                 </div>
                 <button type="button" class="session-close-btn" onmousedown="confirmDiscardGoal()">
                     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -2738,15 +2769,15 @@ function renderGoalCreator() {
                 ${bodyHtml || `
                     <div class="goal-type-cards">
                         <button class="goal-type-card" data-type="skill">
-                            <span class="goal-type-card-name">a skill</span>
+                            <span class="goal-type-card-name">A skill</span>
                             <span class="goal-type-card-desc">Something specific — a technique, a step, a quality of movement.</span>
                         </button>
                         <button class="goal-type-card" data-type="intention">
-                            <span class="goal-type-card-name">a feeling or state</span>
+                            <span class="goal-type-card-name">A feeling or state</span>
                             <span class="goal-type-card-desc">Presence, confidence, ease. Harder to measure, worth naming.</span>
                         </button>
                         <button class="goal-type-card" data-type="habit">
-                            <span class="goal-type-card-name">a habit</span>
+                            <span class="goal-type-card-name">A habit</span>
                             <span class="goal-type-card-desc">A rhythm to build in — conditioning, practice, consistency.</span>
                         </button>
                     </div>
@@ -2805,7 +2836,122 @@ function setGoalPeriod(period) {
     if (!d) return;
     d.commitmentPeriod = period;
     renderGoalCreator();
-    if (period === 'other…') requestAnimationFrame(() => document.querySelector('.goal-period-other-input')?.focus());
+    if (period === 'Choose a date') requestAnimationFrame(() => toggleGoalDateCalendar());
+}
+
+function toggleGoalDateCalendar() {
+    const existing = document.getElementById('goal-date-calendar-popup');
+    if (existing) { existing.remove(); return; }
+    const d = appState._goalDraft;
+    if (!d) return;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const presets = ['This week', 'Two weeks', 'This month', 'Three months', 'Choose a date'];
+    const isRealDate = d.commitmentPeriod && !presets.includes(d.commitmentPeriod);
+    renderGoalDateCalendar(isRealDate ? d.commitmentPeriod : todayStr);
+}
+
+function renderGoalDateCalendar(selectedDateStr) {
+    const existing = document.getElementById('goal-date-calendar-popup');
+    if (existing) existing.remove();
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const sel = new Date(selectedDateStr + 'T12:00:00');
+    const viewYear = sel.getFullYear();
+    const viewMonth = sel.getMonth();
+
+    const firstDay = new Date(viewYear, viewMonth, 1);
+    const lastDay  = new Date(viewYear, viewMonth + 1, 0);
+    const startDow = (firstDay.getDay() + 6) % 7; // Mon=0
+    const monthLabel = firstDay.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+    const todayD = new Date(todayStr + 'T12:00:00');
+    const canGoPrev = viewYear > todayD.getFullYear() || (viewYear === todayD.getFullYear() && viewMonth > todayD.getMonth());
+
+    const dowHeaders = ['M','T','W','T','F','S','S'].map(d => `<div class="date-cal-dow">${d}</div>`).join('');
+
+    let dayCells = '';
+    for (let i = 0; i < startDow; i++) dayCells += `<button class="date-cal-day empty" disabled></button>`;
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+        const dStr = `${viewYear}-${String(viewMonth + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const isSelected = dStr === selectedDateStr;
+        const isPast = dStr < todayStr;
+        const isToday = dStr === todayStr;
+        const cls = ['date-cal-day', isSelected ? 'selected' : '', isToday && !isSelected ? 'today' : ''].filter(Boolean).join(' ');
+        dayCells += `<button class="${cls}" onmousedown="pickGoalCalendarDate('${dStr}')" ${isPast ? 'disabled' : ''}>${day}</button>`;
+    }
+
+    const popup = document.createElement('div');
+    popup.id = 'goal-date-calendar-popup';
+    popup.className = 'date-calendar-popup';
+    popup.innerHTML = `
+        <div class="date-cal-header">
+            <button class="date-cal-nav" onmousedown="renderGoalDateCalendar(getCalNavMonth('${selectedDateStr}', -1))" ${canGoPrev ? '' : 'disabled'}>‹</button>
+            <span class="date-cal-month-label">${monthLabel}</span>
+            <button class="date-cal-nav" onmousedown="renderGoalDateCalendar(getCalNavMonth('${selectedDateStr}', 1))">›</button>
+        </div>
+        <div class="date-cal-grid">
+            ${dowHeaders}
+            ${dayCells}
+        </div>
+    `;
+
+    const picker = document.getElementById('goal-period-date-picker');
+    if (picker) picker.appendChild(popup);
+}
+
+function pickGoalCalendarDate(dateStr) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.commitmentPeriod = dateStr;
+    document.getElementById('goal-date-calendar-popup')?.remove();
+    // Update display in-place
+    const display = document.querySelector('#goal-period-date-picker .date-display');
+    if (display) {
+        const dt = new Date(dateStr + 'T12:00:00');
+        const formatted = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+        display.innerHTML = `<span class="date-display-label">${formatted}</span>`;
+    }
+}
+
+function checkGoalTitleForSkills(text) {
+    const matches = detectSkillsInText(text);
+    const container = document.getElementById('goal-title-input')?.closest('.session-field');
+    const existing = document.getElementById('goal-title-skill-hint');
+
+    if (!matches.length) {
+        if (existing) existing.remove();
+        return;
+    }
+
+    const d = appState._goalDraft;
+    const fresh = d ? matches.filter(m => m.topicId.replace('skill:', '') !== d.skillId) : matches;
+
+    if (!fresh.length) {
+        if (existing) existing.remove();
+        return;
+    }
+
+    let el = existing || document.createElement('div');
+    el.id = 'goal-title-skill-hint';
+    el.className = 'skill-suggestion-chip-row';
+    el.innerHTML = fresh.map(m => {
+        const skillId = m.topicId.replace('skill:', '');
+        return `<button class="skill-suggestion-chip"
+            onmousedown="acceptGoalSkillSuggestion('${escapeHtml(skillId)}', '${escapeHtml(m.label).replace(/'/g, "\\'")}')">
+            link to ${escapeHtml(m.label)} →
+        </button>`;
+    }).join('');
+    if (!existing && container) container.appendChild(el);
+}
+
+function acceptGoalSkillSuggestion(skillId, label) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.skillId = skillId;
+    const input = document.getElementById('goal-skill-input');
+    if (input) input.value = label;
+    const hint = document.getElementById('goal-title-skill-hint');
+    if (hint) hint.remove();
 }
 
 function setGoalHowOften(val) {
@@ -2813,6 +2959,67 @@ function setGoalHowOften(val) {
     if (!d) return;
     d.howOften = val;
     renderGoalCreator();
+}
+
+function adjustGoalHowOftenNum(delta) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    const current = d.howOften && d.howOften.startsWith('x') ? parseInt(d.howOften.slice(1)) || 1 : 1;
+    const next = Math.max(1, current + delta);
+    d.howOften = `x${next}`;
+    // Update DOM directly to avoid full re-render on stepper taps
+    const valueEl = document.querySelector('.goal-stepper-value');
+    const minusBtn = document.querySelector('.goal-stepper-btn');
+    if (valueEl) valueEl.textContent = next;
+    if (minusBtn) minusBtn.disabled = next <= 1;
+}
+
+function filterGoalSkills(query) {
+    const dropdown = document.getElementById('goal-skill-dropdown');
+    if (!dropdown) return;
+    const q = (query || '').toLowerCase().trim();
+    const skills = appState.skills || [];
+    const matches = q.length >= 1
+        ? skills.filter(s =>
+            s.french.toLowerCase().includes(q) ||
+            (s.english || '').toLowerCase().includes(q) ||
+            (s.aliases || []).some(a => a.toLowerCase().includes(q))
+          )
+        : skills.slice(0, 24);
+
+    if (!matches.length) {
+        dropdown.style.display = 'none';
+        return;
+    }
+
+    dropdown.innerHTML = matches.map(s => `
+        <div class="block-topic-option"
+             onmousedown="selectGoalSkill('${escapeHtml(s.id)}', '${escapeHtml(s.french).replace(/'/g, "\\'")}')">
+            ${escapeHtml(s.french)}${s.english ? `<span class="block-topic-option-sub"> — ${escapeHtml(s.english)}</span>` : ''}
+        </div>
+    `).join('');
+    dropdown.style.display = 'block';
+}
+
+function selectGoalSkill(skillId, label) {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.skillId = skillId;
+    const input = document.getElementById('goal-skill-input');
+    if (input) input.value = label;
+    const dropdown = document.getElementById('goal-skill-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+}
+
+function clearGoalSkill() {
+    const d = appState._goalDraft;
+    if (!d) return;
+    d.skillId = null;
+    const input = document.getElementById('goal-skill-input');
+    if (input) { input.value = ''; input.focus(); }
+    const dropdown = document.getElementById('goal-skill-dropdown');
+    if (dropdown) { dropdown.style.display = 'none'; }
+    filterGoalSkills('');
 }
 
 function addProgressMarker() {
@@ -3130,8 +3337,9 @@ function saveGoal() {
 
 function toggleMilestone(goalId, milestoneIndex) {
     const goal = appState.goals.find(g => g.id === Number(goalId));
-    if (!goal || !goal.milestones[milestoneIndex]) return;
-    const milestone = goal.milestones[milestoneIndex];
+    const markers = goal && (goal.progressMarkers || goal.milestones);
+    if (!goal || !markers || !markers[milestoneIndex]) return;
+    const milestone = markers[milestoneIndex];
     milestone.done = !milestone.done;
     storage.save('goals', appState.goals);
     // Write timeline entry if milestone just completed
@@ -4007,33 +4215,27 @@ function renderDetailBlockHtml(sessionSkill) {
     const corrections = (sessionSkill.correctionIds || [])
         .map(id => appState.corrections.find(c => c.id === id))
         .filter(Boolean);
-    const mode = sessionSkill.mode || 'correction';
-    const isPraise = mode === 'praise' || corrections.some(c => c.type === 'praise');
+    const source = sessionSkill.source || sessionSkill.mode || null;
     const hasContent = sessionSkill.blockTitle || sessionSkill.notes || corrections.length > 0;
     if (!hasContent) return '';
 
+    const sourceLabel = source === 'observation' ? 'observation'
+                      : source === 'praise'       ? '★ praise'
+                      : corrections.length > 0    ? `correction${corrections.length > 1 ? 's' : ''}`
+                      : null;
+
     const correctionsHtml = corrections.length > 0 ? `
-        <div class="detail-block-corrections">
-            <span class="detail-block-corrections-label">
-                ${isPraise ? '★ praise' : `correction${corrections.length > 1 ? 's' : ''}`}
-            </span>
-            <ul class="detail-block-correction-list">
-                ${corrections.map(c => `
-                    <li class="${c.isRecurring ? 'is-recurring' : ''}">
-                        ${c.text}
-                        ${c.isRecurring ? '<span class="correction-recurring-badge">recurring</span>' : ''}
-                    </li>
-                `).join('')}
-            </ul>
-        </div>
+        <ul class="detail-block-correction-list">
+            ${corrections.map(c => `<li>${c.text}</li>`).join('')}
+        </ul>
     ` : '';
 
     return `
-        <div class="detail-block ${isPraise ? 'detail-block-praise' : ''} ${mode === 'reflection' ? 'detail-block-reflection' : ''}">
+        <div class="detail-block">
             <div class="detail-block-header">
                 <span class="detail-block-topic">${topicLabel}</span>
                 ${skill ? `<button class="detail-block-skill-link" onclick="showSkillDetail('${sessionSkill.skillId}', appState.currentScreen)">view skill →</button>` : ''}
-                ${isPraise ? '<span class="detail-block-praise-badge">★ praise</span>' : ''}
+                ${sourceLabel ? `<span class="detail-block-source-badge">${sourceLabel}</span>` : ''}
             </div>
             ${sessionSkill.blockTitle ? `<div class="detail-block-title">${sessionSkill.blockTitle}</div>` : ''}
             ${sessionSkill.notes     ? `<div class="detail-block-notes">${sessionSkill.notes}</div>`     : ''}
@@ -4505,13 +4707,12 @@ function toggleSkillFocus(skillId) {
 
 function openGoalCreatorForSkill(skillId) {
     openGoalCreator();
-    // _goalDraft is set by openGoalCreator — update skillId immediately
     if (appState._goalDraft) appState._goalDraft.skillId = skillId;
-    // Also update the select once DOM renders
-    setTimeout(() => {
-        const select = document.getElementById('goal-skill-select');
-        if (select) select.value = skillId || '';
-    }, 50);
+    requestAnimationFrame(() => {
+        const skill = (appState.skills || []).find(s => s.id === skillId);
+        const input = document.getElementById('goal-skill-input');
+        if (input && skill) input.value = skill.french;
+    });
 }
 
 function navigateToGoal(goalId) {
