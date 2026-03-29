@@ -322,9 +322,9 @@ h1, h2, .screen-heading {
 
 .btn-large {
     width: 100%;
-    background: var(--brown-btn);
+    background: var(--ink);
     color: #fff;
-    border: none;
+    border: 1px solid var(--ink);
     border-radius: var(--r-md);
     padding: 14px var(--sp-xl);
     font-size: var(--fs-body);
@@ -332,30 +332,30 @@ h1, h2, .screen-heading {
     font-weight: 500;
     letter-spacing: 0.2px;
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: background 0.15s ease;
     box-shadow: none;
     margin-bottom: 0;
 }
 
-.btn-large:hover { background: var(--brown); }
-.btn-large:active { background: var(--brown); }
+.btn-large:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.btn-large:active { background: var(--ink-2); }
 
 .btn-primary {
-    background: var(--brown-btn);
+    background: var(--ink);
     color: #fff;
-    border: none;
+    border: 1px solid var(--ink);
     border-radius: var(--r-md);
     padding: 10px 18px;
     font-size: var(--fs-small);
     font-family: 'DM Sans', sans-serif;
     font-weight: 500;
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: background 0.15s ease;
     box-shadow: none;
     margin-top: var(--sp-md);
 }
 
-.btn-primary:hover { background: var(--brown); }
+.btn-primary:hover { background: var(--ink-2); border-color: var(--ink-2); }
 
 .btn-secondary {
     background: transparent;
@@ -5798,7 +5798,7 @@ button, a, input, select, textarea,
     bottom: calc(90px + env(safe-area-inset-bottom));
     left: 50%;
     transform: translateX(-50%) translateY(20px);
-    background: var(--brown-btn);
+    background: var(--ink);
     color: #fff;
     border-radius: var(--r-full);
     padding: 10px 20px;
@@ -5885,9 +5885,9 @@ button, a, input, select, textarea,
 }
 
 .post-save-btn {
-    background: var(--brown-btn);
+    background: var(--ink);
     color: #fff;
-    border: none;
+    border: 1px solid var(--ink);
     border-radius: var(--r-md);
     padding: 7px 14px;
     font-family: 'DM Sans', sans-serif;
@@ -5898,7 +5898,7 @@ button, a, input, select, textarea,
     transition: background 0.15s ease;
 }
 
-.post-save-btn:hover { background: var(--brown); }
+.post-save-btn:hover { background: var(--ink-2); border-color: var(--ink-2); }
 
 .post-save-btn-muted {
     background: transparent;
@@ -6113,8 +6113,8 @@ button, a, input, select, textarea,
 }
 
 .skill-focus-btn.active {
-    background: var(--brown-btn);
-    border-color: var(--brown-btn);
+    background: var(--ink);
+    border-color: var(--ink);
     color: #fff;
 }
 
