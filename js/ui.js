@@ -1995,6 +1995,23 @@ function openLearnPointers() {
 // ── The Barre ──
 
 function renderBarreHeroCard() {
+    if (appState.trainingState === 'resting') {
+        return `
+            <div class="profile-action-card hero" onclick="openSessionLogger()">
+                <div class="profile-action-label" style="font-variant:small-caps;color:var(--ink-5)">taking a break</div>
+                <div class="profile-action-description">Anything worth noting while you're away?</div>
+                <div class="profile-action-arrow">log now →</div>
+            </div>`;
+    }
+    if (appState.trainingState === 'recovering') {
+        return `
+            <div class="profile-action-card hero" onclick="openSessionLogger()">
+                <div class="profile-action-label" style="font-variant:small-caps;color:var(--ink-5)">focusing on recuperating</div>
+                <div class="profile-action-description">You can still log anything useful. Physio notes, what you can work on, things to remember.</div>
+                <div class="profile-action-arrow">log now →</div>
+            </div>`;
+    }
+
     const today = new Date().toISOString().split('T')[0];
     const sessions = appState.sessions || [];
     const loggedToday = sessions.some(s => s.date === today);
@@ -2006,21 +2023,35 @@ function renderBarreHeroCard() {
         : null;
 
     if (loggedToday) {
-        const activeGoals = (appState.goals || []).filter(g => !g.completedAt);
-        const title = activeGoals.length > 0
-            ? `${activeGoals.length} goal${activeGoals.length > 1 ? 's' : ''} in progress`
-            : 'Session logged';
-        const desc = activeGoals.length > 0
-            ? 'Keep at it.'
-            : 'Add a goal to give your practice direction.';
-        const action = activeGoals.length > 0 ? 'view goals →' : 'set a goal →';
-        const onclick = activeGoals.length > 0 ? "navigateTo('goals')" : 'openGoalCreator()';
+        const activeGoals = (appState.goals || []).filter(g => g.status === 'active');
+        if (activeGoals.length > 0) {
+            // Surface the most recently touched active goal
+            const scored = activeGoals.map(goal => {
+                let lastActivity = goal.updatedAt || goal.createdAt || 0;
+                if (goal.skillId) {
+                    (appState.sessionSkills || [])
+                        .filter(ss => ss.skillId === goal.skillId)
+                        .forEach(ss => {
+                            const sess = (appState.sessions || []).find(s => s.id === ss.sessionId);
+                            if (sess) lastActivity = Math.max(lastActivity, sess.savedAt || 0);
+                        });
+                }
+                return { goal, lastActivity };
+            });
+            const topGoal = scored.sort((a, b) => b.lastActivity - a.lastActivity)[0].goal;
+            return `
+                <div class="profile-action-card hero" onclick="navigateTo('goals')">
+                    <div class="profile-action-label">TODAY</div>
+                    <div class="profile-action-title">${escapeHtml(topGoal.title)}</div>
+                    <div class="profile-action-arrow">view goals →</div>
+                </div>`;
+        }
         return `
-            <div class="profile-action-card hero" onclick="${onclick}">
+            <div class="profile-action-card hero" onclick="openGoalCreator()">
                 <div class="profile-action-label">TODAY</div>
-                <div class="profile-action-title">${title}</div>
-                <div class="profile-action-description">${desc}</div>
-                <div class="profile-action-arrow">${action}</div>
+                <div class="profile-action-title">Session logged</div>
+                <div class="profile-action-description">Add a goal to give your training direction.</div>
+                <div class="profile-action-arrow">set a goal →</div>
             </div>`;
     } else if (!lastSession) {
         return `
@@ -2033,9 +2064,9 @@ function renderBarreHeroCard() {
     } else if (daysSince !== null && daysSince > 13) {
         return `
             <div class="profile-action-card hero" onclick="openSessionLogger()">
-                <div class="profile-action-label">WELCOME BACK</div>
+                <div class="profile-action-label">LAST SESSION · ${daysSince} DAY${daysSince !== 1 ? 'S' : ''} AGO</div>
                 <div class="profile-action-title">Did you go today?</div>
-                <div class="profile-action-description">It's been a while — jot down what you covered while it's fresh.</div>
+                <div class="profile-action-description">Anything worth logging?</div>
                 <div class="profile-action-arrow">log a session →</div>
             </div>`;
     } else {
@@ -4460,11 +4491,69 @@ function initProfile() {
     // New profile: status card + focus area stack
     renderProfileStatus();
     renderFocusCardStack();
+    renderProfileMySkills();
 
     // Dimension chart slot — hidden in new UI, kept for compat
     const dimEl = document.getElementById('profileDimensions');
-    if (dimEl) dimEl.innerHTML = '';
+    if (dimEl) dimEl.innerHTML = ''; // safe — always empty string
 
+}
+
+function renderProfileMySkills() {
+    const el = document.getElementById('profile-my-skills');
+    if (!el) return;
+
+    // Collect skills that have at least one correction or skillNote
+    const corrSkillIds = new Set((appState.corrections || []).map(c => c.skillId).filter(Boolean));
+    const noteSkillIds = new Set((appState.skillNotes  || []).map(n => n.skillId).filter(Boolean));
+    const activeIds = new Set([...corrSkillIds, ...noteSkillIds]);
+
+    if (activeIds.size === 0) { el.innerHTML = ''; return; }
+
+    // Determine last-worked-on date per skill
+    function lastWorkedOn(skillId) {
+        const sessIds = new Set(
+            (appState.corrections || [])
+                .filter(c => c.skillId === skillId)
+                .map(c => c.sessionId)
+                .filter(Boolean)
+        );
+        const sessDates = (appState.sessions || [])
+            .filter(s => sessIds.has(s.id))
+            .map(s => s.date);
+        const noteDates = (appState.skillNotes || [])
+            .filter(n => n.skillId === skillId && n.date)
+            .map(n => n.date);
+        const all = [...sessDates, ...noteDates].filter(Boolean).sort().reverse();
+        return all[0] || null;
+    }
+
+    const skills = [...activeIds]
+        .map(id => ({ ref: DATA.skills.find(s => s.id === id), lastDate: lastWorkedOn(id) }))
+        .filter(s => s.ref)
+        .sort((a, b) => (b.lastDate || '').localeCompare(a.lastDate || ''));
+
+    const itemsHtml = skills.map(({ ref, lastDate }) => {
+        const cat = (DATA.skillCategories || {})[ref.id] || ref.category || '';
+        const dateLabel = lastDate ? formatTimelineDate(lastDate) : '';
+        return `
+        <div class="profile-skill-item" onclick="showSkillDetail('${escapeHtml(ref.id)}', 'profile')">
+            <div class="profile-skill-main">
+                <span class="profile-skill-name">${escapeHtml(ref.french)}</span>
+                ${cat ? `<span class="profile-skill-cat">${escapeHtml(cat)}</span>` : ''}
+            </div>
+            ${dateLabel ? `<span class="profile-skill-date">${escapeHtml(dateLabel)}</span>` : ''}
+        </div>`;
+    }).join('');
+
+    el.innerHTML = `
+        <div class="barre-section-header">
+            <span class="barre-section-label">my skills</span>
+            <span class="barre-section-label">${skills.length}</span>
+        </div>
+        <div style="padding: 0 var(--sp-lg);">
+            <div class="profile-skills-list">${itemsHtml}</div>
+        </div>`;
 }
 
 function formatTimelineDate(dateStr) {

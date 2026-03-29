@@ -127,6 +127,7 @@ let appState = {
     hidePointe:     false,   // hides pointe from profile, skill library, goals, assess
     profilePicture: null,    // data URL (uploaded) or default key e.g. 'default-bun'
     displayName:    null,    // optional display name shown on status card
+    trainingState:  'active', // 'active' | 'resting' | 'recovering'
 };
 
 /* ═══════════════════════════════════════════════════════════════
