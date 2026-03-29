@@ -193,7 +193,7 @@
 
             <!-- Sticky header — minimal, settings icon replaces level pill -->
             <div class="profile-sticky-header">
-                <span class="profile-sticky-label">profile</span>
+                <span class="profile-sticky-label">Profile</span>
                 <!-- levelBadge kept hidden for JS backward-compat -->
                 <span id="levelBadge" style="display:none;"></span>
                 <button class="profile-settings-btn" onclick="openSettings()" aria-label="Settings">
@@ -300,6 +300,16 @@
                     <span class="fab-action-text">
                         <span class="fab-action-label">Log a session</span>
                         <span class="fab-action-sub">class notes &amp; corrections</span>
+                    </span>
+                    <svg class="fab-action-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="5 3 9 7 5 11"/></svg>
+                </button>
+                <button class="fab-action-item" onmousedown="closeFabActionSheet(); openSessionLogger('note');">
+                    <span class="fab-action-icon">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4h12v12H4z" rx="2"/><line x1="7" y1="8" x2="13" y2="8"/><line x1="7" y1="11" x2="10" y2="11"/></svg>
+                    </span>
+                    <span class="fab-action-text">
+                        <span class="fab-action-label">Add a note</span>
+                        <span class="fab-action-sub">quick capture, no session needed</span>
                     </span>
                     <svg class="fab-action-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="5 3 9 7 5 11"/></svg>
                 </button>

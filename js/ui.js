@@ -2241,6 +2241,7 @@ function renderGoalsScreen() {
                 </svg>
                 set a goal
             </button>
+            ${goals.length > 0 ? `<div style="text-align:center; margin-top: var(--sp-xl);"><button class="text-link-btn" onclick="showAllGoalsScreen()">view past goals →</button></div>` : ''}
         </div>
     `;
 
@@ -2264,6 +2265,82 @@ function renderGoalsScreen() {
             }
         });
     });
+}
+
+function showAllGoalsScreen() {
+    let screen = document.getElementById('all-goals-screen');
+    if (!screen) {
+        screen = document.createElement('div');
+        screen.id = 'all-goals-screen';
+        screen.className = 'screen';
+        document.querySelector('.app-container').appendChild(screen);
+    }
+
+    const goals = [...(appState.goals || [])].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+    // Group by year
+    const byYear = {};
+    goals.forEach(g => {
+        const year = g.createdAt ? new Date(g.createdAt).getFullYear() : 'Unknown';
+        if (!byYear[year]) byYear[year] = [];
+        byYear[year].push(g);
+    });
+
+    const yearsHtml = Object.keys(byYear).sort((a, b) => b - a).map(year => {
+        const yearGoals = byYear[year];
+        const cardsHtml = yearGoals.map(g => {
+            const markers = (g.progressMarkers || g.milestones || []);
+            const done = markers.filter(m => m.done).length;
+            const TYPE_LABELS = { skill: 'a skill', intention: 'a feeling or state', habit: 'a habit' };
+            const typeLabel = TYPE_LABELS[g.goalType] || g.goalType || '';
+            const statusLabel = g.completedAt ? 'completed' : 'active';
+            return `
+                <div class="all-goals-card" onclick="this.classList.toggle('expanded')">
+                    <div class="all-goals-card-header">
+                        <span class="all-goals-card-title">${escapeHtml(g.title)}</span>
+                        <span class="all-goals-card-status ${g.completedAt ? 'done' : 'active'}">${statusLabel}</span>
+                    </div>
+                    <div class="all-goals-card-meta">
+                        ${typeLabel ? `<span>${typeLabel}</span>` : ''}
+                        ${markers.length ? `<span>${done}/${markers.length} markers</span>` : ''}
+                    </div>
+                    <div class="all-goals-card-body">
+                        ${g.body ? `<div class="all-goals-card-desc">${escapeHtml(g.body)}</div>` : ''}
+                        ${markers.length ? `
+                            <ul class="all-goals-markers-list">
+                                ${markers.map(m => `<li class="${m.done ? 'done' : ''}">${escapeHtml(m.text)}</li>`).join('')}
+                            </ul>
+                        ` : ''}
+                        <div class="all-goals-card-date">created ${formatTimelineDate(new Date(g.createdAt).toISOString().split('T')[0])}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        return `
+            <div class="all-goals-year-group">
+                <div class="all-goals-year-label">${year}</div>
+                ${cardsHtml}
+            </div>
+        `;
+    }).join('');
+
+    screen.innerHTML = `
+        <div class="profile-header" style="display:flex;align-items:center;gap:var(--sp-md);">
+            <button class="back-btn" onclick="navigateTo('goals')">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="13 4 7 10 13 16"/></svg>
+            </button>
+            <h1>All goals</h1>
+        </div>
+        <div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
+            ${goals.length === 0
+                ? '<div class="barre-empty-state"><div class="barre-empty-title">No goals yet</div></div>'
+                : yearsHtml
+            }
+        </div>
+    `;
+
+    showScreen('all-goals-screen');
+    appState.currentScreen = 'all-goals-screen';
 }
 
 function renderGoalGroup(category, goals) {

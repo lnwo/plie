@@ -5623,6 +5623,112 @@ button, a, input, select, textarea,
     color: var(--ink);
 }
 
+/* Text link button */
+.text-link-btn {
+    all: unset;
+    display: inline-block;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink-3);
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+.text-link-btn:hover { color: var(--ink); }
+
+/* All Goals screen */
+.all-goals-year-group { margin-bottom: var(--sp-xl); }
+
+.all-goals-year-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+    margin-bottom: var(--sp-sm);
+    padding: 0 var(--sp-xs);
+}
+
+.all-goals-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: var(--sp-md) var(--sp-lg);
+    margin-bottom: var(--sp-sm);
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+.all-goals-card:hover { border-color: var(--border-mid); }
+
+.all-goals-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--sp-sm);
+}
+
+.all-goals-card-title {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-body);
+    font-weight: 500;
+    color: var(--ink);
+    flex: 1;
+}
+
+.all-goals-card-status {
+    font-size: var(--fs-caption);
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: var(--r-full);
+    flex-shrink: 0;
+}
+.all-goals-card-status.done {
+    background: var(--sage-soft);
+    color: var(--sage);
+}
+.all-goals-card-status.active {
+    background: var(--surface-warm);
+    color: var(--ink-3);
+    border: 1px solid var(--border);
+}
+
+.all-goals-card-meta {
+    display: flex;
+    gap: var(--sp-sm);
+    margin-top: var(--sp-xs);
+    font-size: var(--fs-caption);
+    color: var(--ink-3);
+}
+
+.all-goals-card-body {
+    display: none;
+    margin-top: var(--sp-sm);
+    padding-top: var(--sp-sm);
+    border-top: 1px solid var(--border-light);
+}
+.all-goals-card.expanded .all-goals-card-body { display: block; }
+
+.all-goals-card-desc {
+    font-size: var(--fs-small);
+    color: var(--ink-2);
+    margin-bottom: var(--sp-sm);
+}
+
+.all-goals-markers-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 var(--sp-sm);
+    font-size: var(--fs-small);
+    color: var(--ink-2);
+}
+.all-goals-markers-list li { padding: 2px 0; }
+.all-goals-markers-list li.done { text-decoration: line-through; color: var(--ink-3); }
+
+.all-goals-card-date {
+    font-size: var(--fs-caption);
+    color: var(--ink-4);
+}
+
 .goal-correction-search-results {
     border: 1px solid var(--border);
     border-radius: var(--r-md);
