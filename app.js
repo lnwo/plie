@@ -2203,6 +2203,32 @@ function renderSettings() {
                             onmousedown="setTrainingState('${s}')">${s}</button>`).join('')}
                 </div>
             </div>
+            ${(() => {
+                const p = appState._trainingStatePrompt;
+                if (!p) return '';
+                const goalWord = p.count === 1 ? 'goal' : `${p.count} goals`;
+                const itThem   = p.count === 1 ? 'it'   : 'them';
+                if (p.type === 'pause') {
+                    const stateWord = p.state === 'recovering' ? 'recuperating' : 'resting';
+                    return `<div class="training-state-prompt">
+                        <div class="training-state-prompt-body">You have ${p.count === 1 ? 'an active goal' : `${p.count} active goals`}. Do you want to pause ${itThem} while you're ${stateWord}?</div>
+                        <div class="training-state-prompt-actions">
+                            <button class="training-state-prompt-btn" onmousedown="pauseGoalsForTrainingState()">pause ${goalWord}</button>
+                            <button class="training-state-prompt-btn training-state-prompt-dismiss" onmousedown="dismissTrainingStatePrompt()">not now</button>
+                        </div>
+                    </div>`;
+                }
+                if (p.type === 'reactivate') {
+                    return `<div class="training-state-prompt">
+                        <div class="training-state-prompt-body">You have ${p.count === 1 ? 'a paused goal' : `${p.count} paused goals`} from before your break. Do you want to reactivate ${itThem}?</div>
+                        <div class="training-state-prompt-actions">
+                            <button class="training-state-prompt-btn" onmousedown="reactivateGoalsForTrainingState()">reactivate</button>
+                            <button class="training-state-prompt-btn training-state-prompt-dismiss" onmousedown="dismissTrainingStatePrompt()">leave them</button>
+                        </div>
+                    </div>`;
+                }
+                return '';
+            })()}
             <div class="settings-row">
                 <div>
                     <div class="settings-row-label">Pointe work</div>
@@ -2296,8 +2322,53 @@ function renderSettings() {
 }
 
 function setTrainingState(state) {
+    const prev = appState.trainingState;
     appState.trainingState = state;
     savePreferences();
+
+    const activeGoals = (appState.goals || []).filter(g => g.status === 'active');
+    const pausedByTraining = (appState.goals || []).filter(g => g.status === 'paused' && g.pausedByTrainingState);
+
+    if (prev === 'active' && (state === 'resting' || state === 'recovering') && activeGoals.length > 0) {
+        appState._trainingStatePrompt = { type: 'pause', count: activeGoals.length, state };
+    } else if ((prev === 'resting' || prev === 'recovering') && state === 'active' && pausedByTraining.length > 0) {
+        appState._trainingStatePrompt = { type: 'reactivate', count: pausedByTraining.length };
+    } else {
+        appState._trainingStatePrompt = null;
+    }
+
+    renderSettings();
+}
+
+function pauseGoalsForTrainingState() {
+    const now = Date.now();
+    (appState.goals || []).forEach(g => {
+        if (g.status === 'active') {
+            g.status = 'paused';
+            g.pausedAt = now;
+            g.pausedByTrainingState = true;
+        }
+    });
+    storage.save('goals', appState.goals);
+    appState._trainingStatePrompt = null;
+    renderSettings();
+}
+
+function reactivateGoalsForTrainingState() {
+    (appState.goals || []).forEach(g => {
+        if (g.status === 'paused' && g.pausedByTrainingState) {
+            g.status = 'active';
+            g.pausedAt = null;
+            g.pausedByTrainingState = false;
+        }
+    });
+    storage.save('goals', appState.goals);
+    appState._trainingStatePrompt = null;
+    renderSettings();
+}
+
+function dismissTrainingStatePrompt() {
+    appState._trainingStatePrompt = null;
     renderSettings();
 }
 

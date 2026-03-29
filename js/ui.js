@@ -4477,11 +4477,69 @@ function initProfile() {
     // New profile: status card + focus area stack
     renderProfileStatus();
     renderFocusCardStack();
+    renderProfileMySkills();
 
     // Dimension chart slot — hidden in new UI, kept for compat
     const dimEl = document.getElementById('profileDimensions');
-    if (dimEl) dimEl.innerHTML = '';
+    if (dimEl) dimEl.innerHTML = ''; // safe — always empty string
 
+}
+
+function renderProfileMySkills() {
+    const el = document.getElementById('profile-my-skills');
+    if (!el) return;
+
+    // Collect skills that have at least one correction or skillNote
+    const corrSkillIds = new Set((appState.corrections || []).map(c => c.skillId).filter(Boolean));
+    const noteSkillIds = new Set((appState.skillNotes  || []).map(n => n.skillId).filter(Boolean));
+    const activeIds = new Set([...corrSkillIds, ...noteSkillIds]);
+
+    if (activeIds.size === 0) { el.innerHTML = ''; return; }
+
+    // Determine last-worked-on date per skill
+    function lastWorkedOn(skillId) {
+        const sessIds = new Set(
+            (appState.corrections || [])
+                .filter(c => c.skillId === skillId)
+                .map(c => c.sessionId)
+                .filter(Boolean)
+        );
+        const sessDates = (appState.sessions || [])
+            .filter(s => sessIds.has(s.id))
+            .map(s => s.date);
+        const noteDates = (appState.skillNotes || [])
+            .filter(n => n.skillId === skillId && n.date)
+            .map(n => n.date);
+        const all = [...sessDates, ...noteDates].filter(Boolean).sort().reverse();
+        return all[0] || null;
+    }
+
+    const skills = [...activeIds]
+        .map(id => ({ ref: DATA.skills.find(s => s.id === id), lastDate: lastWorkedOn(id) }))
+        .filter(s => s.ref)
+        .sort((a, b) => (b.lastDate || '').localeCompare(a.lastDate || ''));
+
+    const itemsHtml = skills.map(({ ref, lastDate }) => {
+        const cat = (DATA.skillCategories || {})[ref.id] || ref.category || '';
+        const dateLabel = lastDate ? formatTimelineDate(lastDate) : '';
+        return `
+        <div class="profile-skill-item" onclick="showSkillDetail('${escapeHtml(ref.id)}', 'profile')">
+            <div class="profile-skill-main">
+                <span class="profile-skill-name">${escapeHtml(ref.french)}</span>
+                ${cat ? `<span class="profile-skill-cat">${escapeHtml(cat)}</span>` : ''}
+            </div>
+            ${dateLabel ? `<span class="profile-skill-date">${escapeHtml(dateLabel)}</span>` : ''}
+        </div>`;
+    }).join('');
+
+    el.innerHTML = `
+        <div class="barre-section-header">
+            <span class="barre-section-label">my skills</span>
+            <span class="barre-section-label">${skills.length}</span>
+        </div>
+        <div style="padding: 0 var(--sp-lg);">
+            <div class="profile-skills-list">${itemsHtml}</div>
+        </div>`;
 }
 
 function formatTimelineDate(dateStr) {

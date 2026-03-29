@@ -6866,6 +6866,42 @@ button, a, input, select, textarea,
     justify-content: flex-end; /* anchor to bottom */
 }
 
+/* Profile — my skills section */
+.profile-skills-list {
+    display: flex;
+    flex-direction: column;
+}
+.profile-skill-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 0.5px solid rgba(26,23,20,0.08);
+    cursor: pointer;
+}
+.profile-skill-item:last-child { border-bottom: none; }
+.profile-skill-main {
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-sm);
+}
+.profile-skill-name {
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--ink-2);
+}
+.profile-skill-cat {
+    font-size: var(--fs-caption);
+    font-variant: small-caps;
+    color: var(--gold);
+    letter-spacing: .04em;
+}
+.profile-skill-date {
+    font-size: var(--fs-small);
+    color: var(--ink-5);
+    flex-shrink: 0;
+}
+
 /* Base card */
 .focus-card {
     position: relative;
@@ -7405,6 +7441,37 @@ button, a, input, select, textarea,
     background: var(--ink);
     color: white;
     border-color: transparent;
+}
+.training-state-prompt {
+    background: var(--surface-warm);
+    border-radius: 8px;
+    padding: var(--sp-md) var(--sp-lg);
+    width: 100%;
+}
+.training-state-prompt-body {
+    font-size: var(--fs-small);
+    color: var(--ink-2);
+    line-height: 1.5;
+    margin-bottom: var(--sp-sm);
+}
+.training-state-prompt-actions {
+    display: flex;
+    gap: var(--sp-sm);
+}
+.training-state-prompt-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 400;
+    padding: 5px var(--sp-md);
+    border-radius: var(--r-full);
+    border: 1px solid rgba(26,23,20,0.15);
+    background: var(--ink);
+    color: white;
+    cursor: pointer;
+}
+.training-state-prompt-dismiss {
+    background: transparent;
+    color: var(--ink-4);
 }
 .settings-tbd {
     font-size: var(--fs-caption);
