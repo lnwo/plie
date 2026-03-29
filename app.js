@@ -1421,8 +1421,9 @@ function renderProfileStatus() {
         .filter(a => a.type === 'placement')
         .slice(-1)[0];
     const assessedText = latestAssessment
-        ? `from your placement quiz · ${formatTimelineDate(latestAssessment.date)}`
+        ? `orientation quiz · ${formatTimelineDate(latestAssessment.date)}`
         : null;
+    const isAssessed = level !== 'not-assessed';
 
     el.innerHTML = `
         ${animalSrc ? `
@@ -1451,6 +1452,13 @@ function renderProfileStatus() {
             </div>
         </div>
     `;
+
+    // Append orientation quiz CTA button via DOM (not inline HTML)
+    const quizBtn = document.createElement('button');
+    quizBtn.className = isAssessed ? 'profile-quiz-cta profile-quiz-retake' : 'profile-quiz-cta';
+    quizBtn.textContent = isAssessed ? 'retake orientation quiz →' : 'start orientation quiz →';
+    quizBtn.addEventListener('click', () => startOrientationQuiz());
+    el.appendChild(quizBtn);
 }
 
 function defaultAvatarSvg() {

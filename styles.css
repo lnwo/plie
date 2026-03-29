@@ -6366,6 +6366,23 @@ button, a, input, select, textarea,
     color: var(--ink-2);
     line-height: 1.55;
 }
+/* Orientation quiz CTA in profile status */
+.profile-quiz-cta {
+    display: block;
+    margin-top: var(--sp-md);
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 500;
+    color: var(--ink-2);
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.15s ease;
+}
+.profile-quiz-cta:hover { color: var(--ink); }
+.profile-quiz-retake { color: var(--ink-3); font-weight: 400; }
+
 .status-meta {
     display: flex;
     align-items: center;

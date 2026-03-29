@@ -3907,7 +3907,7 @@ function openFolder(folderId) {
         detailScreen.innerHTML = `
             <div class="detail-view">
                 <div class="detail-header">
-                    <button class="detail-back-btn" onclick="navigateTo('assess')">←</button>
+                    <button class="detail-back-btn" onclick="navigateTo('profile')">←</button>
                     <div class="detail-title-section">
                         <div class="detail-icon">${ICONS.get(folder.icon, 28)}</div>
                         <div class="detail-title">${folder.title}</div>
