@@ -1995,6 +1995,23 @@ function openLearnPointers() {
 // ── The Barre ──
 
 function renderBarreHeroCard() {
+    if (appState.trainingState === 'resting') {
+        return `
+            <div class="profile-action-card hero" onclick="openSessionLogger()">
+                <div class="profile-action-label" style="font-variant:small-caps;color:var(--ink-5)">taking a break</div>
+                <div class="profile-action-description">Anything worth noting while you're away?</div>
+                <div class="profile-action-arrow">log now →</div>
+            </div>`;
+    }
+    if (appState.trainingState === 'recovering') {
+        return `
+            <div class="profile-action-card hero" onclick="openSessionLogger()">
+                <div class="profile-action-label" style="font-variant:small-caps;color:var(--ink-5)">focusing on recuperating</div>
+                <div class="profile-action-description">You can still log anything useful. Physio notes, what you can work on, things to remember.</div>
+                <div class="profile-action-arrow">log now →</div>
+            </div>`;
+    }
+
     const today = new Date().toISOString().split('T')[0];
     const sessions = appState.sessions || [];
     const loggedToday = sessions.some(s => s.date === today);

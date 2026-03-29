@@ -1377,6 +1377,7 @@ function skipToProfile() {
         appState.hidePointe     = prefs.hidePointe     ?? false;
         appState.profilePicture = prefs.profilePicture ?? null;
         appState.displayName    = prefs.displayName    ?? null;
+        appState.trainingState  = prefs.trainingState  ?? 'active';
         appState._exploreAllDoneShown = prefs._exploreAllDoneShown ?? false;
     }
 
@@ -1409,6 +1410,7 @@ function savePreferences() {
         hidePointe:     appState.hidePointe,
         profilePicture: appState.profilePicture,
         displayName:    appState.displayName,
+        trainingState:  appState.trainingState,
         _exploreAllDoneShown: appState._exploreAllDoneShown,
     });
 }
@@ -1505,6 +1507,9 @@ function defaultAvatarSvg() {
 }
 
 function buildInsightSentence(level) {
+    if (appState.trainingState === 'resting')    return 'Taking a break.';
+    if (appState.trainingState === 'recovering') return 'Focusing on recuperating.';
+
     // Priority queue: session today > milestone > correction pattern > assessment fallback
     const today = new Date().toISOString().split('T')[0];
     const lastSession = (appState.sessions || [])
@@ -2190,6 +2195,14 @@ function renderSettings() {
         <!-- My training -->
         <div class="settings-section">
             <div class="settings-section-label">My training</div>
+            <div class="settings-row settings-row--stacked">
+                <div class="settings-row-label">Training state</div>
+                <div class="training-state-selector">
+                    ${['active', 'resting', 'recovering'].map(s => `
+                    <button class="training-state-opt${appState.trainingState === s ? ' selected' : ''}"
+                            onmousedown="setTrainingState('${s}')">${s}</button>`).join('')}
+                </div>
+            </div>
             <div class="settings-row">
                 <div>
                     <div class="settings-row-label">Pointe work</div>
@@ -2280,6 +2293,12 @@ function renderSettings() {
             </div>
         </div>
     `;
+}
+
+function setTrainingState(state) {
+    appState.trainingState = state;
+    savePreferences();
+    renderSettings();
 }
 
 function togglePointeSetting(btn) {
