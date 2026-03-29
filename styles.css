@@ -7254,6 +7254,48 @@ button, a, input, select, textarea,
     border-color: var(--gold);
 }
 
+/* Goal type selection cards (no-type state) */
+.goal-type-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-sm);
+    padding: var(--sp-md) 0 var(--sp-lg);
+}
+
+.goal-type-card {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    text-align: left;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-md);
+    padding: var(--sp-md) var(--sp-lg);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.goal-type-card:active {
+    background: var(--gold-wash);
+    border-color: var(--gold);
+}
+
+.goal-type-card-name {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.2;
+}
+
+.goal-type-card-desc {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink-3);
+    line-height: 1.4;
+}
+
 /* Type badge on goal card */
 .goal-tag-type {
     background: var(--surface-warm, #FDF8F3);

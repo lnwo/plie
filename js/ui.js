@@ -2527,25 +2527,24 @@ function renderGoalCreator() {
         'feel it in centre without thinking about it',
     ];
 
-    const periodOptions = ['this week', 'two weeks', 'this month', 'three months', 'custom'];
-    const howOftenOptions = ['every class', 'every week', 'set number of times', 'free text'];
+    const periodOptions = ['this week', 'two weeks', 'this month', 'three months', 'other…'];
+    const howOftenOptions = ['every class', 'every week', 'set number of times', 'other…'];
 
     function periodChipsHtml() {
-        const isCustomSelected = d.commitmentPeriod && !periodOptions.slice(0, -1).includes(d.commitmentPeriod);
+        const presets = periodOptions.slice(0, -1); // all except 'other…'
+        const isOtherSelected = d.commitmentPeriod && !presets.includes(d.commitmentPeriod);
         return `
             <div class="goal-period-chips">
                 ${periodOptions.map(p => {
-                    const isActive = p === 'custom'
-                        ? isCustomSelected
-                        : d.commitmentPeriod === p;
+                    const isActive = p === 'other…' ? isOtherSelected : d.commitmentPeriod === p;
                     return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onmousedown="setGoalPeriod('${p}')">${p}</button>`;
                 }).join('')}
             </div>
-            ${(d.commitmentPeriod === 'custom' || isCustomSelected) ? `
-                <input type="text" class="session-input" style="margin-top: var(--sp-sm);"
+            ${(d.commitmentPeriod === 'other…' || isOtherSelected) ? `
+                <input type="text" class="session-input goal-period-other-input" style="margin-top: var(--sp-sm);"
                        placeholder="e.g. six weeks"
-                       value="${isCustomSelected ? escapeHtml(d.commitmentPeriod) : ''}"
-                       oninput="appState._goalDraft.commitmentPeriod = this.value" />
+                       value="${isOtherSelected && d.commitmentPeriod !== 'other…' ? escapeHtml(d.commitmentPeriod) : ''}"
+                       oninput="appState._goalDraft.commitmentPeriod = this.value || 'other…'" />
             ` : ''}
         `;
     }
@@ -2572,17 +2571,17 @@ function renderGoalCreator() {
 
         return `
             <div class="session-field">
-                <label class="session-field-label">goal</label>
+                <label class="session-field-label">title</label>
                 <input type="text" class="session-input" id="goal-title-input"
                        placeholder="name it so you'd recognise it in a month"
                        value="${escapeHtml(d.title)}"
                        oninput="appState._goalDraft.title = this.value" />
             </div>
             <div class="session-field">
-                <label class="session-field-label">what you're working toward</label>
+                <label class="session-field-label">what does it look like when it happens? <span class="session-field-optional">optional</span></label>
                 <textarea class="session-block-textarea" id="goal-body-input"
-                          placeholder="be specific enough that you'd know if it happened"
-                          rows="3"
+                          placeholder="be specific enough that you'd know"
+                          rows="2"
                           oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);">${escapeHtml(d.body || '')}</textarea>
             </div>
             <div class="session-field">
@@ -2590,17 +2589,17 @@ function renderGoalCreator() {
                 <div class="goal-skill-chips">${skillChipsHtml}</div>
             </div>
             <div class="session-field">
-                <label class="session-field-label">progress markers <span class="session-field-optional">optional</span></label>
+                <label class="session-field-label">milestones <span class="session-field-optional">optional</span></label>
                 <div id="goal-markers-list">${markersHtml}</div>
                 <button class="add-block-btn" style="margin-top: var(--sp-sm);" onmousedown="addProgressMarker()">
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                         <line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/>
                     </svg>
-                    + add marker
+                    + add milestone
                 </button>
             </div>
             <div class="session-field">
-                <label class="session-field-label">commitment period</label>
+                <label class="session-field-label">work on this for</label>
                 ${periodChipsHtml()}
             </div>
         `;
@@ -2609,21 +2608,21 @@ function renderGoalCreator() {
     function intentionFormHtml() {
         return `
             <div class="session-field">
-                <label class="session-field-label">goal</label>
+                <label class="session-field-label">title</label>
                 <input type="text" class="session-input" id="goal-title-input"
                        placeholder="name it so you'd recognise it"
                        value="${escapeHtml(d.title)}"
                        oninput="appState._goalDraft.title = this.value" />
             </div>
             <div class="session-field">
-                <label class="session-field-label">what you're working toward</label>
+                <label class="session-field-label">describe it <span class="session-field-optional">optional</span></label>
                 <textarea class="session-block-textarea" id="goal-body-input"
                           placeholder="this is yours to judge, not the app's"
-                          rows="3"
+                          rows="2"
                           oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);">${escapeHtml(d.body || '')}</textarea>
             </div>
             <div class="session-field">
-                <label class="session-field-label">commitment period</label>
+                <label class="session-field-label">work on this for</label>
                 ${periodChipsHtml()}
             </div>
         `;
@@ -2631,11 +2630,12 @@ function renderGoalCreator() {
 
     function habitFormHtml() {
         const isSetNum = d.howOften && d.howOften.startsWith('x');
-        const isFreeText = d.howOften && !['every class', 'every week', 'set number of times', 'free text'].includes(d.howOften) && !isSetNum;
+        const presetHowOften = ['every class', 'every week', 'set number of times', 'other…'];
+        const isOtherHowOften = d.howOften && !presetHowOften.includes(d.howOften) && !isSetNum;
         const howOftenChipsHtml = howOftenOptions.map(o => {
             let isActive = false;
             if (o === 'set number of times') isActive = isSetNum;
-            else if (o === 'free text') isActive = isFreeText;
+            else if (o === 'other…') isActive = isOtherHowOften;
             else isActive = d.howOften === o;
             return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onmousedown="setGoalHowOften('${o}')">${o}</button>`;
         }).join('');
@@ -2649,28 +2649,28 @@ function renderGoalCreator() {
                        value="${escapeHtml(numVal)}"
                        oninput="appState._goalDraft.howOften = 'x' + this.value" />
             `;
-        } else if (d.howOften === 'free text' || isFreeText) {
+        } else if (d.howOften === 'other…' || isOtherHowOften) {
             howOftenExtra = `
                 <input type="text" class="session-input" style="margin-top: var(--sp-sm);"
                        placeholder="e.g. whenever I feel ready"
-                       value="${isFreeText ? escapeHtml(d.howOften) : ''}"
-                       oninput="appState._goalDraft.howOften = this.value" />
+                       value="${isOtherHowOften ? escapeHtml(d.howOften) : ''}"
+                       oninput="appState._goalDraft.howOften = this.value || 'other…'" />
             `;
         }
 
         return `
             <div class="session-field">
-                <label class="session-field-label">goal</label>
+                <label class="session-field-label">title</label>
                 <input type="text" class="session-input" id="goal-title-input"
                        placeholder="name it so you'd recognise it"
                        value="${escapeHtml(d.title)}"
                        oninput="appState._goalDraft.title = this.value" />
             </div>
             <div class="session-field">
-                <label class="session-field-label">what you want to do</label>
+                <label class="session-field-label">describe it <span class="session-field-optional">optional</span></label>
                 <textarea class="session-block-textarea" id="goal-body-input"
                           placeholder="what, specifically"
-                          rows="3"
+                          rows="2"
                           oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);">${escapeHtml(d.body || '')}</textarea>
             </div>
             <div class="session-field">
@@ -2679,7 +2679,7 @@ function renderGoalCreator() {
                 ${howOftenExtra}
             </div>
             <div class="session-field">
-                <label class="session-field-label">commitment period</label>
+                <label class="session-field-label">work on this for</label>
                 ${periodChipsHtml()}
             </div>
         `;
@@ -2713,9 +2713,7 @@ function renderGoalCreator() {
             <button class="btn-large session-save-btn" onmousedown="saveGoal()">save goal</button>
         `;
     } else {
-        footerHtml = `
-            <button class="session-discard-btn" onmousedown="confirmDiscardGoal()">discard</button>
-        `;
+        footerHtml = '';
     }
 
     overlay.innerHTML = `
@@ -2737,7 +2735,22 @@ function renderGoalCreator() {
             ${typeTabsHtml}
 
             <div class="session-logger-body">
-                ${bodyHtml || `<p class="goal-type-hint">Choose a type above to get started.</p>`}
+                ${bodyHtml || `
+                    <div class="goal-type-cards">
+                        <button class="goal-type-card" data-type="skill">
+                            <span class="goal-type-card-name">a skill</span>
+                            <span class="goal-type-card-desc">Something specific — a technique, a step, a quality of movement.</span>
+                        </button>
+                        <button class="goal-type-card" data-type="intention">
+                            <span class="goal-type-card-name">a feeling or state</span>
+                            <span class="goal-type-card-desc">Presence, confidence, ease. Harder to measure, worth naming.</span>
+                        </button>
+                        <button class="goal-type-card" data-type="habit">
+                            <span class="goal-type-card-name">a habit</span>
+                            <span class="goal-type-card-desc">A rhythm to build in — conditioning, practice, consistency.</span>
+                        </button>
+                    </div>
+                `}
                 ${bodyHtml ? '<div style="height: var(--sp-3xl);"></div>' : ''}
             </div>
 
@@ -2747,8 +2760,8 @@ function renderGoalCreator() {
         </div>
     `;
 
-    // Attach tab listeners via JS — inline handlers inside innerHTML are unreliable in Safari
-    document.querySelectorAll('#goal-type-tabs .goal-type-tab').forEach(btn => {
+    // Attach tab + type card listeners via JS (inline handlers in innerHTML unreliable in Safari)
+    document.querySelectorAll('#goal-type-tabs .goal-type-tab, .goal-type-card').forEach(btn => {
         btn.addEventListener('click', () => setGoalType(btn.dataset.type));
     });
 }
@@ -2775,6 +2788,7 @@ function setGoalType(type) {
     d.howOften = '';
     d._confirmingDiscard = false;
     renderGoalCreator();
+    requestAnimationFrame(() => document.getElementById('goal-title-input')?.focus());
 }
 
 function toggleGoalSkill(skillId) {
@@ -2791,6 +2805,7 @@ function setGoalPeriod(period) {
     if (!d) return;
     d.commitmentPeriod = period;
     renderGoalCreator();
+    if (period === 'other…') requestAnimationFrame(() => document.querySelector('.goal-period-other-input')?.focus());
 }
 
 function setGoalHowOften(val) {
