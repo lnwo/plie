@@ -15,6 +15,13 @@ const DATA = {
         { id: 'fouette',        french: 'Fouetté',        phonetic: 'fweh-TAY',          english: 'Whipped',           difficulty: 'advanced',     category: 'Turns',        dimensionId: 'turns',   aliases: ['fouette', 'whip', 'fouette turns', 'fouettés'] },
         { id: 'grand-jete',     french: 'Grand jeté',     phonetic: 'grahn zhuh-TAY',    english: 'Large throw',       difficulty: 'advanced',     category: 'Jumps',        dimensionId: 'allegro', aliases: ['grand jete', 'split jump', 'leap']            },
         { id: 'manege',         french: 'Manège',         phonetic: 'ma-NEZH',           english: 'Riding school',     difficulty: 'advanced',     category: 'Centre Work',  dimensionId: 'centre',  aliases: ['manege', 'travelling turns', 'en manege']     },
+        { id: 'releve',         french: 'Relevé',         phonetic: 'ruh-luh-VAY',       english: 'Raised',            difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['releve', 'rise', 'elevate']                   },
+        { id: 'eleve',          french: 'Élevé',          phonetic: 'ay-luh-VAY',        english: 'Lifted',            difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['eleve', 'straight rise']                      },
+        { id: 'retire',         french: 'Retiré',         phonetic: 'ruh-tee-RAY',       english: 'Withdrawn',         difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['retire', 'passé position']                    },
+        { id: 'passe',          french: 'Passé',          phonetic: 'pa-SAY',            english: 'Passed',            difficulty: 'beginner',     category: 'Centre Work',  dimensionId: 'centre',  aliases: ['passe', 'retire']                             },
+        { id: 'coupe',          french: 'Coupé',          phonetic: 'koo-PAY',           english: 'Cut',               difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['coupe', 'cut step']                           },
+        { id: 'balance',        french: 'Balancé',        phonetic: 'ba-lahn-SAY',       english: 'Rocking step',      difficulty: 'beginner',     category: 'Centre Work',  dimensionId: 'centre',  aliases: ['balance', 'waltz step']                       },
+        { id: 'port-de-bras',   french: 'Port de bras',   phonetic: 'por duh BRAH',      english: 'Carriage of arms',  difficulty: 'beginner',     category: 'Centre Work',  dimensionId: 'centre',  aliases: ['port de bras', 'arm movement']                },
     ],
 
     folders: {
