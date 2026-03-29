@@ -657,22 +657,22 @@ const ORIENTATION_GOALS_OPTIONS = [
 
 const PERSONAS = {
     duckling: {
-        level: 'beginner',
+        level: 'duckling',
         name: 'Duckling',
         description: 'You\'re building the foundations. Ballet is still relatively new to you, whether you\'ve just started or you\'re finding your footing after a long break. You\'re learning how the vocabulary works, what your body can do, and how to listen to your teacher. Classes might feel like a lot to take in at once, and that\'s exactly where you should be.',
     },
     deer: {
-        level: 'improver',
+        level: 'deer',
         name: 'Deer',
         description: 'You know your way around a class. You\'ve got the basics under your feet and you\'re starting to work on the details. You can follow combinations without watching someone else for every step, and you\'re beginning to notice the difference between getting through something and doing it well. You\'re in the part of the journey where things start to connect.',
     },
     swan: {
-        level: 'intermediate',
+        level: 'swan',
         name: 'Swan',
         description: 'You\'re working with real depth now. You\'ve been training long enough that the foundations are solid and you\'re building on top of them. You bring attention to quality, not just execution. You know what you\'re working on and why. Classes feel like a place to develop, not just survive.',
     },
     firebird: {
-        level: 'advanced',
+        level: 'firebird',
         name: 'Firebird',
         description: 'Ballet is a serious part of your life. You\'ve been at this for a long time. Your technique has real consistency, you\'re musical, and you have a clear sense of what you\'re reaching for. You might still be working on the same things you\'ve always worked on — that\'s the nature of ballet — but you\'re doing it with depth and intention.',
     },
@@ -699,6 +699,10 @@ function showOrientationScreen() {
 function startOrientationQuiz() {
     appState.currentQuestion     = 0;
     appState._orientationAnswers = {};
+    appState._assessmentWritten  = false;
+    showScreen('assessment');
+    document.querySelector('.bottom-nav')?.classList.remove('visible');
+    document.querySelector('.fab')?.classList.remove('visible');
     renderOrientationQuestion();
 }
 
@@ -745,6 +749,7 @@ function renderOrientationQuestion() {
                 ${q.dimension ? `<div class="orient-dimension">${q.dimension}</div>` : ''}
                 <div class="orient-question">${q.text}</div>
                 ${q.helper ? `<div class="orient-helper">${q.helper}</div>` : ''}
+                ${q.type === 'multi' ? `<div class="orient-select-hint">select all that apply</div>` : ''}
                 <div class="orient-options">${optHtml}</div>
             </div>
             <div class="orient-footer">
@@ -767,11 +772,25 @@ function orientToggleMulti(qId, idx) {
     if (!appState._orientationAnswers) appState._orientationAnswers = {};
     if (!Array.isArray(appState._orientationAnswers[qId])) appState._orientationAnswers[qId] = [];
     const arr = appState._orientationAnswers[qId];
-    const pos = arr.indexOf(idx);
-    if (pos > -1) arr.splice(pos, 1); else arr.push(idx);
+
+    // Mutually exclusive first option for questions starting with "I haven't"
+    const q = ORIENTATION_QUESTIONS[appState.currentQuestion];
+    const firstOptText = typeof q.options[0] === 'string' ? q.options[0] : q.options[0].text;
+    const hasExclusive = firstOptText.startsWith("I haven't");
+
+    if (hasExclusive && idx === 0) {
+        if (arr.includes(0)) { arr.splice(arr.indexOf(0), 1); }
+        else { appState._orientationAnswers[qId] = [0]; }
+    } else if (hasExclusive) {
+        if (arr.includes(0)) arr.splice(arr.indexOf(0), 1);
+        const pos = arr.indexOf(idx);
+        if (pos > -1) arr.splice(pos, 1); else arr.push(idx);
+    } else {
+        const pos = arr.indexOf(idx);
+        if (pos > -1) arr.splice(pos, 1); else arr.push(idx);
+    }
 
     // Patch just the options to avoid full re-render flicker
-    const q = ORIENTATION_QUESTIONS[appState.currentQuestion];
     const container = document.querySelector('.orient-options');
     if (!container) return;
     container.innerHTML = q.options.map((opt, i) => {
@@ -907,6 +926,21 @@ function confirmOrientationLevel(personaKey) {
     appState.persona = personaKey;
     appState.level   = persona.level;
 
+    // Synthesise dimension scores from persona level so focus cards show as assessed.
+    // The orientation quiz doesn't score individual dimensions, so we use the midpoint
+    // of each level band as a uniform approximation across all tech/artistry dimensions.
+    const levelRaw = { duckling: 0.5, deer: 1.5, swan: 2.5, firebird: 3.5 }[personaKey] ?? 0.5;
+    appState.dimensions = {
+        barre:       getDimensionStage(levelRaw),
+        centre:      getDimensionStage(levelRaw),
+        allegro:     getDimensionStage(levelRaw),
+        turns:       getDimensionStage(levelRaw),
+        flexibility: getDimensionStage(levelRaw),
+        musicality:  getDimensionStage(levelRaw),
+        knowledge:   getDimensionStage(levelRaw),
+        pointe:      null,
+    };
+
     if (!appState._assessmentWritten) {
         const assessment = {
             id:          Date.now(),
@@ -917,6 +951,7 @@ function confirmOrientationLevel(personaKey) {
             level:       persona.level,
             persona:     personaKey,
             levelLabel:  persona.name,
+            dimensions:  appState.dimensions,
         };
         appState.assessments = appState.assessments || [];
         appState.assessments.push(assessment);
@@ -1198,13 +1233,11 @@ function calculateResults() {
     const avg = answeredRaw.length > 0 ? answeredRaw.reduce((s, v) => s + v, 0) / answeredRaw.length : -1;
 
     let level, levelLabel, levelDescription;
-    if (avg < 0)       { level = 'not-assessed'; levelLabel = 'Not assessed'; levelDescription = "Complete the quiz to find your level"; }
-    else if (avg >= 3.8) { level = 'advanced'; levelLabel = 'Advanced'; levelDescription = "You're working at an advanced level"; }
-    else if (avg >= 3.0) { level = 'upper-intermediate'; levelLabel = 'Upper Intermediate'; levelDescription = "You're working at a strong level"; }
-    else if (avg >= 2.2) { level = 'intermediate'; levelLabel = 'Intermediate'; levelDescription = "Your technique is developing well"; }
-    else if (avg >= 1.5) { level = 'improver'; levelLabel = 'Improver'; levelDescription = "You have a solid base to build on"; }
-    else if (avg >= 0.8) { level = 'elementary'; levelLabel = 'Elementary'; levelDescription = "You're building core foundations"; }
-    else                 { level = 'beginner'; levelLabel = 'Beginner'; levelDescription = "You're at the start of your training"; }
+    if (avg < 0)      { level = 'not-assessed'; levelLabel = 'Not assessed';  levelDescription = "Complete the quiz to find your level"; }
+    else if (avg >= 3) { level = 'firebird';    levelLabel = 'Firebird';      levelDescription = "Ballet is a serious part of your life. Technique has real consistency."; }
+    else if (avg >= 2) { level = 'swan';        levelLabel = 'Swan';          levelDescription = "You're working with real depth. Foundations are solid and you're building on them."; }
+    else if (avg >= 1) { level = 'deer';        levelLabel = 'Deer';          levelDescription = "You know your way around a class. Basics are there — working on the details."; }
+    else               { level = 'duckling';    levelLabel = 'Duckling';      levelDescription = "You're building the foundations. Learning how it all works."; }
 
     appState.level = level;
 
@@ -1330,7 +1363,11 @@ function skipToProfile() {
     if (sessionSkills)    appState.sessionSkills    = sessionSkills;
     if (corrections)      appState.corrections      = corrections;
     if (assessments)      appState.assessments      = assessments;
-    if (goals)            appState.goals            = goals;
+    if (goals)            appState.goals            = goals.map(g => {
+        if (g.status) return g;
+        if (g.completed === true || g.completedAt) return { ...g, status: 'completed' };
+        return { ...g, status: 'active' };
+    });
     if (timeline)         appState.timeline         = timeline;
     if (skillNotes)       appState.skillNotes       = skillNotes;
 
@@ -1385,19 +1422,13 @@ function renderProfileStatus() {
     if (!el) return;
 
     const level = appState.level || 'not-assessed';
-    const levelLabels = {
-        'beginner':          'Beginner',
-        'elementary':        'Elementary',
-        'improver':          'Improver',
-        'intermediate':      'Intermediate',
-        'upper-intermediate':'Upper Intermediate',
-        'advanced':          'Advanced',
-        'not-assessed':      'Not yet assessed',
-    };
-    const levelName = levelLabels[level] || 'Not yet assessed';
+    const levelName = { duckling: 'Duckling', deer: 'Deer', swan: 'Swan', firebird: 'Firebird' }[level] || 'Not yet assessed';
 
-    // Animal watermark — matches level
-    const animalSrc = ILLUSTRATIONS.levels[level] || null;
+    // Animal watermark — maps new level IDs to illustration keys
+    const LEVEL_TO_ILLUS = { duckling: 'beginner', deer: 'improver', swan: 'intermediate', firebird: 'advanced',
+                              beginner: 'beginner', elementary: 'beginner', improver: 'improver',
+                              intermediate: 'intermediate', 'upper-intermediate': 'intermediate', advanced: 'advanced' };
+    const animalSrc = ILLUSTRATIONS.levels[LEVEL_TO_ILLUS[level]] || null;
 
     // Avatar — uploaded photo, default illustration, or placeholder SVG
     let avatarContent;
@@ -1516,13 +1547,18 @@ function buildInsightSentence(level) {
 
     // 4. Assessment-based fallback per level
     const fallbacks = {
+        'duckling':  'You\'re at the start of something. Log your first session to begin building a picture of your training.',
+        'deer':      'A solid foundation developing well. Log sessions to start seeing where your corrections cluster.',
+        'swan':      'Your technique is developing well. Log sessions to track where the most growth is happening.',
+        'firebird':  'You\'re working at a high level. The app is most useful as a record of nuance at this stage.',
+        'not-assessed': 'Take the placement quiz to get a picture of where you are and where to focus.',
+        // backward compat
         'beginner':          'You\'re at the start of something. Log your first session to begin building a picture of your training.',
-        'elementary':        'Core positions are coming together. The barre is where the foundation is being laid — trust the repetition.',
+        'elementary':        'You\'re at the start of something. Log your first session to begin building a picture of your training.',
         'improver':          'A solid foundation developing well. Log sessions to start seeing where your corrections cluster.',
         'intermediate':      'Your technique is developing well. Log sessions to track where the most growth is happening.',
-        'upper-intermediate':'Strong across the board. The work now is refinement — quality over acquisition.',
+        'upper-intermediate':'Your technique is developing well. Log sessions to track where the most growth is happening.',
         'advanced':          'You\'re working at a high level. The app is most useful as a record of nuance at this stage.',
-        'not-assessed':      'Take the placement quiz to get a picture of where you are and where to focus.',
     };
     return fallbacks[level] || fallbacks['not-assessed'];
 }
@@ -2247,8 +2283,9 @@ function renderSettings() {
 }
 
 function togglePointeSetting(btn) {
-    appState.hidePointe = !btn.classList.contains('on');
-    btn.classList.toggle('on', !appState.hidePointe);
+    const isOn = btn.classList.contains('on');
+    appState.hidePointe = isOn;
+    btn.classList.toggle('on', !isOn);
     savePreferences();
     renderFocusCardStack();
 }

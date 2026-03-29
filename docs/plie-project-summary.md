@@ -98,6 +98,16 @@ js/ui.js      — All screen builders and render functions:
 ### Chips / pills
 - Selected state: `--ink` (#1A1714) fill, white text — NOT gold
 
+### Layout — section headers
+- `.barre-section-header` already carries `padding: 0 var(--sp-lg)` — do NOT wrap it in an additional padding div or the label will be double-indented
+- Content below a section header (cards, lists) lives in its own `padding: 0 var(--sp-lg)` wrapper
+- "see all →" buttons inside section headers use `.barre-see-all-btn` — no inline styles
+
+### Free text display
+- User-entered text (note body, goal body, skill notes): render with `nl2br()` — escapeHtml then `\n → <br>`
+- Long text truncates at 4 lines via `renderClampedHtml(html, uid)` → `.text-clamped` + see more / hide
+- "see more" / "hide": DM Sans 400, 12px, `--ink-5`, shown only when text actually overflows (measured post-render via `initClampedTexts(root)`)
+
 ---
 
 ## Current feature status
@@ -112,8 +122,16 @@ js/ui.js      — All screen builders and render functions:
 - Goal creator — skill auto-detection in title, correction linking, custom date picker
 - Goal editing, categories, correction linking, milestones/progress markers
 - Goal cards — friendly type labels, linked skill name, formatted commitment period, howOften display
+- Goal progress markers — tap to toggle done state (onmousedown + ontouchend), persists
 - Session delete, skill note delete
-- Note blocks — single free-text + source chips (Correction · Observation) + highlight star
+- Note blocks — contenteditable bullet entry with live — dash prefix, source chips, highlight star
+- Note block star moved left of topic input; title field removed (T22)
+- Session save — all block types (correction + observation + general) create sessionSkills; corrections always go to correctionIds; observation blocks also write to skillNotes; all stores saved atomically; isHighlight saved on sessionSkill; edit flow cleans up stale skillNotes (T23)
+- Recurring correction detection — ≥3 corrections for same skill across ≥2 sessions within 60 days sets isRecurring on all corrections for that skill (T27)
+- Barre corrections in focus — All / Recurring filter tabs; Recurring shows empty state if no in-focus skills qualify (T28)
+- Highlights section on skill detail — shows highlighted sessionSkills and skillNotes with gold border, star to un-star; absent if empty (T26)
+- Timeline session entries show gold ★ if any sessionSkill for that session has isHighlight (T26)
+- User-entered text: line breaks preserved (nl2br), long text truncates at 4 lines with see more / hide (T24)
 - Timeline date groups, icons, tappable sessions
 - Profile capability cards
 - Profile — orientation quiz CTA (start or retake)
@@ -143,8 +161,6 @@ js/ui.js      — All screen builders and render functions:
 - Duplicate timeline entries possible if saveSession called twice (guard: _isEdit)
 - highlightMatch regex — Node.js false positive, browser-valid
 - Observation blocks write a timeline entry via legacy praise path — should not
-- isHighlight flag saved to corrections/skillNotes but never read in skill detail or timeline UI
-- Recurring correction flag (isRecurring) never set to true — detection logic unwritten
 - Goal swipe-left delete uses native confirm() dialog — should be in-app discard pattern
 - Goal pause/dismiss states unbuilt — swipe-left permanently deletes with no undo
 
@@ -153,8 +169,6 @@ js/ui.js      — All screen builders and render functions:
 - Goals: goal pause / dismiss (non-destructive swipe-left)
 - Goals: goal renewal / reactivation flow (lineage model, renewal prompt)
 - Goals: All Goals page status grouping (paused / let go / completed within each year)
-- Note blocks: isHighlight surfaced in skill detail (Highlights section) and timeline
-- Note blocks: recurring correction detection (threshold logic unwritten)
 - Class type chips: square cards → pill chips
 - Session logger: retrospective date floor removed (any past date allowed)
 - Profile: signal lines replacing score bars

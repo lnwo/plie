@@ -252,9 +252,18 @@ const DATA = {
     stageLabels: ['Just starting', 'Early stages', 'Developing', 'Comfortable', 'Strong'],
 
     levelLabels: {
-        'beginner': 'BEGINNER', 'elementary': 'ELEMENTARY', 'improver': 'IMPROVER',
-        'intermediate': 'INTERMEDIATE', 'upper-intermediate': 'UPPER INTERMEDIATE',
-        'advanced': 'ADVANCED', 'not-assessed': 'NOT YET ASSESSED'
+        'duckling':          'DUCKLING',
+        'deer':              'DEER',
+        'swan':              'SWAN',
+        'firebird':          'FIREBIRD',
+        'not-assessed':      'NOT YET ASSESSED',
+        // backward compat for stored assessments from the old 6-level system
+        'beginner':          'DUCKLING',
+        'elementary':        'DUCKLING',
+        'improver':          'DEER',
+        'intermediate':      'SWAN',
+        'upper-intermediate':'SWAN',
+        'advanced':          'FIREBIRD',
     },
 
     dimensionNames: {

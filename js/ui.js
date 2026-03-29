@@ -15,6 +15,52 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
+// Escape HTML and convert newlines to <br> for displaying user-entered free text.
+function nl2br(str) {
+    if (str == null) return '';
+    return escapeHtml(str).replace(/\n/g, '<br>');
+}
+
+// Render a truncatable text block with see more / hide toggle.
+// `html` should already be HTML-safe (e.g. produced by nl2br).
+// `uid` must be unique across the page at render time.
+function renderClampedHtml(html, uid) {
+    return `<div class="text-clamped" id="tc-${uid}">${html}</div>` +
+           `<button class="note-block-see-more" id="tcm-${uid}" onclick="expandClamped('${uid}')" style="display:none">see more</button>` +
+           `<button class="note-block-see-more" id="tch-${uid}" onclick="collapseClamped('${uid}')" style="display:none">hide</button>`;
+}
+
+function expandClamped(uid) {
+    const el = document.getElementById('tc-' + uid);
+    if (el) el.classList.add('expanded');
+    const m = document.getElementById('tcm-' + uid);
+    const h = document.getElementById('tch-' + uid);
+    if (m) m.style.display = 'none';
+    if (h) h.style.display = '';
+}
+
+function collapseClamped(uid) {
+    const el = document.getElementById('tc-' + uid);
+    if (el) el.classList.remove('expanded');
+    const m = document.getElementById('tcm-' + uid);
+    const h = document.getElementById('tch-' + uid);
+    if (m) m.style.display = '';
+    if (h) h.style.display = 'none';
+}
+
+// After rendering, measure each .text-clamped element and show the
+// see-more button only if the text actually overflows 4 lines.
+function initClampedTexts(root) {
+    (root || document).querySelectorAll('.text-clamped').forEach(el => {
+        const uid = el.id.slice(3); // strip 'tc-' prefix
+        const moreBtn = document.getElementById('tcm-' + uid);
+        if (!moreBtn) return;
+        if (el.scrollHeight > el.clientHeight + 2) {
+            moreBtn.style.display = '';
+        }
+    });
+}
+
 /* ═══════════════════════════════════════════════════════════════
    SESSION LOGGER
    Stage 2: Full overlay with class type carousel, day picker,
@@ -837,7 +883,7 @@ function addBlock(focusTitle = false) {
     renderBlocksOnly();
     if (focusTitle) {
         requestAnimationFrame(() => {
-            const blocks = document.querySelectorAll('.session-block-title-input');
+            const blocks = document.querySelectorAll('.block-bullet-entry');
             const last = blocks[blocks.length - 1];
             last?.focus();
         });
@@ -926,6 +972,12 @@ function renderBlockHtml(block, index) {
         </div>
     `;
 
+    // Build contenteditable bullet lines from existing text
+    const bulletLines = blockText ? blockText.split('\n') : [];
+    const bulletDivsHtml = bulletLines.length
+        ? bulletLines.map(l => `<div>${escapeHtml(l) || '<br>'}</div>`).join('')
+        : '<div></div>';
+
     return `
         <div class="swipe-row" data-block-id="${block.id}">
             <div class="swipe-action-left swipe-action-remove">
@@ -936,6 +988,13 @@ function renderBlockHtml(block, index) {
                 <div class="session-block" id="block-${block.id}">
 
                     <div class="session-block-header">
+                        <button class="block-star-btn ${block.isHighlight ? 'active' : ''}"
+                                onmousedown="toggleBlockHighlight(${block.id})"
+                                aria-label="Highlight">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="${block.isHighlight ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M8 1.5l1.7 3.4 3.8.55-2.75 2.68.65 3.78L8 10.1 4.6 11.91l.65-3.78L2.5 5.45l3.8-.55z"/>
+                            </svg>
+                        </button>
                         <div class="session-block-topic-wrapper" id="topic-wrapper-${block.id}">
                             <input class="session-block-topic-input"
                                    id="topic-input-${block.id}"
@@ -949,13 +1008,6 @@ function renderBlockHtml(block, index) {
                                    placeholder="Search skill…" />
                             <div class="block-topic-dropdown" id="topic-dropdown-${block.id}" style="display:none;"></div>
                         </div>
-                        <button class="block-star-btn ${block.isHighlight ? 'active' : ''}"
-                                onmousedown="toggleBlockHighlight(${block.id})"
-                                aria-label="Highlight">
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="${block.isHighlight ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M8 1.5l1.7 3.4 3.8.55-2.75 2.68.65 3.78L8 10.1 4.6 11.91l.65-3.78L2.5 5.45l3.8-.55z"/>
-                            </svg>
-                        </button>
                         <button class="block-remove-btn" onclick="removeBlock(${block.id})" aria-label="Remove">
                             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                                 <line x1="3" y1="3" x2="11" y2="11"/>
@@ -965,18 +1017,10 @@ function renderBlockHtml(block, index) {
                     </div>
 
                     <div class="session-block-fields">
-                        <textarea class="session-block-title-input"
-                                  placeholder="${isGeneral ? 'Topic or title…' : 'Add a title…'}"
-                                  rows="1"
-                                  oninput="updateBlockField(${block.id}, 'title', this.value); autoResizeCapped(this); checkBlockTitleForSkills(${block.id}, this.value);"
-                                  onfocus="this.placeholder=''"
-                                  onblur="this.placeholder='${isGeneral ? 'Topic or title…' : 'Add a title…'}'"
-                                  >${block.title}</textarea>
-
-                        <textarea class="session-block-textarea session-block-capped"
-                                  placeholder="What happened…"
-                                  oninput="updateBlockField(${block.id}, 'text', this.value); autoResizeCapped(this);"
-                                  >${blockText}</textarea>
+                        <div class="block-bullet-entry"
+                             contenteditable="true"
+                             oninput="updateBlockBullets(${block.id}, this)"
+                             >${bulletDivsHtml}</div>
 
                         ${sourcesHtml}
 
@@ -1037,8 +1081,8 @@ function renderSkillSuggestionChips(blockId, matches) {
     const filtered = matches.filter(m => m.topicId !== block.topicId);
     if (!filtered.length) return;
 
-    const titleEl = blockEl.querySelector('.session-block-title-input');
-    if (!titleEl) return;
+    const bulletEl = blockEl.querySelector('.block-bullet-entry');
+    if (!bulletEl) return;
 
     const row = document.createElement('div');
     row.className = 'skill-suggestion-chip-row';
@@ -1048,7 +1092,7 @@ function renderSkillSuggestionChips(blockId, matches) {
             link to ${m.label} →
         </button>`).join('');
 
-    titleEl.insertAdjacentElement('afterend', row);
+    bulletEl.insertAdjacentElement('beforebegin', row);
 }
 
 function acceptSkillSuggestion(blockId, topicId, label) {
@@ -1065,6 +1109,15 @@ function acceptSkillSuggestion(blockId, topicId, label) {
 function checkBlockTitleForSkills(blockId, text) {
     const matches = detectSkillsInText(text);
     renderSkillSuggestionChips(blockId, matches);
+}
+
+function updateBlockBullets(blockId, el) {
+    const divs = el.querySelectorAll('div');
+    const text = divs.length
+        ? Array.from(divs).map(d => d.textContent || '').join('\n').trimEnd()
+        : (el.textContent || '').trimEnd();
+    updateBlockField(blockId, 'text', text);
+    checkBlockTitleForSkills(blockId, text);
 }
 
 function checkSessionTitleForSkills(text) {
@@ -1502,6 +1555,7 @@ function saveSession() {
         appState.corrections  = appState.corrections.filter(c =>
             !(c.sessionId === session.id && oldSessionSkillIds.includes(c.id)));
         appState.sessionSkills = appState.sessionSkills.filter(ss => ss.sessionId !== session.id);
+        appState.skillNotes    = (appState.skillNotes || []).filter(n => n.sessionId !== session.id);
     } else {
         appState.sessions.push(session);
     }
@@ -1512,6 +1566,8 @@ function saveSession() {
     let correctionCount = 0;
     // Track skills with corrections for post-save promotion prompt
     const skillsWithCorrections = [];
+    // Collect skillNotes entries to add after the loop (written atomically)
+    const pendingSkillNotes = [];
 
     s.blocks.forEach(block => {
         const isSkill = block.topicId?.startsWith('skill:');
@@ -1527,9 +1583,9 @@ function saveSession() {
 
         const isCorrection = block.source === 'correction' || (!block.source && !!block.mode && block.mode === 'correction');
 
-        // Save as Correction if source is 'correction' (or legacy correction mode with bullets)
-        if (isCorrection && blockText) {
-            // Split multi-line text into individual corrections (legacy bullet compat)
+        // Save all non-empty lines as Correction objects regardless of source —
+        // this is what renderDetailBlockHtml reads for session detail display.
+        if (blockText) {
             const lines = blockText.split('\n').map(l => l.trim()).filter(Boolean);
             lines.forEach(text => {
                 const correction = {
@@ -1542,62 +1598,79 @@ function saveSession() {
                 };
                 appState.corrections.push(correction);
                 blockCorrectionIds.push(correction.id);
-                correctionCount++;
             });
-        } else if (blockText) {
-            // Observation or untagged — save as SkillNote
-            appState.skillNotes = appState.skillNotes || [];
-            appState.skillNotes.push({
-                id:          nextId(),
-                skillId:     skillId || null,
-                text:        blockText,
-                date:        session.date,
-                createdAt:   now,
-                source:      block.source || null,
-                isHighlight: !!block.isHighlight,
-            });
-            storage.save('skillNotes', appState.skillNotes);
+            // Only count towards the timeline "X corrections" label for correction-source blocks
+            if (isCorrection) correctionCount += blockCorrectionIds.length;
+
+            // Skill-linked observation blocks also write to skillNotes so they appear
+            // in "my notes" on the skill detail page.
+            if (isSkill && skillId && block.source === 'observation') {
+                pendingSkillNotes.push({
+                    id:          nextId(),
+                    skillId:     skillId,
+                    text:        blockText,
+                    date:        session.date,
+                    createdAt:   now,
+                    sessionId:   session.id,
+                    source:      'session',
+                    isHighlight: !!block.isHighlight,
+                });
+            }
         }
 
-        // Legacy praise → timeline entry
-        if ((block.mode === 'praise' || block.source === 'observation') && blockText) {
-            const skillRef = skillId ? DATA.skills.find(sk => sk.id === skillId) : null;
-            appendTimelineEntry({
-                type:     'milestone',
-                objectId: session.id,
-                title:    blockText,
-                body:     skillRef ? skillRef.french : null,
-                date:     session.date,
-                isPraise: true,
-            });
-        }
-
-        // SessionSkill join object — only for skill-topic blocks
-        if (isSkill && skillId) {
+        // SessionSkill join object — created for any block that has content,
+        // not just skill-linked blocks, so general notes appear in session detail.
+        if (blockText || block.notes?.trim()) {
             const sessionSkill = {
                 id:            nextId(),
                 sessionId:     session.id,
-                skillId:       skillId,
+                skillId:       skillId || null,
                 notes:         block.notes?.trim() || null,
                 correctionIds: blockCorrectionIds,
                 tracked:       true,
                 blockTitle:    block.title?.trim() || null,
                 source:        block.source || null,
+                isHighlight:   !!block.isHighlight,
             };
             appState.sessionSkills.push(sessionSkill);
-            skillCount++;
 
-            if (blockCorrectionIds.length > 0) {
-                skillsWithCorrections.push(skillId);
+            if (isSkill && skillId) {
+                skillCount++;
+                if (blockCorrectionIds.length > 0) skillsWithCorrections.push(skillId);
+                const skill = appState.skills.find(sk => sk.id === skillId);
+                if (skill) skill.flagged = true;
             }
-
-            const skill = appState.skills.find(sk => sk.id === skillId);
-            if (skill) skill.flagged = true;
         }
+    });
+
+    // Add session-originated skillNotes and persist all stores together
+    if (pendingSkillNotes.length) {
+        appState.skillNotes = appState.skillNotes || [];
+        appState.skillNotes.push(...pendingSkillNotes);
+    }
+    // Recurring correction detection — run for every skill touched in this session
+    const touchedSkillIds = [...new Set(
+        s.blocks
+            .filter(b => b.topicId?.startsWith('skill:'))
+            .map(b => b.topicId.replace('skill:', ''))
+    )];
+    const sixtyDaysAgo = now - 60 * 24 * 60 * 60 * 1000;
+    touchedSkillIds.forEach(sid => {
+        const recent = appState.corrections.filter(
+            c => c.skillId === sid && c.createdAt >= sixtyDaysAgo
+        );
+        const sessionCount = new Set(recent.map(c => c.sessionId).filter(Boolean)).size;
+        const isRecurring = recent.length >= 3 && sessionCount >= 2;
+        // Apply to ALL corrections for this skill, not just recent, so stale ones
+        // also get cleared when the threshold is no longer met.
+        appState.corrections
+            .filter(c => c.skillId === sid)
+            .forEach(c => { c.isRecurring = isRecurring; });
     });
 
     storage.save('corrections',   appState.corrections);
     storage.save('sessionSkills', appState.sessionSkills);
+    storage.save('skillNotes',    appState.skillNotes);
     persistSkillState();
 
     // 3. Write timeline entry (new sessions only — edits don't create duplicate entries)
@@ -1985,14 +2058,25 @@ function showBarreScreen() {
         document.querySelector('.app-container').appendChild(screen);
     }
 
-    const activeSkills = appState.skills.filter(s => s.flagged || s.tracked);
+    const focusedSkills = appState.skills.filter(s => s.flagged);
+    const displaySkills = focusedSkills.slice(0, 3);
+    const nudge = computeFocusNudge();
+    const nudgeHtml = nudge ? `
+        <div class="focus-nudge" id="focus-nudge">
+            <p class="focus-nudge-text">You've been working a lot on <strong>${nudge.skillX.french}</strong>. Is <strong>${nudge.skillY.french}</strong> still in focus?</p>
+            <div class="focus-nudge-actions">
+                <button onmousedown="dismissFocusNudge('${nudge.skillX.id}','${nudge.skillY.id}',true)">yes, keep it</button>
+                <button onmousedown="dismissFocusNudge('${nudge.skillX.id}','${nudge.skillY.id}',false)">remove it</button>
+            </div>
+        </div>` : '';
 
     // Level badge — show persona name if set, otherwise level label
-    const personaNames = { duckling: 'Duckling', deer: 'Deer', swan: 'Swan', firebird: 'Firebird' };
-    const levelLabels = { beginner: 'Beginner', elementary: 'Elementary', improver: 'Improver', intermediate: 'Intermediate', 'upper-intermediate': 'Upper Intermediate', advanced: 'Advanced' };
+    const LEVEL_NAMES = { duckling: 'Duckling', deer: 'Deer', swan: 'Swan', firebird: 'Firebird',
+                          beginner: 'Duckling', elementary: 'Duckling', improver: 'Deer',
+                          intermediate: 'Swan', 'upper-intermediate': 'Swan', advanced: 'Firebird' };
     const badgeText = appState.persona
-        ? personaNames[appState.persona]
-        : (appState.level && appState.level !== 'not-assessed' ? levelLabels[appState.level] : null);
+        ? (LEVEL_NAMES[appState.persona] || null)
+        : (appState.level && appState.level !== 'not-assessed' ? (LEVEL_NAMES[appState.level] || null) : null);
     const levelBadgeHtml = badgeText ? `<span class="barre-level-badge">${badgeText}</span>` : '';
 
     // Getting started section
@@ -2030,61 +2114,23 @@ function showBarreScreen() {
 
     // Corrections in focus
     let activeSkillsHtml = '';
-    if (activeSkills.length > 0) {
+    if (focusedSkills.length > 0) {
         activeSkillsHtml = `
             <div class="barre-section-header">
                 <span class="barre-section-label">corrections in focus</span>
-                <span class="barre-section-count">${activeSkills.length}</span>
-            </div>
-            <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);">
-                <div style="display: flex; flex-direction: column; gap: var(--sp-sm);" id="active-skills-list">
-                    ${activeSkills.map(skill => {
-                        const skillCorrections = appState.corrections
-                            .filter(c => c.skillId === skill.id)
-                            .sort((a, b) => b.createdAt - a.createdAt);
-                        const lastCorrection = skillCorrections[0] || null;
-                        const isRecurring = skillCorrections.some(c => c.isRecurring);
-                        const lastSessionSkill = appState.sessionSkills
-                            .filter(ss => ss.skillId === skill.id)
-                            .sort((a, b) => {
-                                const sa = appState.sessions.find(s => s.id === a.sessionId);
-                                const sb = appState.sessions.find(s => s.id === b.sessionId);
-                                return (sb?.date || '').localeCompare(sa?.date || '');
-                            })[0];
-                        const lastSession = lastSessionSkill
-                            ? appState.sessions.find(s => s.id === lastSessionSkill.sessionId)
-                            : null;
-                        return `
-                        <div class="swipe-row" data-skill-id="${skill.id}">
-                            <div class="swipe-action-left swipe-action-remove">
-                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
-                                remove
-                            </div>
-                            <div class="swipe-content">
-                                <div class="active-skill-card${isRecurring ? ' active-skill-recurring' : ''}">
-                                    <div class="active-skill-top">
-                                        <div class="active-skill-name">${skill.french}</div>
-                                        <div class="active-skill-category">${skill.category}</div>
-                                    </div>
-                                    ${lastCorrection ? `<div class="active-skill-correction"><em>"${lastCorrection.text}"</em></div>` : ''}
-                                    <div class="active-skill-footer">
-                                        ${lastSession ? `<span class="active-skill-date">${formatTimelineDate(lastSession.date)}</span>` : ''}
-                                        ${isRecurring ? `<span class="active-skill-recurring-badge">recurring</span>` : ''}
-                                        <button class="active-skill-view-btn" onclick="showSkillDetail('${skill.id}', 'barre-screen')">view →</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>`;
-                    }).join('')}
+                <div style="display:flex;align-items:center;gap:var(--sp-md);">
+                    <span class="barre-section-count">${focusedSkills.length}</span>
+                    ${focusedSkills.length > 3 ? '<button class="barre-see-all-btn" onclick="showFocusSkillsSheet()">see all →</button>' : ''}
                 </div>
             </div>
-        `;
-    } else {
-        activeSkillsHtml = `
-            <div class="barre-empty-state">
-                <div class="barre-empty-icon">${ICONS.get('cat-barre', 32)}</div>
-                <div class="barre-empty-title">No active skills yet</div>
-                <div class="barre-empty-text">Log a session to start tracking skills, or browse the categories below to add them manually.</div>
+            <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-md);">
+                <div style="display:flex;gap:var(--sp-xs);margin-bottom:var(--sp-md);">
+                    <button class="skill-corr-filter barre-focus-filter active" onmousedown="filterBarreSkills('all', this)">All</button>
+                    <button class="skill-corr-filter barre-focus-filter" onmousedown="filterBarreSkills('recurring', this)">Recurring</button>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: var(--sp-sm);" id="active-skills-list">
+                    ${renderActiveSkillsList(displaySkills)}
+                </div>
             </div>
         `;
     }
@@ -2097,32 +2143,17 @@ function showBarreScreen() {
         <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);">
             ${renderBarreHeroCard()}
         </div>
+        ${nudgeHtml}
         ${gettingStartedHtml}
         ${activeSkillsHtml}
+        <div class="barre-section-header">
+            <span class="barre-section-label">recent activity</span>
+            <button class="barre-see-all-btn" onclick="showBarreTimelineSheet()">see all →</button>
+        </div>
         <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-xl);">
-            <div class="barre-section-header">
-                <span class="barre-section-label">recent activity</span>
-                <button onclick="showBarreTimelineSheet()" style="background:none;border:none;font-family:var(--font-ui);font-size:var(--fs-caption);color:var(--gold);cursor:pointer;font-weight:500;">see all →</button>
-            </div>
             <div id="barre-timeline-inline"></div>
         </div>
-        <div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
-            <div class="barre-section-header" style="padding: 0; margin-bottom: var(--sp-lg);">
-                <span class="barre-section-label">browse by category</span>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: var(--sp-sm);">
-                ${DATA.skillCategories.map(cat => `
-                    <div class="skill-category-card" onclick="${cat.onclick}">
-                        <div class="skill-category-icon">${ICONS.get(cat.icon, 24)}</div>
-                        <div class="skill-category-info">
-                            <div class="skill-category-name">${cat.name}</div>
-                            <div class="skill-category-count">${cat.count}</div>
-                        </div>
-                        <div class="skill-category-arrow">→</div>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
+        <div style="height: 120px;"></div>
     `;
     showScreen('barre-screen');
 
@@ -2136,21 +2167,215 @@ function showBarreScreen() {
     }
 
     // Attach swipe-to-remove on active skill cards
-    screen.querySelectorAll('.swipe-row[data-skill-id]').forEach(row => {
+    attachBarreFocusSwipes();
+}
+
+function renderActiveSkillsList(skills) {
+    return skills.map(skill => {
+        const skillCorrections = appState.corrections
+            .filter(c => c.skillId === skill.id)
+            .sort((a, b) => b.createdAt - a.createdAt);
+        const isRecurring = skillCorrections.some(c => c.isRecurring);
+        const lastSessionSkill = appState.sessionSkills
+            .filter(ss => ss.skillId === skill.id)
+            .sort((a, b) => {
+                const sa = appState.sessions.find(s => s.id === a.sessionId);
+                const sb = appState.sessions.find(s => s.id === b.sessionId);
+                return (sb?.date || '').localeCompare(sa?.date || '');
+            })[0];
+        const lastSession = lastSessionSkill
+            ? appState.sessions.find(s => s.id === lastSessionSkill.sessionId)
+            : null;
+        const visibleCorrections = skillCorrections.slice(0, 3);
+        const hasMore = skillCorrections.length > 3;
+        const correctionsHtml = visibleCorrections.map((c, i) => {
+            const isLast = i === visibleCorrections.length - 1;
+            const truncate = isLast && hasMore ? ' active-skill-correction--truncate' : '';
+            return `<div class="active-skill-correction${truncate}">&ldquo;<em>${c.text}</em>&rdquo;</div>`;
+        }).join('');
+        return `
+        <div class="swipe-row" data-skill-id="${skill.id}">
+            <div class="swipe-action-left swipe-action-remove">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+                remove
+            </div>
+            <div class="swipe-content">
+                <div class="active-skill-card${isRecurring ? ' active-skill-recurring' : ''}" onclick="showSkillDetail('${skill.id}', 'barre-screen')">
+                    <div class="active-skill-top">
+                        <div class="active-skill-name">${skill.french}</div>
+                        <div class="active-skill-arrow">&#x203A;</div>
+                    </div>
+                    ${correctionsHtml}
+                    <div class="active-skill-footer">
+                        ${lastSession ? `<span class="active-skill-date">Last worked: ${formatTimelineDate(lastSession.date)}</span>` : ''}
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function attachBarreFocusSwipes() {
+    const screen = document.getElementById('barre-screen');
+    screen?.querySelectorAll('.swipe-row[data-skill-id]').forEach(row => {
         attachSwipe(row, {
             onLeft: () => {
                 const skillId = row.dataset.skillId;
                 const skill = appState.skills.find(s => s.id === skillId);
                 if (skill) {
-                    skill.flagged  = false;
-                    skill.tracked  = false;
+                    skill.flagged = false;
+                    skill.tracked = false;
                     persistSkillState();
                 }
-                // Re-render after animation completes
                 setTimeout(() => showBarreScreen(), 320);
             }
         });
     });
+}
+
+function filterBarreSkills(filter, btn) {
+    document.querySelectorAll('.barre-focus-filter').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const displaySkills = appState.skills.filter(s => s.flagged).slice(0, 3);
+    const list = document.getElementById('active-skills-list');
+    if (!list) return;
+
+    if (filter === 'recurring') {
+        const recurring = displaySkills.filter(skill =>
+            appState.corrections.some(c => c.skillId === skill.id && c.isRecurring)
+        );
+        if (!recurring.length) {
+            list.innerHTML = `<p style="color:var(--ink-5);font-size:var(--fs-small);font-style:italic;padding:var(--sp-sm) 0;">no recurring corrections yet</p>`;
+            return;
+        }
+        list.innerHTML = renderActiveSkillsList(recurring);
+    } else {
+        list.innerHTML = renderActiveSkillsList(displaySkills);
+    }
+    attachBarreFocusSwipes();
+}
+
+function showFocusSkillsSheet() {
+    const existing = document.getElementById('focus-skills-sheet');
+    if (existing) existing.remove();
+
+    const focusedSkills = appState.skills.filter(s => s.flagged);
+    if (!focusedSkills.length) return;
+
+    const cardsHtml = focusedSkills.map(skill => {
+        const skillCorrections = appState.corrections
+            .filter(c => c.skillId === skill.id)
+            .sort((a, b) => b.createdAt - a.createdAt);
+        const lastSessionSkill = appState.sessionSkills
+            .filter(ss => ss.skillId === skill.id)
+            .sort((a, b) => {
+                const sa = appState.sessions.find(s => s.id === a.sessionId);
+                const sb = appState.sessions.find(s => s.id === b.sessionId);
+                return (sb?.date || '').localeCompare(sa?.date || '');
+            })[0];
+        const lastSession = lastSessionSkill
+            ? appState.sessions.find(s => s.id === lastSessionSkill.sessionId)
+            : null;
+        const visibleCorrections = skillCorrections.slice(0, 3);
+        const hasMore = skillCorrections.length > 3;
+        const correctionsHtml = visibleCorrections.map((c, i) => {
+            const isLast = i === visibleCorrections.length - 1;
+            const truncate = isLast && hasMore ? ' active-skill-correction--truncate' : '';
+            return `<div class="active-skill-correction${truncate}">&ldquo;<em>${c.text}</em>&rdquo;</div>`;
+        }).join('');
+        return `
+        <div class="active-skill-card" onclick="document.getElementById('focus-skills-sheet').remove(); setTimeout(() => showSkillDetail('${skill.id}', 'barre-screen'), 200);">
+            <div class="active-skill-top">
+                <div class="active-skill-name">${skill.french}</div>
+                <div class="active-skill-arrow">&#x203A;</div>
+            </div>
+            ${correctionsHtml}
+            <div class="active-skill-footer">
+                ${lastSession ? `<span class="active-skill-date">Last worked: ${formatTimelineDate(lastSession.date)}</span>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+
+    const sheet = document.createElement('div');
+    sheet.id = 'focus-skills-sheet';
+    sheet.className = 'session-overlay';
+    sheet.innerHTML = `
+        <div class="session-logger-sheet" style="max-height: 85vh; display: flex; flex-direction: column;">
+            <div class="session-sheet-handle"></div>
+            <div class="session-logger-header" style="flex-shrink: 0;">
+                <div>
+                    <div class="session-logger-eyebrow">The Barre</div>
+                    <h2 class="session-logger-title">Skills in focus</h2>
+                </div>
+                <button class="session-close-btn" onclick="document.getElementById('focus-skills-sheet').remove()">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/>
+                    </svg>
+                </button>
+            </div>
+            <div style="padding: 0 var(--sp-lg) var(--sp-xl); overflow-y: auto; flex: 1;">
+                <div style="display: flex; flex-direction: column; gap: var(--sp-sm); padding-top: var(--sp-lg);">
+                    ${cardsHtml}
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(sheet);
+    requestAnimationFrame(() => sheet.classList.add('open'));
+    sheet.addEventListener('click', e => { if (e.target === sheet) sheet.remove(); });
+}
+
+function computeFocusNudge() {
+    const now = Date.now();
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    const SEVEN_DAYS  = 7  * 24 * 60 * 60 * 1000;
+
+    const recentCorrections = (appState.corrections || []).filter(c => (now - c.createdAt) <= THIRTY_DAYS);
+    const corrCountBySkill = {};
+    recentCorrections.forEach(c => {
+        if (c.skillId) corrCountBySkill[c.skillId] = (corrCountBySkill[c.skillId] || 0) + 1;
+    });
+
+    // Skill X: most corrected in last 30 days with 3+
+    const skillXEntry = Object.entries(corrCountBySkill)
+        .filter(([, count]) => count >= 3)
+        .sort((a, b) => b[1] - a[1])[0];
+    if (!skillXEntry) return null;
+    const skillXId = skillXEntry[0];
+
+    // Skill Y: flagged, 0 corrections in last 30 days, not same as X
+    const skillY = appState.skills.find(s =>
+        s.flagged && s.id !== skillXId && !(corrCountBySkill[s.id])
+    );
+    if (!skillY) return null;
+
+    // Throttle: once per (X, Y) pair per 7 days
+    const nudges = storage.load('focusNudges') || [];
+    if (nudges.find(n => n.x === skillXId && n.y === skillY.id && (now - n.at) <= SEVEN_DAYS)) return null;
+
+    const refX = DATA.skills.find(s => s.id === skillXId);
+    const refY = DATA.skills.find(s => s.id === skillY.id);
+    if (!refX || !refY) return null;
+
+    return { skillX: refX, skillY: refY };
+}
+
+function dismissFocusNudge(skillXId, skillYId, keep) {
+    const nudges = storage.load('focusNudges') || [];
+    nudges.push({ x: skillXId, y: skillYId, at: Date.now() });
+    storage.save('focusNudges', nudges);
+
+    document.getElementById('focus-nudge')?.remove();
+
+    if (!keep) {
+        const skill = appState.skills.find(s => s.id === skillYId);
+        if (skill) {
+            skill.flagged = false;
+            persistSkillState();
+            showBarreScreen();
+        }
+    }
 }
 
 // ── Assess ──
@@ -2219,11 +2444,85 @@ function showGoalsScreen() {
     showScreen('goals-screen');
 }
 
+function attachGoalSwipe(row, goalId) {
+    const content = row.querySelector('.swipe-content');
+    const leftEl  = row.querySelector('.swipe-action-left');
+    const rightEl = row.querySelector('.swipe-action-right');
+    if (!content) return;
+
+    const SNAP = 176, COMPLETE = 100, MIN_MS = 120;
+    let startX = 0, startTime = 0, dx = 0, dragging = false, revealed = false;
+
+    function getX(e) { return e.touches ? e.touches[0].clientX : e.clientX; }
+
+    function reset() {
+        content.style.transition = 'transform 0.25s var(--ease-out)';
+        content.style.transform  = '';
+        if (leftEl)  { leftEl.style.opacity  = '0'; leftEl.classList.remove('goal-swipe-revealed'); }
+        if (rightEl) rightEl.style.opacity = '0';
+        revealed = false;
+        dragging = false;
+    }
+
+    function onStart(e) {
+        if (revealed) { reset(); return; }
+        if (e.target.closest('button, input, a')) return;
+        startX    = getX(e);
+        startTime = Date.now();
+        dx        = 0;
+        dragging  = true;
+        content.style.transition = 'none';
+    }
+
+    function onMove(e) {
+        if (!dragging || revealed) return;
+        const raw = getX(e) - startX;
+        if (Math.abs(raw) < 8) return;
+        dx = raw;
+        if (dx < 0) {
+            const t = dx < -SNAP ? -SNAP + (dx + SNAP) * 0.1 : dx;
+            content.style.transform = `translateX(${t}px)`;
+            if (leftEl)  leftEl.style.opacity  = String(Math.min(1, Math.abs(dx) / SNAP));
+            if (rightEl) rightEl.style.opacity = '0';
+        } else {
+            const t = Math.min(dx, COMPLETE + (dx - COMPLETE) * 0.15);
+            content.style.transform = `translateX(${t}px)`;
+            if (rightEl) rightEl.style.opacity = String(Math.min(1, dx / COMPLETE));
+            if (leftEl)  leftEl.style.opacity  = '0';
+        }
+    }
+
+    function onEnd() {
+        if (!dragging) return;
+        dragging = false;
+        const elapsed = Date.now() - startTime;
+        if (dx <= -SNAP && elapsed >= MIN_MS) {
+            content.style.transition = 'transform 0.2s var(--ease-out)';
+            content.style.transform  = `translateX(-${SNAP}px)`;
+            if (leftEl) { leftEl.style.opacity = '1'; leftEl.classList.add('goal-swipe-revealed'); }
+            revealed = true;
+        } else if (dx >= COMPLETE && elapsed >= MIN_MS) {
+            content.style.transition = 'transform 0.25s var(--ease-out)';
+            content.style.transform  = 'translateX(110%)';
+            setTimeout(() => markGoalComplete(goalId), 200);
+        } else {
+            reset();
+        }
+    }
+
+    content.addEventListener('touchstart', onStart, { passive: true });
+    content.addEventListener('mousedown',  onStart);
+    document.addEventListener('touchmove', onMove, { passive: true });
+    document.addEventListener('touchend',  onEnd);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onEnd);
+}
+
 function renderGoalsScreen() {
     const screen = document.getElementById('goals-screen');
     if (!screen) return;
 
-    const goals = appState.goals || [];
+    const goals = (appState.goals || []).filter(g => g.status === 'active');
 
     // Sort newest first within each group
     const sorted = [...goals].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -2232,7 +2531,6 @@ function renderGoalsScreen() {
     const categorised = {};
     const uncategorised = [];
     sorted.forEach(g => {
-        if (g.completedAt) return;
         if (g.category) {
             if (!categorised[g.category]) categorised[g.category] = [];
             categorised[g.category].push(g);
@@ -2241,7 +2539,9 @@ function renderGoalsScreen() {
         }
     });
 
-    const completedGoals = sorted.filter(g => g.completedAt);
+    const completedGoals = [...(appState.goals || [])]
+        .filter(g => g.status === 'completed')
+        .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
 
     let goalsHtml = '';
 
@@ -2260,32 +2560,28 @@ function renderGoalsScreen() {
         Object.entries(categorised).forEach(([cat, catGoals]) => {
             goalsHtml += renderGoalGroup(cat, catGoals);
         });
-        if (completedGoals.length) {
-            const COMPLETED_PREVIEW = 2;
-            const visibleCompleted = completedGoals.slice(0, COMPLETED_PREVIEW);
-            const hiddenCount = completedGoals.length - COMPLETED_PREVIEW;
-            goalsHtml += `
-                <div class="goals-group-label goals-completed-label" style="margin-top: var(--sp-xl);">
-                    Completed
-                    <span class="goals-completed-count">${completedGoals.length}</span>
-                </div>
-                ${visibleCompleted.map(g => renderGoalCard(g, true)).join('')}
-                ${hiddenCount > 0 ? `
-                <div id="goals-completed-hidden" style="display:none;">
-                    ${completedGoals.slice(COMPLETED_PREVIEW).map(g => renderGoalCard(g, true)).join('')}
-                </div>
-                <button class="goals-see-all-btn" onclick="
-                    document.getElementById('goals-completed-hidden').style.display='block';
-                    this.remove();">
-                    see all ${completedGoals.length} completed
-                </button>` : ''}`;
-        }
+    }
+
+    if (completedGoals.length) {
+        const startCollapsed = completedGoals.length >= 2;
+        goalsHtml += `
+            <button class="goals-completed-header" onmousedown="
+                const body = this.nextElementSibling;
+                body.classList.toggle('collapsed');
+            ">
+                <span>completed</span>
+                <span class="goals-completed-count">${completedGoals.length}</span>
+            </button>
+            <div class="goals-completed-body ${startCollapsed ? 'collapsed' : ''}">
+                ${completedGoals.map(g => renderGoalCard(g, true)).join('')}
+            </div>
+        `;
     }
 
     screen.innerHTML = `
         <div class="profile-header">
             <h1>Goals</h1>
-            <p style="color: var(--text-muted); font-size: var(--fs-body); margin-top: var(--sp-xs);">Track what you're working towards</p>
+            <p style="color: var(--ink-3); font-size: var(--fs-body); margin-top: var(--sp-xs);">Track what you're working towards</p>
         </div>
         <div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
             ${goalsHtml}
@@ -2301,24 +2597,9 @@ function renderGoalsScreen() {
 
     // Attach swipes to goal cards
     screen.querySelectorAll('.swipe-row[data-goal-id]').forEach(row => {
-        const goalId = Number(row.dataset.goalId);
-        const isCompleted = !!(appState.goals.find(g => g.id === goalId)?.completedAt);
-        attachSwipe(row, {
-            onLeft: () => {
-                if (!confirm('Delete this goal?')) return;
-                appState.goals = appState.goals.filter(g => g.id !== goalId);
-                storage.save('goals', appState.goals);
-                setTimeout(() => renderGoalsScreen(), 320);
-            },
-            onRight: () => {
-                if (isCompleted) {
-                    reopenGoal(goalId);
-                } else {
-                    markGoalComplete(goalId);
-                }
-            }
-        });
+        attachGoalSwipe(row, Number(row.dataset.goalId));
     });
+    requestAnimationFrame(() => initClampedTexts(screen));
 }
 
 function showAllGoalsScreen() {
@@ -2330,53 +2611,100 @@ function showAllGoalsScreen() {
         document.querySelector('.app-container').appendChild(screen);
     }
 
-    const goals = [...(appState.goals || [])].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    const now = Date.now();
+    const WEEK  = 7  * 24 * 60 * 60 * 1000;
+    const MONTH = 30 * 24 * 60 * 60 * 1000;
+    const thisYear = new Date().getFullYear();
 
-    // Group by year
-    const byYear = {};
-    goals.forEach(g => {
-        const year = g.createdAt ? new Date(g.createdAt).getFullYear() : 'Unknown';
-        if (!byYear[year]) byYear[year] = [];
-        byYear[year].push(g);
+    function closeDate(g) {
+        return g.completedAt || g.letGoAt || g.pausedAt || null;
+    }
+
+    function groupKey(g) {
+        const ts = closeDate(g);
+        if (!ts) return 'active';
+        const age = now - ts;
+        if (age <= WEEK)  return 'this week';
+        if (age <= MONTH) return 'last month';
+        const d = new Date(ts);
+        if (d.getFullYear() === thisYear) return d.toLocaleString('en-GB', { month: 'long' });
+        return String(d.getFullYear());
+    }
+
+    // Sort goals within each group by close date desc (active by createdAt desc)
+    const allGoals = [...(appState.goals || [])];
+    allGoals.sort((a, b) => {
+        const ca = closeDate(a) || a.createdAt || 0;
+        const cb = closeDate(b) || b.createdAt || 0;
+        return cb - ca;
     });
 
-    const yearsHtml = Object.keys(byYear).sort((a, b) => b - a).map(year => {
-        const yearGoals = byYear[year];
-        const cardsHtml = yearGoals.map(g => {
-            const markers = (g.progressMarkers || g.milestones || []);
-            const done = markers.filter(m => m.done).length;
-            const TYPE_LABELS = { skill: 'a skill', intention: 'a feeling or state', habit: 'a habit' };
-            const typeLabel = TYPE_LABELS[g.goalType] || g.goalType || '';
-            const statusLabel = g.completedAt ? 'completed' : 'active';
-            return `
-                <div class="all-goals-card" onclick="this.classList.toggle('expanded')">
-                    <div class="all-goals-card-header">
-                        <span class="all-goals-card-title">${escapeHtml(g.title)}</span>
-                        <span class="all-goals-card-status ${g.completedAt ? 'done' : 'active'}">${statusLabel}</span>
-                    </div>
-                    <div class="all-goals-card-meta">
-                        ${typeLabel ? `<span>${typeLabel}</span>` : ''}
-                        ${markers.length ? `<span>${done}/${markers.length} markers</span>` : ''}
-                    </div>
-                    <div class="all-goals-card-body">
-                        ${g.body ? `<div class="all-goals-card-desc">${escapeHtml(g.body)}</div>` : ''}
-                        ${markers.length ? `
-                            <ul class="all-goals-markers-list">
-                                ${markers.map(m => `<li class="${m.done ? 'done' : ''}">${escapeHtml(m.text)}</li>`).join('')}
-                            </ul>
-                        ` : ''}
-                        <div class="all-goals-card-date">created ${formatTimelineDate(new Date(g.createdAt).toISOString().split('T')[0])}</div>
-                    </div>
+    // Build ordered group list
+    const groupMap = {};
+    allGoals.forEach(g => {
+        const key = groupKey(g);
+        if (!groupMap[key]) groupMap[key] = [];
+        groupMap[key].push(g);
+    });
+
+    // Determine display order: active first, then recency groups, then named months, then years
+    const FIXED_ORDER = ['active', 'this week', 'last month'];
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const keys = Object.keys(groupMap);
+    const orderedKeys = [
+        ...FIXED_ORDER.filter(k => keys.includes(k)),
+        ...monthNames.filter(k => keys.includes(k)).reverse(),
+        ...keys.filter(k => !FIXED_ORDER.includes(k) && !monthNames.includes(k)).sort((a, b) => b - a),
+    ];
+
+    const TYPE_LABELS   = { skill: 'a skill', intention: 'a feeling or state', habit: 'a habit' };
+    const STATUS_LABELS = { active: 'active', completed: 'completed', paused: 'paused', letgo: 'let go' };
+
+    function renderAllGoalCard(g) {
+        const markers   = (g.progressMarkers || g.milestones || []);
+        const done      = markers.filter(m => m.done).length;
+        const typeLabel = TYPE_LABELS[g.goalType] || '';
+        const status    = g.status || (g.completedAt ? 'completed' : 'active');
+        const statusLabel = STATUS_LABELS[status] || status;
+        const closedTs  = closeDate(g);
+        const closedStr = closedTs ? formatTimelineDate(new Date(closedTs).toISOString().split('T')[0]) : null;
+        const cardHtml = `
+            <div class="all-goals-card" onclick="this.classList.toggle('expanded')">
+                <div class="all-goals-card-header">
+                    <span class="all-goals-card-title">${escapeHtml(g.title)}</span>
+                    <span class="all-goals-card-status ${status === 'completed' ? 'done' : status}">${statusLabel}</span>
                 </div>
-            `;
-        }).join('');
-        return `
-            <div class="all-goals-year-group">
-                <div class="all-goals-year-label">${year}</div>
-                ${cardsHtml}
+                <div class="all-goals-card-meta">
+                    ${typeLabel ? `<span>${typeLabel}</span>` : ''}
+                    ${markers.length ? `<span>${done}/${markers.length} steps</span>` : ''}
+                </div>
+                <div class="all-goals-card-body">
+                    ${g.body ? `<div class="all-goals-card-desc">${nl2br(g.body)}</div>` : ''}
+                    ${markers.length ? `
+                        <ul class="all-goals-markers-list">
+                            ${markers.map(m => `<li class="${m.done ? 'done' : ''}">${escapeHtml(m.text)}</li>`).join('')}
+                        </ul>
+                    ` : ''}
+                    <div class="all-goals-card-date">created ${formatTimelineDate(new Date(g.createdAt).toISOString().split('T')[0])}${closedStr ? ` · ${statusLabel} ${closedStr}` : ''}</div>
+                </div>
             </div>
         `;
-    }).join('');
+        if (status === 'paused' || status === 'letgo') {
+            return `
+            <div class="swipe-row" data-goal-id="${g.id}">
+                <div class="swipe-action-right swipe-action-reactivate">reactivate</div>
+                <div class="swipe-content">${cardHtml}</div>
+            </div>`;
+        }
+        return cardHtml;
+    }
+
+    const groupsHtml = orderedKeys.map(key => `
+        <div class="all-goals-group">
+            <div class="all-goals-group-label">${key}</div>
+            ${groupMap[key].map(renderAllGoalCard).join('')}
+        </div>
+    `).join('');
 
     screen.innerHTML = `
         <div class="profile-header" style="display:flex;align-items:center;gap:var(--sp-md);">
@@ -2386,15 +2714,91 @@ function showAllGoalsScreen() {
             <h1>All goals</h1>
         </div>
         <div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
-            ${goals.length === 0
+            ${allGoals.length === 0
                 ? '<div class="barre-empty-state"><div class="barre-empty-title">No goals yet</div></div>'
-                : yearsHtml
+                : groupsHtml
             }
         </div>
     `;
 
+    screen.querySelectorAll('.swipe-row[data-goal-id]').forEach(row => {
+        attachReactivateSwipe(row, Number(row.dataset.goalId));
+    });
+
     showScreen('all-goals-screen');
     appState.currentScreen = 'all-goals-screen';
+}
+
+function reactivateGoal(goalId) {
+    const goal = (appState.goals || []).find(g => g.id === goalId);
+    if (!goal) return;
+    goal.status   = 'active';
+    goal.pausedAt = null;
+    goal.letGoAt  = null;
+    storage.save('goals', appState.goals);
+    showAllGoalsScreen();
+}
+
+function attachReactivateSwipe(row, goalId) {
+    const content = row.querySelector('.swipe-content');
+    const rightEl = row.querySelector('.swipe-action-right');
+    if (!content) return;
+
+    const COMPLETE = 100, MIN_MS = 120;
+    let startX = 0, startTime = 0, dx = 0, dragging = false;
+
+    function getX(e) { return e.touches ? e.touches[0].clientX : e.clientX; }
+
+    function reset() {
+        content.style.transition = 'transform 0.25s var(--ease-out)';
+        content.style.transform  = '';
+        if (rightEl) rightEl.style.opacity = '0';
+        dragging = false;
+    }
+
+    function onStart(e) {
+        if (e.target.closest('button, input, a')) return;
+        startX    = getX(e);
+        startTime = Date.now();
+        dx        = 0;
+        dragging  = true;
+        content.style.transition = 'none';
+    }
+
+    function onMove(e) {
+        if (!dragging) return;
+        const raw = getX(e) - startX;
+        if (Math.abs(raw) < 8) return;
+        dx = raw;
+        if (dx > 0) {
+            const t = Math.min(dx, COMPLETE + (dx - COMPLETE) * 0.15);
+            content.style.transform = `translateX(${t}px)`;
+            if (rightEl) rightEl.style.opacity = String(Math.min(1, dx / COMPLETE));
+        } else {
+            content.style.transform = '';
+            if (rightEl) rightEl.style.opacity = '0';
+        }
+    }
+
+    function onEnd() {
+        if (!dragging) return;
+        dragging = false;
+        const elapsed = Date.now() - startTime;
+        if (dx >= COMPLETE && elapsed >= MIN_MS) {
+            content.style.transition = 'transform 0.25s var(--ease-out)';
+            content.style.transform  = 'translateX(110%)';
+            setTimeout(() => reactivateGoal(goalId), 200);
+        } else {
+            reset();
+        }
+    }
+
+    content.addEventListener('touchstart', onStart, { passive: true });
+    content.addEventListener('mousedown',  onStart);
+    document.addEventListener('touchmove', onMove, { passive: true });
+    document.addEventListener('touchend',  onEnd);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onEnd);
 }
 
 function renderGoalGroup(category, goals) {
@@ -2439,7 +2843,8 @@ function renderGoalCard(goal, completed) {
         <div class="goal-milestones ${markers.length > MARKER_CAP ? 'goal-milestones-scrollable' : ''}">
             ${markers.map((m, i) => `
                 <div class="goal-milestone ${m.done ? 'done' : ''}"
-                     onclick="toggleMilestone('${goal.id}', ${i})">
+                     onmousedown="toggleMilestone('${goal.id}', ${i})"
+                     ontouchend="event.preventDefault(); toggleMilestone('${goal.id}', ${i})">
                     <div class="goal-milestone-check">
                         ${m.done ? `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="1.5 5 4 7.5 8.5 2.5"/></svg>` : ''}
                     </div>
@@ -2459,9 +2864,9 @@ function renderGoalCard(goal, completed) {
 
     return `
         <div class="swipe-row" data-goal-id="${goal.id}">
-            <div class="swipe-action-left swipe-action-remove">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
-                delete
+            <div class="swipe-action-left goal-swipe-left">
+                <button class="goal-swipe-btn goal-swipe-pause" onmousedown="pauseGoal(${goal.id})">pause</button>
+                <button class="goal-swipe-btn goal-swipe-letgo" onmousedown="letGoGoal(${goal.id})">let it go</button>
             </div>
             ${!completed ? `
             <div class="swipe-action-right swipe-action-complete">
@@ -2474,14 +2879,13 @@ function renderGoalCard(goal, completed) {
             </div>`}
             <div class="swipe-content">
                 <div class="goal-card ${completed ? 'goal-card-completed' : ''}">
-                    ${completed ? `<div class="goal-card-complete-banner">&#x2713; Completed ${formatTimelineDate(new Date(goal.completedAt).toISOString().split('T')[0])}</div>` : ''}
                     ${tagsHtml ? `<div class="goal-tags">${tagsHtml}</div>` : ''}
-                    <div class="goal-card-title">${goal.title}</div>
-                    ${goal.body ? `<div class="goal-card-body">${goal.body}</div>` : ''}
+                    <div class="goal-card-title">${completed ? '<span class="goal-complete-tick">&#x2713;</span>' : ''}${goal.title}</div>
+                    ${goal.body ? `<div class="goal-card-body">${renderClampedHtml(nl2br(goal.body), 'gb-' + goal.id)}</div>` : ''}
                     ${markersHtml}
                     ${progressBarHtml}
                     <div class="goal-card-footer">
-                        <span class="goal-card-date">created ${formatTimelineDate(new Date(goal.createdAt).toISOString().split('T')[0])}</span>
+                        <span class="goal-card-date">${formatTimelineDate(new Date(goal.createdAt).toISOString().split('T')[0])}</span>
                         ${!completed ? `<button class="goal-edit-btn" onclick="openGoalEditor(${goal.id})">edit</button>` : ''}
                     </div>
                 </div>
@@ -2576,6 +2980,7 @@ function openGoalCreatorWithSuggestion(title, dimensionId, skillId, rationale, m
 function openGoalEditor(goalId) {
     const goal = appState.goals.find(g => g.id === Number(goalId));
     if (!goal) return;
+    const markers = (goal.progressMarkers || goal.milestones || []).map(m => ({ ...m }));
     appState._goalDraft = {
         _editId:          goal.id,
         title:            goal.title || '',
@@ -2588,9 +2993,18 @@ function openGoalEditor(goalId) {
         milestones:       (goal.milestones || []).map(m => ({ ...m })),
         goalType:         goal.goalType         || null,
         commitmentPeriod: goal.commitmentPeriod || '',
-        progressMarkers:  (goal.progressMarkers || goal.milestones || []).map(m => ({ ...m })),
+        progressMarkers:  markers,
         skillIds:         [...(goal.skillIds || [])],
         howOften:         goal.howOften || '',
+        _snapshot: {
+            title:            goal.title || '',
+            body:             goal.body  || '',
+            skillId:          goal.skillId || null,
+            category:         goal.category || null,
+            howOften:         goal.howOften || '',
+            commitmentPeriod: goal.commitmentPeriod || '',
+            markers:          JSON.stringify(markers.filter(m => m.text?.trim()).map(m => ({ text: m.text, done: m.done }))),
+        },
     };
 
     let overlay = document.getElementById('goal-creator-overlay');
@@ -2630,14 +3044,16 @@ function renderGoalCreator() {
     const d = appState._goalDraft;
     if (!d) return;
 
+    const phIdx = Math.floor(Date.now() / 86400000) % 3;
+
     const markerPlaceholders = [
-        'land two pirouettes back to back',
         'get a correction on it from my teacher',
-        'feel it in centre without thinking about it',
+        'land two back to back without thinking about the arms',
+        'feel it click in centre without the mirror',
     ];
 
     const periodOptions = ['This week', 'Two weeks', 'This month', 'Three months', 'Choose a date'];
-    const howOftenOptions = ['Every class', 'Every week', 'Set number of times', 'Other…'];
+    const howOftenOptions = ['Every class', 'Every week', 'set a number', 'other'];
 
     function periodChipsHtml() {
         const presets = periodOptions.slice(0, -1);
@@ -2647,8 +3063,12 @@ function renderGoalCreator() {
         let dateDisplayHtml = '';
         if (isDateSelected) {
             const dt = new Date(d.commitmentPeriod + 'T12:00:00');
-            const formatted = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-            dateDisplayHtml = `<span class="date-display-label">${formatted}</span>`;
+            if (!isNaN(dt.getTime())) {
+                const formatted = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+                dateDisplayHtml = `<span class="date-display-label">${formatted}</span>`;
+            } else {
+                dateDisplayHtml = `<span class="date-display-label" style="color:var(--ink-3);font-weight:400;">Tap to pick a date</span>`;
+            }
         } else {
             dateDisplayHtml = `<span class="date-display-label" style="color:var(--ink-3);font-weight:400;">Tap to pick a date</span>`;
         }
@@ -2692,7 +3112,7 @@ function renderGoalCreator() {
             <div class="session-field">
                 <label class="session-field-label">Title</label>
                 <input type="text" class="session-input" id="goal-title-input"
-                       placeholder="Name it so you'd recognise it in a month"
+                       placeholder="${['improve pirouettes en dedans from fifth, on my left side', 'sort out the arms in grand allegro', 'stop gripping in the hip flexor on développé devant'][phIdx]}"
                        value="${escapeHtml(d.title)}"
                        oninput="appState._goalDraft.title = this.value; checkGoalTitleForSkills(this.value); searchGoalCorrections(this.value);" />
                 <div id="goal-correction-search-results"></div>
@@ -2708,7 +3128,7 @@ function renderGoalCreator() {
             <div class="session-field">
                 <label class="session-field-label">What does it look like when it happens? <span class="session-field-optional">optional</span></label>
                 <textarea class="session-input" id="goal-body-input"
-                          placeholder="Be specific enough that you'd know"
+                          placeholder="${['landing a clean single consistently', 'my teacher stops mentioning it in the same breath as my right side', 'I can think about the music instead of the mechanics'][phIdx]}"
                           rows="2"
                           style="resize: none;"
                           oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);">${escapeHtml(d.body || '')}</textarea>
@@ -2735,7 +3155,7 @@ function renderGoalCreator() {
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                         <line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/>
                     </svg>
-                    add milestone
+                    add a step
                 </button>
             </div>
             <div class="session-field">
@@ -2750,7 +3170,7 @@ function renderGoalCreator() {
             <div class="session-field">
                 <label class="session-field-label">Title</label>
                 <input type="text" class="session-input" id="goal-title-input"
-                       placeholder="Name it so you'd recognise it"
+                       placeholder="${['feel at home in the Friday intermediate class', 'stop dreading centre', 'actually enjoy the adage'][phIdx]}"
                        value="${escapeHtml(d.title)}"
                        oninput="appState._goalDraft.title = this.value; searchGoalCorrections(this.value);" />
                 <div id="goal-correction-search-results"></div>
@@ -2764,9 +3184,9 @@ function renderGoalCreator() {
                 </div>
             ` : `<div id="goal-linked-corrections-wrapper"></div>`}
             <div class="session-field">
-                <label class="session-field-label">Describe it <span class="session-field-optional">optional</span></label>
+                <label class="session-field-label">describe it <span class="session-field-optional">optional</span></label>
                 <textarea class="session-input" id="goal-body-input"
-                          placeholder="This is yours to judge, not the app's"
+                          placeholder="${['not panicking at centre, following combinations without watching everyone else', 'trusting what I know instead of second-guessing it', 'finding it interesting rather than overwhelming'][phIdx]}"
                           rows="2"
                           style="resize: none;"
                           oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);">${escapeHtml(d.body || '')}</textarea>
@@ -2780,19 +3200,19 @@ function renderGoalCreator() {
 
     function habitFormHtml() {
         const isSetNum = d.howOften && d.howOften.startsWith('x');
-        const presetHowOften = ['Every class', 'Every week', 'Set number of times', 'Other…'];
+        const presetHowOften = ['Every class', 'Every week', 'set a number', 'other'];
         const isOtherHowOften = d.howOften && !presetHowOften.includes(d.howOften) && !isSetNum;
         const howOftenChipsHtml = howOftenOptions.map(o => {
             let isActive = false;
-            if (o === 'Set number of times') isActive = isSetNum;
-            else if (o === 'Other…') isActive = isOtherHowOften;
+            if (o === 'set a number') isActive = isSetNum;
+            else if (o === 'other') isActive = isOtherHowOften;
             else isActive = d.howOften === o;
             return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onmousedown="setGoalHowOften('${o}')">${o}</button>`;
         }).join('');
 
         const numVal = isSetNum ? parseInt(d.howOften.slice(1)) || 1 : 1;
         let howOftenExtra = '';
-        if (d.howOften === 'Set number of times' || isSetNum) {
+        if (d.howOften === 'set a number' || isSetNum) {
             howOftenExtra = `
                 <div class="goal-number-stepper">
                     <button class="goal-stepper-btn" onmousedown="adjustGoalHowOftenNum(-1)" ${numVal <= 1 ? 'disabled' : ''}>−</button>
@@ -2801,12 +3221,12 @@ function renderGoalCreator() {
                     <span class="goal-stepper-label">times per week</span>
                 </div>
             `;
-        } else if (d.howOften === 'Other…' || isOtherHowOften) {
+        } else if (d.howOften === 'other' || isOtherHowOften) {
             howOftenExtra = `
                 <input type="text" class="session-input" style="margin-top: var(--sp-sm);"
                        placeholder="e.g. whenever I feel ready"
                        value="${isOtherHowOften ? escapeHtml(d.howOften) : ''}"
-                       oninput="appState._goalDraft.howOften = this.value || 'Other…'" />
+                       oninput="appState._goalDraft.howOften = this.value || 'other'" />
             `;
         }
 
@@ -2814,7 +3234,7 @@ function renderGoalCreator() {
             <div class="session-field">
                 <label class="session-field-label">Title</label>
                 <input type="text" class="session-input" id="goal-title-input"
-                       placeholder="Name it so you'd recognise it"
+                       placeholder="${['actually warm up before class', 'get to conditioning', 'stretch on the days I don\'t have class'][phIdx]}"
                        value="${escapeHtml(d.title)}"
                        oninput="appState._goalDraft.title = this.value; searchGoalCorrections(this.value);" />
                 <div id="goal-correction-search-results"></div>
@@ -2828,9 +3248,9 @@ function renderGoalCreator() {
                 </div>
             ` : `<div id="goal-linked-corrections-wrapper"></div>`}
             <div class="session-field">
-                <label class="session-field-label">Describe it <span class="session-field-optional">optional</span></label>
+                <label class="session-field-label">what does it involve? <span class="session-field-optional">optional</span></label>
                 <textarea class="session-input" id="goal-body-input"
-                          placeholder="What, specifically"
+                          placeholder="${['20 minutes of stretching and relevés before I get into class', 'the full warm-up, not just a quick stretch in the changing room', 'hip flexors and hamstrings, 15 minutes minimum'][phIdx]}"
                           rows="2"
                           style="resize: none;"
                           oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);">${escapeHtml(d.body || '')}</textarea>
@@ -2859,20 +3279,15 @@ function renderGoalCreator() {
     if (d.goalType === 'skill') bodyHtml = skillFormHtml();
     else if (d.goalType === 'intention') bodyHtml = intentionFormHtml();
     else if (d.goalType === 'habit') bodyHtml = habitFormHtml();
+    if (bodyHtml && d._editId) {
+        bodyHtml += `<div style="margin-top: var(--sp-xl); text-align: center;"><button class="goal-delete-btn" onmousedown="deleteGoal(${d._editId})">delete goal</button></div>`;
+    }
 
     let footerHtml;
-    if (d._confirmingDiscard) {
-        footerHtml = `
-            <div class="goal-discard-confirm">
-                discard this goal?
-                <button class="goal-discard-confirm-yes" onmousedown="closeGoalCreator()">discard</button>
-                <button class="goal-discard-confirm-no" onmousedown="appState._goalDraft._confirmingDiscard = false; renderGoalCreator()">keep editing</button>
-            </div>
-        `;
-    } else if (d.goalType) {
+    if (d.goalType) {
         footerHtml = `
             <button class="session-discard-btn" onmousedown="confirmDiscardGoal()">discard</button>
-            <button class="btn-large session-save-btn" onmousedown="saveGoal()">Save goal</button>
+            <button class="btn-large session-save-btn" onmousedown="saveGoal()">save goal</button>
         `;
     } else {
         footerHtml = '';
@@ -2901,7 +3316,7 @@ function renderGoalCreator() {
                     <div class="goal-type-cards">
                         <button class="goal-type-card" data-type="skill">
                             <span class="goal-type-card-name">A skill</span>
-                            <span class="goal-type-card-desc">Something specific — a technique, a step, a quality of movement.</span>
+                            <span class="goal-type-card-desc">Something specific. A technique, a step, a quality of movement.</span>
                         </button>
                         <button class="goal-type-card" data-type="intention">
                             <span class="goal-type-card-name">A feeling or state</span>
@@ -2909,11 +3324,11 @@ function renderGoalCreator() {
                         </button>
                         <button class="goal-type-card" data-type="habit">
                             <span class="goal-type-card-name">A habit</span>
-                            <span class="goal-type-card-desc">A rhythm to build in — conditioning, practice, consistency.</span>
+                            <span class="goal-type-card-desc">A rhythm to build in. Conditioning, practice, consistency.</span>
                         </button>
                     </div>
                 `}
-                ${bodyHtml ? '<div style="height: var(--sp-3xl);"></div>' : ''}
+                ${bodyHtml ? `<div style="height: var(--sp-3xl);"></div>` : ''}
             </div>
 
             <div class="session-logger-footer">
@@ -2948,7 +3363,6 @@ function setGoalType(type) {
     d.progressMarkers = [];
     d.skillIds = [];
     d.howOften = '';
-    d._confirmingDiscard = false;
     renderGoalCreator();
     requestAnimationFrame(() => document.getElementById('goal-title-input')?.focus());
 }
@@ -2977,7 +3391,7 @@ function toggleGoalDateCalendar() {
     if (!d) return;
     const todayStr = new Date().toISOString().split('T')[0];
     const presets = ['This week', 'Two weeks', 'This month', 'Three months', 'Choose a date'];
-    const isRealDate = d.commitmentPeriod && !presets.includes(d.commitmentPeriod);
+    const isRealDate = d.commitmentPeriod && !presets.includes(d.commitmentPeriod) && /^\d{4}-\d{2}-\d{2}$/.test(d.commitmentPeriod);
     renderGoalDateCalendar(isRealDate ? d.commitmentPeriod : todayStr);
 }
 
@@ -3109,7 +3523,7 @@ function filterGoalSkills(query) {
     const dropdown = document.getElementById('goal-skill-dropdown');
     if (!dropdown) return;
     const q = (query || '').toLowerCase().trim();
-    const skills = appState.skills || [];
+    const skills = (appState.skills || []).filter(s => !(appState.hidePointe && s.dimensionId === 'pointe'));
     const matches = q.length >= 1
         ? skills.filter(s =>
             s.french.toLowerCase().includes(q) ||
@@ -3171,15 +3585,56 @@ function removeProgressMarker(i) {
     renderGoalCreator();
 }
 
-function confirmDiscardGoal() {
+function isDraftChanged() {
     const d = appState._goalDraft;
-    if (!d) { closeGoalCreator(); return; }
-    if (d.title.trim() || d.body?.trim() || d.progressMarkers?.length) {
-        d._confirmingDiscard = true;
-        renderGoalCreator();
-    } else {
-        closeGoalCreator();
+    if (!d) return false;
+    if (!d._snapshot) {
+        // New goal — changed if any content entered
+        return !!(d.title?.trim() || d.body?.trim() || (d.progressMarkers || []).some(m => m.text?.trim()));
     }
+    const s = d._snapshot;
+    const currentMarkers = JSON.stringify((d.progressMarkers || []).filter(m => m.text?.trim()).map(m => ({ text: m.text, done: m.done })));
+    return (
+        d.title            !== s.title ||
+        (d.body || '')     !== s.body  ||
+        d.skillId          !== s.skillId ||
+        d.category         !== s.category ||
+        d.howOften         !== s.howOften ||
+        d.commitmentPeriod !== s.commitmentPeriod ||
+        currentMarkers     !== s.markers
+    );
+}
+
+function confirmDiscardGoal() {
+    if (!isDraftChanged()) { closeGoalCreator(); return; }
+    showGoalDiscardBanner();
+}
+
+function showGoalDiscardBanner() {
+    const footer = document.querySelector('#goal-creator-overlay .session-logger-footer');
+    if (!footer || document.getElementById('goal-discard-banner')) return;
+    const footerDiscard = footer.querySelector('.session-discard-btn');
+    if (footerDiscard) footerDiscard.style.visibility = 'hidden';
+    const banner = document.createElement('div');
+    banner.id = 'goal-discard-banner';
+    banner.className = 'goal-discard-banner';
+    banner.innerHTML = `
+        <span>discard changes?</span>
+        <button onmousedown="closeGoalCreator()">discard</button>
+        <button onmousedown="removeGoalDiscardBanner()">keep editing</button>
+    `;
+    footer.insertAdjacentElement('beforebegin', banner);
+    requestAnimationFrame(() => banner.classList.add('visible'));
+}
+
+function removeGoalDiscardBanner() {
+    const banner = document.getElementById('goal-discard-banner');
+    if (!banner) return;
+    const footer = document.querySelector('#goal-creator-overlay .session-logger-footer');
+    const footerDiscard = footer?.querySelector('.session-discard-btn');
+    if (footerDiscard) footerDiscard.style.visibility = '';
+    banner.classList.remove('visible');
+    banner.addEventListener('transitionend', () => banner.remove(), { once: true });
 }
 
 function clearGoalCategory() {
@@ -3422,7 +3877,10 @@ function saveGoal() {
             text: m.text.trim(),
             done: m.done || false,
         })),
+        status:           existingGoal?.status || 'active',
         completedAt:      existingGoal?.completedAt || null,
+        pausedAt:         existingGoal?.pausedAt    || null,
+        letGoAt:          existingGoal?.letGoAt     || null,
         goalType:         d.goalType         || null,
         commitmentPeriod: d.commitmentPeriod || null,
         progressMarkers:  (d.progressMarkers || []).filter(m => m.text.trim()).map(m => ({
@@ -3454,7 +3912,7 @@ function saveGoal() {
         // Re-render just the linked goals section
         const linkedSection = document.querySelector(`#skill-detail-${skillId} .skill-linked-goals`);
         if (linkedSection) {
-            const linkedGoals = (appState.goals || []).filter(g => g.skillId === skillId && !g.completedAt);
+            const linkedGoals = (appState.goals || []).filter(g => g.skillId === skillId && g.status === 'active');
             linkedSection.innerHTML = linkedGoals.length > 0
                 ? linkedGoals.map(g => `
                     <div class="skill-linked-goal" onclick="navigateTo('goals')">
@@ -3490,6 +3948,7 @@ function toggleMilestone(goalId, milestoneIndex) {
 function markGoalComplete(goalId) {
     const goal = appState.goals.find(g => g.id === Number(goalId));
     if (!goal) return;
+    goal.status = 'completed';
     goal.completedAt = Date.now();
     storage.save('goals', appState.goals);
     appendTimelineEntry({
@@ -3525,8 +3984,61 @@ function showGoalCompleteMessage(title) {
 function reopenGoal(goalId) {
     const goal = appState.goals.find(g => g.id === Number(goalId));
     if (!goal) return;
+    goal.status = 'active';
     goal.completedAt = null;
     storage.save('goals', appState.goals);
+    if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
+    if (appState.currentScreen === 'profile') initProfile();
+}
+
+function pauseGoal(goalId) {
+    const goal = appState.goals.find(g => g.id === Number(goalId));
+    if (!goal) return;
+    goal.status   = 'paused';
+    goal.pausedAt = Date.now();
+    storage.save('goals', appState.goals);
+    const row = document.querySelector(`.swipe-row[data-goal-id="${goalId}"]`);
+    if (row) {
+        row.style.transition  = 'max-height 0.3s var(--ease-out), opacity 0.3s ease, margin 0.3s ease';
+        row.style.maxHeight   = row.offsetHeight + 'px';
+        requestAnimationFrame(() => {
+            row.style.maxHeight   = '0';
+            row.style.opacity     = '0';
+            row.style.marginBottom = '0';
+        });
+        setTimeout(() => renderGoalsScreen(), 320);
+    } else {
+        renderGoalsScreen();
+    }
+    if (appState.currentScreen === 'profile') initProfile();
+}
+
+function letGoGoal(goalId) {
+    const goal = appState.goals.find(g => g.id === Number(goalId));
+    if (!goal) return;
+    goal.status  = 'letgo';
+    goal.letGoAt = Date.now();
+    storage.save('goals', appState.goals);
+    const row = document.querySelector(`.swipe-row[data-goal-id="${goalId}"]`);
+    if (row) {
+        row.style.transition  = 'max-height 0.3s var(--ease-out), opacity 0.3s ease, margin 0.3s ease';
+        row.style.maxHeight   = row.offsetHeight + 'px';
+        requestAnimationFrame(() => {
+            row.style.maxHeight   = '0';
+            row.style.opacity     = '0';
+            row.style.marginBottom = '0';
+        });
+        setTimeout(() => renderGoalsScreen(), 320);
+    } else {
+        renderGoalsScreen();
+    }
+    if (appState.currentScreen === 'profile') initProfile();
+}
+
+function deleteGoal(goalId) {
+    appState.goals = appState.goals.filter(g => g.id !== Number(goalId));
+    storage.save('goals', appState.goals);
+    closeGoalCreator();
     if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
     if (appState.currentScreen === 'profile') initProfile();
 }
@@ -3894,9 +4406,10 @@ function handleLearnSearch(query) {
 }
 
 // ── Folder Detail Views ──
-function openFolder(folderId) {
+function openFolder(folderId, returnTo) {
     const folder = DATA.folders[folderId];
     if (!folder) { console.log('Folder not yet implemented:', folderId); return; }
+    const context = returnTo || appState.currentNav || 'barre';
 
     let detailScreen = document.getElementById('detail-' + folderId);
     if (!detailScreen) {
@@ -3907,7 +4420,7 @@ function openFolder(folderId) {
         detailScreen.innerHTML = `
             <div class="detail-view">
                 <div class="detail-header">
-                    <button class="detail-back-btn" onclick="navigateTo('profile')">←</button>
+                    <button class="detail-back-btn" onclick="navigateTo('${context}')">←</button>
                     <div class="detail-title-section">
                         <div class="detail-icon">${ICONS.get(folder.icon, 28)}</div>
                         <div class="detail-title">${folder.title}</div>
@@ -3952,118 +4465,6 @@ function initProfile() {
     const dimEl = document.getElementById('profileDimensions');
     if (dimEl) dimEl.innerHTML = '';
 
-    // Hero action card — context-aware based on recent activity
-    const heroEl = document.getElementById('profileHeroCard');
-    const persona = appState.answers?.persona;
-    const today = new Date().toISOString().split('T')[0];
-    const lastSession = appState.sessions.length
-        ? appState.sessions.slice().sort((a,b) => (b.savedAt||0) - (a.savedAt||0))[0]
-        : null;
-    const loggedToday = lastSession?.date === today;
-    const daysSinceLast = lastSession
-        ? Math.floor((Date.now() - (lastSession.savedAt || 0)) / 86400000)
-        : null;
-
-    let heroLabel, heroTitle, heroDesc, heroAction, heroOnclick;
-    heroOnclick = 'openSessionLogger()';
-
-    if (loggedToday) {
-        // Already logged today — surface a nudge toward goals or reflection
-        const activeGoals = (appState.goals || []).filter(g => !g.completedAt);
-        if (activeGoals.length > 0) {
-            heroLabel = 'TODAY'; heroTitle = 'Session logged';
-            heroDesc = `You have ${activeGoals.length} active goal${activeGoals.length > 1 ? 's' : ''} in progress.`;
-            heroAction = 'view goals →';
-            heroOnclick = "navigateTo('goals')";
-        } else {
-            heroLabel = 'TODAY'; heroTitle = 'Session logged';
-            heroDesc = 'Add a goal to give your practice direction.';
-            heroAction = 'add a goal →';
-            heroOnclick = 'openGoalCreator()';
-        }
-    } else if (persona === 4 || persona === 5) {
-        heroLabel = 'WELCOME BACK'; heroTitle = 'Log your first class back';
-        heroDesc = 'Jot down what you worked on and how it felt.';
-        heroAction = 'log a session →';
-    } else if (!lastSession) {
-        heroLabel = 'GET STARTED'; heroTitle = 'Log your first session';
-        heroDesc = 'After class, jot down what you covered and any corrections your teacher gave you.';
-        heroAction = 'log a session →';
-    } else if (daysSinceLast !== null && daysSinceLast > 6) {
-        heroLabel = 'AFTER CLASS'; heroTitle = 'Log your next session';
-        heroDesc = `Last logged ${daysSinceLast} days ago — keep the record going.`;
-        heroAction = 'log a session →';
-    } else {
-        heroLabel = 'AFTER CLASS'; heroTitle = 'Log a session';
-        heroDesc = "Record corrections, praise, and what you worked on while it's fresh.";
-        heroAction = 'log a session →';
-    }
-
-    heroEl.innerHTML = `
-        <div class="profile-action-card hero profile-hero-compact" onclick="${heroOnclick}">
-            <div class="profile-action-label">${heroLabel}</div>
-            <div class="profile-action-title">${heroTitle}</div>
-            <div class="profile-action-description">${heroDesc}</div>
-            <div class="profile-action-arrow">${heroAction}</div>
-        </div>
-    `;
-
-    // Goal card — show real goal if one exists, otherwise show suggestion
-    const goalEl = document.getElementById('profileGoalCard');
-    const activeGoals = (appState.goals || []).filter(g => !g.completedAt);
-
-    if (activeGoals.length > 0) {
-        const latest = activeGoals[activeGoals.length - 1];
-        const milestones = latest.milestones || [];
-        const done = milestones.filter(m => m.done).length;
-        const progressText = milestones.length > 0
-            ? `${done} of ${milestones.length} milestones`
-            : null;
-        goalEl.innerHTML = `
-            <div class="profile-action-card" onclick="navigateTo('goals')">
-                <div class="profile-action-label">ACTIVE GOAL</div>
-                <div class="profile-action-title">${latest.title}</div>
-                ${progressText ? `<div class="profile-action-description">${progressText}</div>` : ''}
-                <div class="profile-action-arrow">view all goals →</div>
-            </div>
-        `;
-    } else {
-        // Keyword-based suggestion from assessment answers with rationale and milestones
-        let suggestedGoal = 'Build a consistent practice routine';
-        let dimensionId = null;
-        let rationale = 'You indicated you wanted to build a consistent practice routine.';
-        let milestones = ['Plan my weekly schedule', 'Complete my first week', 'Reflect and adjust'];
-        
-        const quizGoals = appState.answers?.goals || [];
-        if (quizGoals.includes(2)) {
-            suggestedGoal = 'Work towards pointe readiness';
-            dimensionId = 'pointe';
-            rationale = 'Pointe readiness was selected as a goal during your placement assessment. This is a strong foundation to build on.';
-            milestones = ['Complete pointe-readiness assessment', 'Strengthen ankles and calves', 'Work with teacher on technique', 'Progress to pointe shoes'];
-        } else if (quizGoals.includes(3)) {
-            suggestedGoal = 'Improve technique in my weakest areas';
-            rationale = 'You indicated areas where your technique could use improvement. Let\'s build them deliberately.';
-            milestones = ['Identify my three weakest skills', 'Take focused classes', 'Record myself and review', 'Get feedback from teacher'];
-        } else if (quizGoals.includes(4)) {
-            suggestedGoal = 'Prepare for a performance';
-            rationale = 'You mentioned wanting to perform. This is a clear milestone to work towards.';
-            milestones = ['Choose a piece or choreography', 'Learn the full routine', 'Practice with music', 'Perform'];
-        } else if (quizGoals.includes(0)) {
-            suggestedGoal = 'Get back into a regular class routine';
-            rationale = 'You responded that you\'re looking to restart your practice. Consistency is key.';
-            milestones = ['Schedule my weekly classes', 'Attend my first week', 'Build to my target frequency'];
-        }
-
-        goalEl.innerHTML = `
-            <div class="profile-action-card" onclick="openGoalCreatorWithSuggestion('${suggestedGoal.replace(/'/g, "\\'")}', '${dimensionId}', null, '${rationale.replace(/'/g, "\\'")}', ${JSON.stringify(milestones).replace(/"/g, '&quot;')})">
-                <div class="profile-action-label">YOUR FIRST GOAL</div>
-                <div class="profile-action-title">${suggestedGoal}</div>
-                <div class="profile-action-description">Based on what you told us. Tap to set it, edit, or write your own.</div>
-                <div class="profile-action-arrow">set this goal →</div>
-            </div>
-        `;
-    }
-
 }
 
 function formatTimelineDate(dateStr) {
@@ -4095,7 +4496,12 @@ function buildTimelineEntries() {
     return [
         ...(appState.timeline || []).map(e => ({ ...e, _noteEntry: false })),
         ...noteEntries,
-    ].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    ].sort((a, b) => {
+        const dateA = a.date || new Date(a.createdAt || 0).toISOString().split('T')[0];
+        const dateB = b.date || new Date(b.createdAt || 0).toISOString().split('T')[0];
+        if (dateB !== dateA) return dateB.localeCompare(dateA);
+        return (b.createdAt || 0) - (a.createdAt || 0);
+    });
 }
 
 function renderTimelineEntry(entry) {
@@ -4121,13 +4527,15 @@ function renderTimelineEntry(entry) {
     const typeKey    = isPraise ? 'praise' : (entry.type || 'manual');
     const typeLabels = { session: 'Session', milestone: 'Milestone', assessment: 'Assessment', praise: 'Praise \u2605', manual: '' };
     const typeLabel  = typeLabels[typeKey] || '';
+    const hasHighlight = entry.type === 'session' && entry.objectId &&
+        appState.sessionSkills.some(ss => ss.sessionId === entry.objectId && ss.isHighlight);
     return `
     <div class="timeline-item timeline-item-${typeKey} ${isTappable ? 'timeline-item-tappable' : ''}"
          ${isTappable ? `onclick="showSessionDetail(${entry.objectId})"` : ''}>
         <div class="timeline-content">
             ${typeLabel ? `<span class="timeline-type-label">${typeLabel}</span>` : ''}
             <div class="timeline-title ${isPraise ? 'timeline-praise-text' : ''}">${entry.title}</div>
-            ${entry.body ? `<div class="timeline-subtitle">${entry.body}</div>` : ''}
+            ${entry.body ? `<div class="timeline-subtitle">${entry.body}${hasHighlight ? ' <span class="timeline-star">★</span>' : ''}</div>` : ''}
             ${isTappable ? `<div class="timeline-tap-hint">tap to review \u2192</div>` : ''}
         </div>
     </div>`;
@@ -4225,6 +4633,7 @@ function showSessionDetail(sessionId) {
     if (!session) return;
 
     const returnTo = appState.currentScreen;
+    if (returnTo === 'profile') appState._returnScrollY = window.scrollY;
 
     let screen = document.getElementById(`session-detail-${sessionId}`);
     if (!screen) {
@@ -4250,9 +4659,6 @@ function showSessionDetail(sessionId) {
     // Get SessionSkills for this session
     const sessionSkillRecords = appState.sessionSkills.filter(ss => ss.sessionId === sessionId);
 
-    // Get unique linked skills for the chips section
-    const uniqueSkillIds = [...new Set(sessionSkillRecords.map(ss => ss.skillId))];
-
     // Render blocks from SessionSkill records
     const blocksHtml = sessionSkillRecords.length > 0
         ? sessionSkillRecords.map(ss => renderDetailBlockHtml(ss)).join('')
@@ -4265,21 +4671,6 @@ function showSessionDetail(sessionId) {
                 <span class="detail-block-topic">General</span>
             </div>
             <div class="detail-block-notes">${session.notes}</div>
-        </div>
-    ` : '';
-
-    // Linked skills chips
-    const skillChipsHtml = uniqueSkillIds.length > 0 ? `
-        <div class="session-detail-section">
-            <div class="session-detail-section-label">Linked skills</div>
-            <div class="session-detail-skill-chips">
-                ${uniqueSkillIds.map(skillId => {
-                    const skill = DATA.skills.find(sk => sk.id === skillId);
-                    return `<button class="session-skill-chip" onclick="showSkillDetail('${skillId}', 'session-detail-${sessionId}')">
-                        ${skill ? skill.french : skillId}
-                    </button>`;
-                }).join('')}
-            </div>
         </div>
     ` : '';
 
@@ -4318,61 +4709,143 @@ function showSessionDetail(sessionId) {
                 </div>
             </div>
 
-            ${skillChipsHtml}
-
             <div style="height: 120px;"></div>
         </div>
     `;
 
     showScreen(`session-detail-${sessionId}`);
+    requestAnimationFrame(() => initDetailBlockSeeMore());
 }
 
 function closeSessionDetail(sessionId, returnTo) {
-    // Navigate back to wherever we came from
     if (returnTo === 'profile') {
         showScreen('profile');
         document.querySelector('[data-nav="profile"]')?.classList.add('active');
         appState.currentNav = 'profile';
+        requestAnimationFrame(() => window.scrollTo(0, appState._returnScrollY || 0));
     } else if (returnTo) {
         navigateTo(returnTo.replace('-screen', ''));
     } else {
-        navigateTo('profile');
+        navigateTo('barre');
     }
 }
 
 function renderDetailBlockHtml(sessionSkill) {
-    const skill = DATA.skills.find(s => s.id === sessionSkill.skillId);
-    const topicLabel = skill ? skill.french : sessionSkill.skillId;
+    const skill = sessionSkill.skillId ? DATA.skills.find(s => s.id === sessionSkill.skillId) : null;
     const corrections = (sessionSkill.correctionIds || [])
         .map(id => appState.corrections.find(c => c.id === id))
         .filter(Boolean);
     const source = sessionSkill.source || sessionSkill.mode || null;
-    const hasContent = sessionSkill.blockTitle || sessionSkill.notes || corrections.length > 0;
-    if (!hasContent) return '';
+    const hasCorrections = corrections.length > 0;
+    const isHighlight = !!(sessionSkill.isHighlight || corrections.some(c => c.isHighlight));
 
-    const sourceLabel = source === 'observation' ? 'observation'
-                      : source === 'praise'       ? '★ praise'
-                      : corrections.length > 0    ? `correction${corrections.length > 1 ? 's' : ''}`
-                      : null;
+    if (!skill && !sessionSkill.notes && !hasCorrections) return '';
 
-    const correctionsHtml = corrections.length > 0 ? `
-        <ul class="detail-block-correction-list">
-            ${corrections.map(c => `<li>${c.text}</li>`).join('')}
-        </ul>
-    ` : '';
+    const borderClass = isHighlight        ? 'note-block--highlight'
+                      : hasCorrections     ? 'note-block--correction'
+                      : 'note-block--observation';
+    const bgClass = (isHighlight && !skill) ? ' note-block--gold-bg' : '';
+
+    // Skill row — shown only when a skill is linked
+    let skillRowHtml = '';
+    if (skill) {
+        const starHtml = isHighlight
+            ? `<button class="note-block-star" onmousedown="toggleDetailBlockHighlight(${sessionSkill.id})">★</button>`
+            : '';
+        skillRowHtml = `
+            <div class="note-block-skill-row">
+                <span class="note-block-skill-name">${skill.french}</span>
+                <span class="note-block-skill-right">${starHtml}<button class="note-block-view-link" onclick="showSkillDetail('${skill.id}', appState.currentScreen)">view →</button></span>
+            </div>`;
+    } else if (isHighlight) {
+        skillRowHtml = `
+            <div class="note-block-highlight-row">
+                <button class="note-block-star" onmousedown="toggleDetailBlockHighlight(${sessionSkill.id})">★</button>
+                <span class="note-block-highlight-label">highlight</span>
+            </div>`;
+    }
+
+    // Free text body
+    const bodyHtml = sessionSkill.notes ? `
+        <div class="note-block-body">
+            <div class="note-block-body-text" id="nbt-${sessionSkill.id}">${nl2br(sessionSkill.notes)}</div>
+            <button class="note-block-see-more" id="nbm-${sessionSkill.id}"
+                    onclick="expandBlockBody(${sessionSkill.id})" style="display:none;">see more</button>
+            <button class="note-block-see-more" id="nbh-${sessionSkill.id}"
+                    onclick="collapseBlockBody(${sessionSkill.id})" style="display:none;">hide</button>
+        </div>` : '';
+
+    // Bullets
+    const isObs = source === 'observation';
+    const bulletsHtml = hasCorrections ? `
+        <div class="note-block-bullets">
+            ${corrections.map(c => `
+                <div class="note-block-bullet${isObs ? ' note-block-bullet--obs' : ''}">
+                    <span class="note-block-dash">—</span><span class="note-block-bullet-text">${c.text}</span>
+                </div>`).join('')}
+        </div>` : '';
 
     return `
-        <div class="detail-block">
-            <div class="detail-block-header">
-                <span class="detail-block-topic">${topicLabel}</span>
-                ${skill ? `<button class="detail-block-skill-link" onclick="showSkillDetail('${sessionSkill.skillId}', appState.currentScreen)">view skill →</button>` : ''}
-                ${sourceLabel ? `<span class="detail-block-source-badge">${sourceLabel}</span>` : ''}
-            </div>
-            ${sessionSkill.blockTitle ? `<div class="detail-block-title">${sessionSkill.blockTitle}</div>` : ''}
-            ${sessionSkill.notes     ? `<div class="detail-block-notes">${sessionSkill.notes}</div>`     : ''}
-            ${correctionsHtml}
-        </div>
-    `;
+        <div class="note-block ${borderClass}${bgClass}" id="note-block-${sessionSkill.id}">
+            ${skillRowHtml}${bodyHtml}${bulletsHtml}
+        </div>`;
+}
+
+function toggleDetailBlockHighlight(sessionSkillId) {
+    const ss = appState.sessionSkills.find(s => s.id === sessionSkillId);
+    if (!ss) return;
+    const corrections = (ss.correctionIds || [])
+        .map(id => appState.corrections.find(c => c.id === id))
+        .filter(Boolean);
+    const newState = !(ss.isHighlight || corrections.some(c => c.isHighlight));
+    ss.isHighlight = newState;
+    corrections.forEach(c => { c.isHighlight = newState; });
+    storage.save('sessionSkills', appState.sessionSkills);
+    storage.save('corrections', appState.corrections);
+    const blockEl = document.getElementById(`note-block-${sessionSkillId}`);
+    if (blockEl) {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = renderDetailBlockHtml(ss);
+        const newBlock = tmp.firstElementChild;
+        if (newBlock) {
+            blockEl.replaceWith(newBlock);
+            requestAnimationFrame(() => initDetailBlockSeeMore(sessionSkillId));
+        }
+    }
+}
+
+function expandBlockBody(sessionSkillId) {
+    const textEl = document.getElementById(`nbt-${sessionSkillId}`);
+    const moreBtn = document.getElementById(`nbm-${sessionSkillId}`);
+    const hideBtn = document.getElementById(`nbh-${sessionSkillId}`);
+    if (textEl) textEl.classList.add('expanded');
+    if (moreBtn) moreBtn.style.display = 'none';
+    if (hideBtn) hideBtn.style.display = '';
+}
+
+function collapseBlockBody(sessionSkillId) {
+    const textEl = document.getElementById(`nbt-${sessionSkillId}`);
+    const moreBtn = document.getElementById(`nbm-${sessionSkillId}`);
+    const hideBtn = document.getElementById(`nbh-${sessionSkillId}`);
+    if (textEl) textEl.classList.remove('expanded');
+    if (moreBtn) moreBtn.style.display = '';
+    if (hideBtn) hideBtn.style.display = 'none';
+}
+
+function initDetailBlockSeeMore(specificId) {
+    const els = specificId
+        ? [document.getElementById(`nbt-${specificId}`)]
+        : Array.from(document.querySelectorAll('.note-block-body-text'));
+    els.forEach(el => {
+        if (!el) return;
+        const id = el.id.replace('nbt-', '');
+        const moreBtn = document.getElementById(`nbm-${id}`);
+        const hideBtn = document.getElementById(`nbh-${id}`);
+        if (!moreBtn) return;
+        const truncated = el.scrollHeight > el.clientHeight + 2;
+        moreBtn.style.display = truncated ? '' : 'none';
+        if (hideBtn) hideBtn.style.display = 'none';
+    });
 }
 
 
@@ -4400,6 +4873,9 @@ function showSkillDetail(skillId, returnTo) {
     // Store returnTo so saveSkillNote can use it after re-render
     appState._skillDetailReturnTo = returnTo;
 
+    // ── Highlights ──
+    const highlightsHtml = buildSkillHighlightsHtml(skillId);
+
     // ── Corrections for this skill ──
     const allCorrections = appState.corrections
         .filter(c => c.skillId === skillId)
@@ -4413,7 +4889,7 @@ function showSkillDetail(skillId, returnTo) {
         ? `<div class="skill-detail-empty-state">No corrections logged yet. Add them when logging a session.</div>`
         : `
             <div id="skill-corrections-list">
-                ${visibleCorrections.map(c => renderSkillCorrectionRow(c)).join('')}
+                ${renderSkillCorrectionsGrouped(visibleCorrections)}
             </div>
             ${hasMore ? `
                 <button class="skill-see-more-btn" id="skill-see-more"
@@ -4439,7 +4915,7 @@ function showSkillDetail(skillId, returnTo) {
                         <div class="skill-note-date">${formatTimelineDate(n.date)}</div>
                         <button class="skill-note-delete" onclick="deleteSkillNote(${n.id}, '${skillId}')">×</button>
                     </div>
-                    <div class="skill-note-text">${n.text}</div>
+                    <div class="skill-note-text">${renderClampedHtml(nl2br(n.text), 'sn-' + n.id)}</div>
                 </div>
             `).join('')}
             ${skillNotes.length === 0 ? `<div class="skill-detail-empty-state">No notes yet.</div>` : ''}
@@ -4542,12 +5018,12 @@ function showSkillDetail(skillId, returnTo) {
                 </button>
                 <div class="skill-detail-header-collapsed" id="skill-detail-collapsed-${skillId}">
                     <span class="skill-detail-collapsed-name">${refSkill.french}</span>
-                    <span class="difficulty-badge difficulty-${refSkill.difficulty}">${refSkill.difficulty}</span>
                     ${lastSession ? `<span class="skill-detail-collapsed-date">${formatTimelineDate(lastSession.date)}</span>` : ''}
                 </div>
-                <button class="skill-focus-btn ${isFlagged ? 'active' : ''}" id="skill-focus-btn-${skillId}"
+                <button class="skill-hero-focus-btn ${isFlagged ? 'active' : ''}"
+                        id="skill-hero-focus-btn-${skillId}"
                         onclick="toggleSkillFocus('${skillId}')">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><circle cx="7" cy="7" r="2"/></svg>
+                    ${isFlagged ? '<span class="skill-hero-focus-dot"></span>in focus' : 'add to focus'}
                 </button>
             </div>
 
@@ -4558,7 +5034,6 @@ function showSkillDetail(skillId, returnTo) {
                 <div class="skill-detail-phonetic">${refSkill.phonetic}</div>
                 <div class="skill-detail-english">${refSkill.english}</div>
                 <div class="skill-detail-meta-row">
-                    <span class="difficulty-badge difficulty-${refSkill.difficulty}">${refSkill.difficulty}</span>
                     ${sessionCount > 0 ? `<span class="skill-detail-session-count">worked on ${sessionCount} time${sessionCount !== 1 ? 's' : ''}</span>` : ''}
                     ${lastSession ? `<span class="skill-detail-last-worked">last: ${formatTimelineDate(lastSession.date)}</span>` : ''}
                 </div>
@@ -4572,6 +5047,8 @@ function showSkillDetail(skillId, returnTo) {
             <div class="skill-detail-section" style="padding-top: 0;">
                 ${progressionHtml}
             </div>
+
+            ${highlightsHtml}
 
             <!-- Corrections -->
             <div class="skill-detail-section">
@@ -4620,6 +5097,7 @@ function showSkillDetail(skillId, returnTo) {
     // Use .app-container as root so the observer is immune to overflow-x:clip
     // on the container, which can cause the viewport-based observer to misfire on iOS.
     requestAnimationFrame(() => {
+        initClampedTexts(screen);
         const hero = document.getElementById(`skill-hero-${skillId}`);
         const collapsed = document.getElementById(`skill-detail-collapsed-${skillId}`);
         if (!hero || !collapsed) return;
@@ -4631,25 +5109,138 @@ function showSkillDetail(skillId, returnTo) {
     });
 }
 
-function renderSkillCorrectionRow(correction) {
-    const session = correction.sessionId
-        ? appState.sessions.find(s => s.id === correction.sessionId)
-        : null;
-    const sessionLink = session
-        ? `<button class="skill-correction-source" onmousedown="showSessionDetail(${correction.sessionId})">
-               ${session.sessionName || 'Session'} →
-           </button>`
-        : '';
+function buildSkillHighlightsHtml(skillId) {
+    const hlSessionSkills = appState.sessionSkills
+        .filter(ss => ss.skillId === skillId && ss.isHighlight)
+        .map(ss => {
+            const session = appState.sessions.find(s => s.id === ss.sessionId);
+            const bullets = (ss.correctionIds || [])
+                .map(id => appState.corrections.find(c => c.id === id))
+                .filter(Boolean)
+                .map(c => c.text);
+            return { type: 'ss', id: ss.id, date: session?.date || null, body: ss.notes || null, bullets, sortKey: ss.id };
+        });
+
+    const hlNotes = (appState.skillNotes || [])
+        .filter(n => n.skillId === skillId && n.isHighlight)
+        .map(n => ({ type: 'note', id: n.id, date: n.date, body: n.text, bullets: [], sortKey: n.createdAt }));
+
+    const all = [...hlSessionSkills, ...hlNotes].sort((a, b) => b.sortKey - a.sortKey);
+    if (!all.length) return '';
+
+    const blocksHtml = all.map(item => {
+        const dateStr = item.date ? formatTimelineDate(item.date) : '';
+        const bodyHtml = item.body ? `
+            <div class="note-block-body">
+                <div class="note-block-body-text">${nl2br(item.body)}</div>
+            </div>` : '';
+        const bulletsHtml = item.bullets.length ? `
+            <div class="note-block-bullets">
+                ${item.bullets.map(b => `
+                    <div class="note-block-bullet">
+                        <span class="note-block-dash">—</span>
+                        <span class="note-block-bullet-text">${escapeHtml(b)}</span>
+                    </div>`).join('')}
+            </div>` : '';
+        return `
+            <div class="note-block note-block--highlight note-block--gold-bg" id="hl-${item.type}-${item.id}">
+                <div class="note-block-highlight-row">
+                    <button class="note-block-star active"
+                            onmousedown="toggleSkillHighlightItem('${item.type}', ${item.id}, '${skillId}')">★</button>
+                    <span class="note-block-highlight-label">${dateStr}</span>
+                </div>
+                ${bodyHtml}${bulletsHtml}
+            </div>`;
+    }).join('');
+
     return `
-        <div class="skill-correction-row ${correction.isRecurring ? 'is-recurring' : ''}">
-            <div class="skill-correction-meta">
-                <span class="skill-correction-date">${formatTimelineDate(correction.createdAt ? new Date(correction.createdAt).toISOString().split('T')[0] : '')}</span>
-                ${correction.isRecurring ? `<span class="skill-correction-recurring">recurring</span>` : ''}
+        <div class="skill-detail-section" id="skill-highlights-section-${skillId}">
+            <div class="skill-detail-section-header">
+                <div class="skill-detail-section-label" style="color: var(--ink-5);">Highlights</div>
             </div>
-            <div class="skill-correction-text">${correction.text}</div>
-            ${sessionLink}
-        </div>
-    `;
+            ${blocksHtml}
+        </div>`;
+}
+
+function renderSkillHighlightsSectionInPlace(skillId, sectionEl) {
+    const html = buildSkillHighlightsHtml(skillId);
+    if (!html) {
+        sectionEl.remove();
+        return;
+    }
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const newSection = tmp.firstElementChild;
+    if (newSection) {
+        sectionEl.replaceWith(newSection);
+        requestAnimationFrame(() => initClampedTexts(newSection));
+    }
+}
+
+function toggleSkillHighlightItem(type, id, skillId) {
+    if (type === 'ss') {
+        const ss = appState.sessionSkills.find(s => s.id === id);
+        if (!ss) return;
+        ss.isHighlight = false;
+        const corrections = (ss.correctionIds || [])
+            .map(cid => appState.corrections.find(c => c.id === cid))
+            .filter(Boolean);
+        corrections.forEach(c => { c.isHighlight = false; });
+        storage.save('sessionSkills', appState.sessionSkills);
+        storage.save('corrections', appState.corrections);
+    } else {
+        const note = (appState.skillNotes || []).find(n => n.id === id);
+        if (!note) return;
+        note.isHighlight = false;
+        storage.save('skillNotes', appState.skillNotes);
+    }
+    const sectionEl = document.getElementById(`skill-highlights-section-${skillId}`);
+    if (sectionEl) renderSkillHighlightsSectionInPlace(skillId, sectionEl);
+}
+
+function renderSkillCorrectionsGrouped(corrections) {
+    const groups = [];
+    const sessionMap = {};
+
+    const sorted = [...corrections].sort((a, b) => b.createdAt - a.createdAt);
+
+    sorted.forEach(c => {
+        if (c.sessionId) {
+            if (!sessionMap[c.sessionId]) {
+                sessionMap[c.sessionId] = [];
+                groups.push({ sessionId: c.sessionId, items: sessionMap[c.sessionId] });
+            }
+            sessionMap[c.sessionId].push(c);
+        } else {
+            groups.push({ sessionId: null, items: [c] });
+        }
+    });
+
+    return groups.map(group => {
+        const items = [...group.items].sort((a, b) => a.createdAt - b.createdAt);
+        const dateStr = formatTimelineDate(
+            items[0].createdAt ? new Date(items[0].createdAt).toISOString().split('T')[0] : ''
+        );
+        const session = group.sessionId
+            ? appState.sessions.find(s => s.id === group.sessionId)
+            : null;
+        const sessionLink = session
+            ? `<button class="skill-corr-source" onmousedown="showSessionDetail(${group.sessionId})">${session.sessionName || 'Session'} →</button>`
+            : '';
+        const itemsHtml = items.map(c => `
+            <div class="skill-corr-item${c.isRecurring ? ' is-recurring' : ''}">
+                <div class="skill-corr-text">${c.text}</div>
+                ${c.isRecurring ? `<span class="skill-correction-recurring">recurring</span>` : ''}
+            </div>
+        `).join('');
+        return `
+            <div class="skill-corr-group">
+                <div class="skill-corr-group-date">${dateStr}</div>
+                ${itemsHtml}
+                ${sessionLink}
+            </div>
+        `;
+    }).join('');
 }
 
 function expandSkillCorrections(skillId) {
@@ -4661,7 +5252,7 @@ function expandSkillCorrections(skillId) {
         .filter(c => c.skillId === skillId)
         .sort((a, b) => b.createdAt - a.createdAt);
 
-    list.innerHTML = allCorrections.map(c => renderSkillCorrectionRow(c)).join('');
+    list.innerHTML = renderSkillCorrectionsGrouped(allCorrections);
     if (btn) btn.remove();
 }
 
@@ -4673,12 +5264,16 @@ function expandSkillNotes(skillId) {
         .sort((a, b) => b.createdAt - a.createdAt);
     list.innerHTML = allNotes.map(n => `
         <div class="skill-note-entry">
-            <div class="skill-note-date">${formatTimelineDate(n.date)}</div>
-            <div class="skill-note-text">${n.text}</div>
+            <div class="skill-note-header">
+                <div class="skill-note-date">${formatTimelineDate(n.date)}</div>
+                <button class="skill-note-delete" onclick="deleteSkillNote(${n.id}, '${skillId}')">×</button>
+            </div>
+            <div class="skill-note-text">${renderClampedHtml(nl2br(n.text), 'sn-' + n.id)}</div>
         </div>
     `).join('');
     // Remove the see more button
     list.nextElementSibling?.remove();
+    requestAnimationFrame(() => initClampedTexts(list));
 }
 
 function saveSkillNote(skillId) {
@@ -4742,7 +5337,7 @@ function filterSkillCorrections(skillId, filter, btn) {
     }
 
     display.innerHTML = `
-        <div id="skill-corr-list">${filtered.slice(0, PREVIEW).map(c => renderSkillCorrectionRow(c)).join('')}</div>
+        <div id="skill-corr-list">${renderSkillCorrectionsGrouped(filtered.slice(0, PREVIEW))}</div>
         ${hasMore ? `<button class="skill-see-more-btn"
             onclick="expandFilteredCorrections('${skillId}', '${filter}')">
             see all ${filtered.length} corrections
@@ -4768,7 +5363,7 @@ function expandFilteredCorrections(skillId, filter) {
     }
 
     const list = document.getElementById('skill-corr-list');
-    if (list) list.innerHTML = filtered.map(c => renderSkillCorrectionRow(c)).join('');
+    if (list) list.innerHTML = renderSkillCorrectionsGrouped(filtered);
     // Remove see-more button
     const btn = document.querySelector('#skill-corrections-display .skill-see-more-btn');
     if (btn) btn.remove();
@@ -4791,7 +5386,7 @@ function renderSkillNotesSectionInPlace(skillId, sectionEl) {
                         <div class="skill-note-date">${formatTimelineDate(n.date)}</div>
                         <button class="skill-note-delete" onclick="deleteSkillNote(${n.id}, '${skillId}')">×</button>
                     </div>
-                    <div class="skill-note-text">${n.text}</div>
+                    <div class="skill-note-text">${renderClampedHtml(nl2br(n.text), 'sn-' + n.id)}</div>
                 </div>
             `).join('')}
             ${skillNotes.length === 0 ? `<div class="skill-detail-empty-state">No notes yet.</div>` : ''}
@@ -4816,6 +5411,7 @@ function renderSkillNotesSectionInPlace(skillId, sectionEl) {
         </div>
         ${notesHtml}
     `;
+    requestAnimationFrame(() => initClampedTexts(sectionEl));
 }
 
 function toggleSkillFocus(skillId) {
@@ -4824,10 +5420,13 @@ function toggleSkillFocus(skillId) {
     skill.flagged = !skill.flagged;
     persistSkillState();
 
-    // Update the focus button in place
-    const btn = document.getElementById(`skill-focus-btn-${skillId}`) || document.querySelector('.skill-focus-btn');
-    if (btn) {
-        btn.className = `skill-focus-btn ${skill.flagged ? 'active' : ''}`;
+    // Update focus button (header pill)
+    const heroBtn = document.getElementById(`skill-hero-focus-btn-${skillId}`);
+    if (heroBtn) {
+        heroBtn.className = `skill-hero-focus-btn ${skill.flagged ? 'active' : ''}`;
+        heroBtn.innerHTML = skill.flagged
+            ? '<span class="skill-hero-focus-dot"></span>in focus'
+            : 'add to focus';
     }
 
     // If The Barre is the current screen, refresh it
@@ -4897,7 +5496,8 @@ function showLearnSkillLibrary() {
         screen.id = 'skill-library-screen';
         document.querySelector('.app-container').appendChild(screen);
     }
-    // Build the shell once — search input is never destroyed after this
+    _skillLibTab = 'all';
+    _skillLibDimFilter = null;
     screen.innerHTML = `
         <div class="skill-library-view">
             <div class="skill-detail-header">
@@ -4929,6 +5529,8 @@ function showLearnSkillLibrary() {
                             onclick="setSkillLibTab(this, 'all')">All skills</button>
                     <button class="skill-lib-tab" data-tab="my"
                             onclick="setSkillLibTab(this, 'my')">Skills I've recorded</button>
+                    <button class="skill-lib-tab" data-tab="category"
+                            onclick="setSkillLibTab(this, 'category')">By category</button>
                 </div>
             </div>
             <div class="skill-lib-body" id="skill-lib-body"></div>
@@ -4962,7 +5564,39 @@ function updateSkillLibResults() {
     const input = document.getElementById('skill-lib-search-input');
     const body  = document.getElementById('skill-lib-body');
     const clearBtn = document.getElementById('skill-lib-clear');
+    const searchWrapper = document.querySelector('.skill-lib-search-wrapper');
     if (!body) return;
+
+    if (_skillLibTab === 'category') {
+        if (searchWrapper) searchWrapper.style.display = 'none';
+        if (clearBtn) clearBtn.style.display = 'none';
+        body.innerHTML = `<div style="display:flex;flex-direction:column;gap:var(--sp-sm);padding:var(--sp-lg) 0;">` +
+            DATA.skillCategories.map(cat => {
+                const isBarre = cat.id === 'barre';
+                if (isBarre) {
+                    return `<div class="skill-category-card" onclick="${cat.onclick}">
+                        <div class="skill-category-icon">${ICONS.get(cat.icon, 24)}</div>
+                        <div class="skill-category-info">
+                            <div class="skill-category-name">${cat.name}</div>
+                            <div class="skill-category-count">${cat.count}</div>
+                        </div>
+                        <div class="skill-category-arrow">→</div>
+                    </div>`;
+                } else {
+                    return `<div class="skill-category-card skill-category-card--muted">
+                        <div class="skill-category-icon">${ICONS.get(cat.icon, 24)}</div>
+                        <div class="skill-category-info">
+                            <div class="skill-category-name">${cat.name}</div>
+                            <div class="skill-category-count">${cat.count}</div>
+                        </div>
+                    </div>`;
+                }
+            }).join('') +
+        `</div>`;
+        return;
+    }
+
+    if (searchWrapper) searchWrapper.style.display = '';
 
     const query = input?.value || '';
     const q = normaliseStr(query.trim());
@@ -4971,6 +5605,7 @@ function updateSkillLibResults() {
 
     const userSkills = appState.skills;
     let filtered = DATA.skills.filter(ref => {
+        if (appState.hidePointe && ref.dimensionId === 'pointe') return false;
         // Filter by dimension if set
         if (_skillLibDimFilter && ref.dimension !== _skillLibDimFilter) {
             return false;
@@ -5051,7 +5686,7 @@ function renderSkillLibCard(ref, query) {
                     ${displayName}
                     ${correctionCount > 0 ? `<span class="skill-lib-inline-count"><span class="skill-lib-indicator-count">${correctionCount}</span></span>` : ''}
                 </div>
-                ${q && displayEnglish !== ref.english ? `<div class="skill-lib-card-english">${displayEnglish}</div>` : ''}
+                ${query && displayEnglish !== ref.english ? `<div class="skill-lib-card-english">${displayEnglish}</div>` : ''}
             </div>
             <div class="skill-lib-card-meta">
                 <span class="difficulty-badge difficulty-${ref.difficulty}">${ref.difficulty}</span>
@@ -5215,9 +5850,13 @@ function showSkillKnowledgePage(skillId, returnTo) {
             <div class="skill-detail-hero">
                 <div class="skill-detail-category">${ref.category}</div>
                 <h1 class="skill-detail-title">${ref.french}</h1>
-                <div class="skill-detail-phonetic">${ref.phonetic}</div>
-                <div class="skill-detail-english">${ref.english}</div>
-                <span class="difficulty-badge difficulty-${ref.difficulty}">${ref.difficulty}</span>
+                <div class="skill-know-meta-row">
+                    <span class="skill-detail-phonetic">${ref.phonetic}</span>
+                    <span class="skill-know-meta-dot">·</span>
+                    <span class="skill-detail-english">${ref.english}</span>
+                    <span class="skill-know-meta-dot">·</span>
+                    <span class="skill-know-difficulty">${ref.difficulty}</span>
+                </div>
             </div>
 
             <!-- Description -->
@@ -5638,6 +6277,9 @@ function resetProfile() {
     // Restore nav visibility state
     document.querySelector('.bottom-nav')?.classList.remove('visible');
     document.querySelector('.fab')?.classList.remove('visible');
+
+    // Re-seed mock data so the app has test content after reset
+    seedMockData();
 
     // Restart from onboarding
     currentOnboardingScreen = 1;
