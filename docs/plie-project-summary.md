@@ -104,18 +104,23 @@ js/ui.js      — All screen builders and render functions:
 
 ### CONFIRMED WORKING
 - localStorage persistence (all collections)
-- Onboarding — all 3 screens → now: single screen + quiz routing
+- Onboarding — single welcome screen + quiz routing
 - Accent-insensitive search (normaliseStr)
 - Swipe — 100px threshold, 120ms min, 8px dead zone
-- FAB action sheet (Log a session, Set a goal)
+- FAB action sheet: Log a session / Add a note / Set a goal
 - Goal creator — 3 types (skill / intention / habit), type tabs, progress markers
 - Goal creator — skill auto-detection in title, correction linking, custom date picker
 - Goal editing, categories, correction linking, milestones/progress markers
+- Goal cards — friendly type labels, linked skill name, formatted commitment period, howOften display
 - Session delete, skill note delete
-- Highlight star → timeline + SkillNote
+- Note blocks — single free-text + source chips (Correction · Observation) + highlight star
 - Timeline date groups, icons, tappable sessions
 - Profile capability cards
+- Profile — orientation quiz CTA (start or retake)
 - Skill library search
+- All Goals history page (grouped by year, expand on tap)
+- Barre hero card — context-aware "Did you go today?" variants
+- Barre skill cards — Georgia name, italic quoted correction, "view →" link
 - All 4 tabs navigate correctly
 
 ### BUILT NOT VERIFIED (real device)
@@ -131,30 +136,28 @@ js/ui.js      — All screen builders and render functions:
 - Muscles expandable section
 - Goal creator custom calendar (mirrors session logger calendar)
 - Goal creator click-outside to dismiss
+- All Goals history page
 
 ### KNOWN BUGS
 - Touch target offset on iOS overlays (partially addressed)
 - Duplicate timeline entries possible if saveSession called twice (guard: _isEdit)
 - highlightMatch regex — Node.js false positive, browser-valid
-- toggleMilestone: reads goal.milestones[i] — new goals use progressMarkers; needs `progressMarkers || milestones`
-- openGoalEditor: loads `progressMarkers: (goal.milestones || [])` — should be `(goal.progressMarkers || goal.milestones || [])`
-- openGoalCreatorForSkill: still sets `goal-skill-select` value (DOM element removed, now `goal-skill-input`)
+- Observation blocks write a timeline entry via legacy praise path — should not
+- isHighlight flag saved to corrections/skillNotes but never read in skill detail or timeline UI
+- Recurring correction flag (isRecurring) never set to true — detection logic unwritten
+- Goal swipe-left delete uses native confirm() dialog — should be in-app discard pattern
+- Goal pause/dismiss states unbuilt — swipe-left permanently deletes with no undo
 
 ### DEFERRED
-- "Add a note" FAB action (standalone note logger)
-- Training states: Active / Resting / Recovering
-- Goals: "view past goals →" + All Goals history page
-- Goals: goal renewal / reactivation flow (lineage model)
-- Goals: replace confirm() delete dialog with in-app discard pattern
-- Goals: friendly commitment period display on card (duration label, not ISO date)
-- Goals: linked skill name shown on card
-- Note block redesign: source chips (Correction · Observation) replaces mode tabs
+- Training states: Active / Resting / Recovering (settings toggle + goal pause behaviour)
+- Goals: goal pause / dismiss (non-destructive swipe-left)
+- Goals: goal renewal / reactivation flow (lineage model, renewal prompt)
+- Goals: All Goals page status grouping (paused / let go / completed within each year)
+- Note blocks: isHighlight surfaced in skill detail (Highlights section) and timeline
+- Note blocks: recurring correction detection (threshold logic unwritten)
 - Class type chips: square cards → pill chips
 - Session logger: retrospective date floor removed (any past date allowed)
 - Profile: signal lines replacing score bars
-- Profile: "Start orientation quiz →" if unassessed
-- Barre hero card: training state variants, Georgia heading, "Did you go today?"
-- Barre skill cards: Georgia for name, correction in italic quotes, "view →" text link
 - Remaining Barre categories: Centre, Turns, Allegro, Pointe, Flexibility & strength
 - Learn: Pointers content type (diagnostic, 4 MVP areas)
 - Onboarding: collapse to single welcome screen; CTAs "let's go →" / "skip quiz →"
@@ -169,9 +172,6 @@ js/ui.js      — All screen builders and render functions:
 - Settings: notifications, dark mode, data export, account/sync
 - Privacy policy, terms of service
 - Authentication / account system
-- Typography migration: replace all Cormorant Garamond with Georgia in styles.css
-- Token migration: realign ink scale + gold to match design system doc
-- Primary button: --ink fill, not --brown-btn
 
 ---
 
