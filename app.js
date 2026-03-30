@@ -1,181 +1,107 @@
 'use strict';
-
+ 
 /* ═══════════════════════════════════════════════════════════════
-   ICON MAP
-   All SVG icons in one place. Data objects reference keys.
-   Render with: ICONS.get('key') or ICONS.get('key', 20) for size.
-   All icons: stroke="currentColor", inherit colour from parent.
+   ICON MAP — Phosphor Web Components
+   
+   SETUP: Add to index.html <head> (one line, that's it):
+   <script type="module" src="https://unpkg.com/@phosphor-icons/webcomponents"></script>
+   
+   Weight: "light" throughout — matches Plié's editorial tone.
+   All icons inherit currentColor from parent, same as before.
+   ICONS.get(key, size) API unchanged — no call sites need updating.
+   
+   Icon reference: https://phosphoricons.com
+   Filter by weight: light
 ═══════════════════════════════════════════════════════════════ */
+ 
 const ICONS = {
-    _svg(paths, size = 24, extra = '') {
-        return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${extra}>${paths}</svg>`;
-    },
     get(key, size = 24) {
-        const fn = this[key];
-        return fn ? fn.call(this, size) : this._svg('', size);
+        const name = ICONS._map[key];
+        if (!name) return '';
+        return `<ph-icon name="${name}" size="${size}" weight="light" style="display:inline-flex;align-items:center;line-height:1;"></ph-icon>`;
     },
-
-    profile: (s) => ICONS._svg(
-        '<circle cx="12" cy="8" r="4"/>' +
-        '<path d="M4 20 C4 16 8 13 12 13 C16 13 20 16 20 20"/>', s),
-
-    // ── Navigation ──────────────────────────────────────────────
-    barre: (s) => ICONS._svg(
-        // Horizontal barre with a leg extending up — simplified dance pose
-        '<line x1="3" y1="13" x2="21" y2="13"/>' +
-        '<circle cx="8" cy="13" r="1.2" fill="currentColor" stroke="none"/>' +
-        '<path d="M10 13 C10 9 12 6 12 5"/>' +
-        '<path d="M10 13 C9 17 7 20 6 21"/>' +
-        '<path d="M10 13 C12 11 15 10 16 9"/>', s),
-
-    assess: (s) => ICONS._svg(
-        // Clipboard / assessment sheet
-        '<rect x="4" y="3" width="16" height="18" rx="2"/>' +
-        '<line x1="8" y1="8" x2="16" y2="8"/>' +
-        '<line x1="8" y1="12" x2="14" y2="12"/>' +
-        '<line x1="8" y1="16" x2="12" y2="16"/>', s),
-
-    goals: (s) => ICONS._svg(
-        // Target / bullseye
-        '<circle cx="12" cy="12" r="9"/>' +
-        '<circle cx="12" cy="12" r="5"/>' +
-        '<circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>', s),
-
-    learn: (s) => ICONS._svg(
-        // Open book / mortarboard
-        '<path d="M2 5 L12 9 L22 5"/>' +
-        '<path d="M12 9 L12 20"/>' +
-        '<path d="M4 6.5 L4 15 C4 15 8 18 12 18 C16 18 20 15 20 15 L20 6.5"/>', s),
-
-    profile: (s) => ICONS._svg(
-        '<circle cx="12" cy="8" r="4"/>' +
-        '<path d="M4 20 C4 16 8 13 12 13 C16 13 20 16 20 20"/>', s),
-
-    // ── Skill categories ────────────────────────────────────────
-    'cat-barre': (s) => ICONS._svg(
-        // Barre rail — horizontal line with support posts
-        '<line x1="2" y1="10" x2="22" y2="10" stroke-width="2.2"/>' +
-        '<line x1="6" y1="10" x2="6" y2="20"/>' +
-        '<line x1="18" y1="10" x2="18" y2="20"/>' +
-        '<line x1="3" y1="20" x2="21" y2="20"/>', s),
-
-    'cat-centre': (s) => ICONS._svg(
-        // Four arrows expanding from centre — open space
-        '<line x1="12" y1="12" x2="19" y2="5"/>' +
-        '<polyline points="14 5 19 5 19 10"/>' +
-        '<line x1="12" y1="12" x2="5" y2="19"/>' +
-        '<polyline points="10 19 5 19 5 14"/>', s),
-
-    'cat-turns': (s) => ICONS._svg(
-        // Circular arrow — rotation
-        '<path d="M20 12 A8 8 0 1 1 13 4.1"/>' +
-        '<polyline points="13 2 13 6 17 6"/>', s),
-
-    'cat-allegro': (s) => ICONS._svg(
-        // Upward arc — jump
-        '<path d="M5 18 C5 18 7 8 12 6 C17 8 19 18 19 18"/>' +
-        '<line x1="8" y1="18" x2="16" y2="18"/>', s),
-
-    'cat-pointe': (s) => ICONS._svg(
-        // Pointed foot silhouette — simplified
-        '<path d="M8 4 L8 16 C8 18 10 20 13 20 C16 20 17 18 17 17 C17 15 15 14 12 15"/>' +
-        '<line x1="5" y1="4" x2="11" y2="4"/>', s),
-
-    'cat-flexibility': (s) => ICONS._svg(
-        // Side stretch / arc
-        '<path d="M5 18 C5 12 8 7 12 6"/>' +
-        '<path d="M12 6 C16 7 19 11 20 16"/>' +
-        '<circle cx="12" cy="6" r="1.5" fill="currentColor" stroke="none"/>', s),
-
-    // ── Learn cards ─────────────────────────────────────────────
-    'learn-quiz': (s) => ICONS._svg(
-        // Question mark in circle
-        '<circle cx="12" cy="12" r="9"/>' +
-        '<path d="M9.5 9 C9.5 7.3 10.6 6 12 6 C13.4 6 14.5 7.1 14.5 8.5 C14.5 10.5 12 11 12 13"/>' +
-        '<circle cx="12" cy="16.5" r="0.8" fill="currentColor" stroke="none"/>', s),
-
-    'learn-footwork': (s) => ICONS._svg(
-        // Foot / relevé — simplified
-        '<path d="M8 5 L8 15 C8 17 9.5 19 12 19 C14.5 19 16 17.5 16 16.5 C16 15 14.5 14 12 14.5"/>' +
-        '<line x1="5" y1="5" x2="11" y2="5"/>', s),
-
-    'learn-splits': (s) => ICONS._svg(
-        // Figure with legs extended — splits
-        '<circle cx="12" cy="5" r="2"/>' +
-        '<line x1="12" y1="7" x2="12" y2="13"/>' +
-        '<line x1="3" y1="17" x2="12" y2="13"/>' +
-        '<line x1="12" y1="13" x2="21" y2="17"/>', s),
-
-    'learn-core': (s) => ICONS._svg(
-        // Shield / core strength
-        '<path d="M12 3 L20 7 L20 13 C20 17 16 20 12 21 C8 20 4 17 4 13 L4 7 Z"/>' +
-        '<polyline points="9 12 11 14 15 10"/>', s),
-
-    'learn-pirouette': (s) => ICONS._svg(
-        // Spinning figure — circle with upward line
-        '<circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/>' +
-        '<circle cx="12" cy="5" r="2"/>' +
-        '<line x1="12" y1="7" x2="12" y2="14"/>', s),
-
-    // ── Actions / utility ────────────────────────────────────────
-    'flag': (s) => ICONS._svg(
-        // Filled flag — skill in focus
-        '<path d="M4 21 L4 4" stroke-width="2"/>' +
-        '<path d="M4 4 L16 4 L13 9.5 L16 15 L4 15" fill="currentColor" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5"/>', s),
-
-    'flag-outline': (s) => ICONS._svg(
-        // Outline flag — not flagged
-        '<path d="M4 21 L4 4" stroke-width="2"/>' +
-        '<path d="M4 4 L16 4 L13 9.5 L16 15 L4 15" fill="none" stroke-linejoin="round" stroke-width="1.5"/>', s),
-
-    'edit': (s) => ICONS._svg(
-        // Pencil — edit / notes
-        '<path d="M17 3 L21 7 L8 20 L3 21 L4 16 Z"/>' +
-        '<line x1="14" y1="6" x2="18" y2="10"/>', s),
-
-    // ── Folders ─────────────────────────────────────────────────
-    'folder-ballets': (s) => ICONS._svg(
-        // Stage curtains with arch — theatre / repertoire
-        '<path d="M3 5 C3 5 7 7 12 5 C17 7 21 5 21 5 L21 19 L3 19 Z"/>' +
-        '<path d="M3 5 L3 19"/>' +
-        '<path d="M21 5 L21 19"/>' +
-        '<path d="M7 19 L7 11 C7 8 10 7 12 9 C14 7 17 8 17 11 L17 19"/>', s),
-
-    // ── Persona / experience level ──────────────────────────────
-    'persona-natural': (s) => ICONS._svg(
-        // Star — natural talent
-        '<polygon points="12,2 15.1,8.3 22,9.3 17,14.1 18.2,21 12,17.8 5.8,21 7,14.1 2,9.3 8.9,8.3"/>', s),
-
-    'persona-lifelong': (s) => ICONS._svg(
-        // Continuous loop — lifelong
-        '<path d="M12 3 C7 3 3 7 3 12 C3 17 7 21 12 21 C17 21 21 17 21 12 C21 9 19 6.5 16 5"/>' +
-        '<polyline points="16 2 16 6 12 6"/>', s),
-
-    'persona-new': (s) => ICONS._svg(
-        // Seedling / sprout
-        '<line x1="12" y1="21" x2="12" y2="10"/>' +
-        '<path d="M12 10 C12 10 8 9 7 5 C10 4 13 6 12 10"/>' +
-        '<path d="M12 13 C12 13 16 12 17 8 C14 7 11 9 12 13"/>', s),
-
-    'persona-finding': (s) => ICONS._svg(
-        // Compass rose — finding direction
-        '<circle cx="12" cy="12" r="9"/>' +
-        '<polygon points="12,5 13.5,10.5 12,12 10.5,10.5" fill="currentColor" stroke="none"/>' +
-        '<polygon points="12,19 10.5,13.5 12,12 13.5,13.5" fill="none"/>', s),
-
-    'persona-returning': (s) => ICONS._svg(
-        // Curtain / stage — returning to it
-        '<rect x="2" y="3" width="20" height="16" rx="1"/>' +
-        '<path d="M2 3 C2 3 7 5 12 3 C17 5 22 3 22 3"/>' +
-        '<path d="M7 19 L7 10 C7 7 10 6 12 8 C14 6 17 7 17 10 L17 19"/>', s),
-
-    'persona-break': (s) => ICONS._svg(
-        // Pause then play — after a break
-        '<circle cx="12" cy="12" r="9"/>' +
-        '<line x1="9" y1="8" x2="9" y2="16"/>' +
-        '<line x1="13" y1="8" x2="13" y2="16"/>' +
-        '<polyline points="16 10 19 12 16 14"/>', s),
+ 
+    _map: {
+ 
+        // ── Navigation ────────────────────────────────────────
+        'barre':            'person-simple-tai-chi',    // confirmed
+        'goals':            'target',                   // confirmed
+        'learn':            'book-open',
+        'profile':          'user',
+        'assess':           'clipboard-text',           // legacy key, tab dissolved
+ 
+        // ── Skill categories ──────────────────────────────────
+        'cat-barre':        'person-simple-tai-chi',    // at the barre
+        'cat-centre':       'arrows-out',               // expanding into space
+        'cat-turns':        'arrow-counter-clockwise',
+        'cat-allegro':      'arrow-fat-up',             // jump — upward with weight
+        'cat-pointe':       'cat-pointe',               // DEFERRED — keep custom SVG for now (see note below)
+        'cat-flexibility':  'person-arms-spread',       // confirmed
+ 
+        // ── Learn section cards ───────────────────────────────
+        // Keys match section.icon values in js/data.js
+        // Update those values to match these keys if they differ
+        'learn-skills':     'list-checks',              // skill library — checklist of moves
+        'learn-glossary':   'book-bookmark',            // language reference
+        'learn-musicality': 'wave-sine',                // musical phrasing — wave
+        'learn-conditioning':'barbell',                 // strength & drills
+        'learn-quiz':       'question',                 // fallback if used elsewhere
+        'learn-footwork':   'sneaker-move',
+        'learn-splits':     'person-arms-spread',
+        'learn-core':       'barbell',
+        'learn-pirouette':  'learn-pirouette',          // DEFERRED — keep custom SVG for now
+ 
+        // ── Actions / utility ─────────────────────────────────
+        'flag':             'flag-pennant-fill',        // filled — skill in focus
+        'flag-outline':     'flag-pennant',             // outline — not yet flagged
+        'edit':             'pencil-simple',
+        'star':             'star',
+        'star-fill':        'star-fill',
+        'plus':             'plus',
+        'plus-circle':      'plus-circle',
+        'x':                'x',
+        'x-circle':         'x-circle',
+        'caret-left':       'caret-left',
+        'caret-right':      'caret-right',
+        'search':           'magnifying-glass',
+        'map-pin':          'map-pin',
+        'trash':            'trash',
+        'sliders':          'sliders-horizontal',       // settings trigger
+ 
+        // ── FAB action sheet ──────────────────────────────────
+        'fab-session':      'calendar-plus',            // log a session
+        'fab-note':         'note-pencil',              // add a note
+        'fab-goal':         'target',                   // set a goal — mirrors nav
+ 
+        // ── Folders ───────────────────────────────────────────
+        'folder-ballets':   'mask-happy',               // theatre / repertoire
+ 
+        // ── Persona / orientation ─────────────────────────────
+        'persona-natural':  'star',
+        'persona-lifelong': 'infinity',
+        'persona-new':      'plant',
+        'persona-finding':  'compass',
+        'persona-returning':'arrow-counter-clockwise',
+        'persona-break':    'pause-circle',
+    }
 };
+ 
+/*
+   DEFERRED ICONS — two custom SVG icons kept until better options found:
+ 
+   'cat-pointe': Phosphor has no pointed-foot equivalent.
+   Keep the existing custom path from the old ICONS block:
+     '<path d="M8 4 L8 16 C8 18 10 20 13 20 C16 20 17 18 17 17 C17 15 15 14 12 15"/>' +
+     '<line x1="5" y1="4" x2="11" y2="4"/>'
+ 
+   'learn-pirouette': 'spiral' exists in Phosphor but risks reading as
+   a loading spinner. Keep the custom dashed-circle figure until confirmed.
+ 
+   To keep these working, add them back as methods on the ICONS object:
+ 
+   'cat-pointe': (s) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4 L8 16 C8 18 10 20 13 20 C16 20 17 18 17 17 C17 15 15 14 12 15"/><line x1="5" y1="4" x2="11" y2="4"/></svg>`,
+ 
+   'learn-pirouette': (s) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/><circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="14"/></svg>`,
 
 
 /* ═══════════════════════════════════════════════════════════════

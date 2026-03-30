@@ -409,10 +409,7 @@ function renderSessionLogger() {
                     <h2 class="session-logger-title">${isNoteMode ? 'Add a note' : 'Log a class'}</h2>
                 </div>
                 <button class="session-close-btn" onclick="closeSessionLogger()" aria-label="Close">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                        <line x1="4" y1="4" x2="14" y2="14"/>
-                        <line x1="14" y1="4" x2="4" y2="14"/>
-                    </svg>
+                    ${ICONS.get('x', 18)}
                 </button>
             </div>
 
@@ -981,19 +978,15 @@ function renderBlockHtml(block, index) {
     return `
         <div class="swipe-row" data-block-id="${block.id}">
             <div class="swipe-action-left swipe-action-remove">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+                ${ICONS.get('x', 16)}
                 remove
             </div>
-            <div class="swipe-content">
-                <div class="session-block" id="block-${block.id}">
 
                     <div class="session-block-header">
                         <button class="block-star-btn ${block.isHighlight ? 'active' : ''}"
                                 onmousedown="toggleBlockHighlight(${block.id})"
                                 aria-label="Highlight">
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="${block.isHighlight ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M8 1.5l1.7 3.4 3.8.55-2.75 2.68.65 3.78L8 10.1 4.6 11.91l.65-3.78L2.5 5.45l3.8-.55z"/>
-                            </svg>
+                            ${block.isHighlight ? ICONS.get('star-fill', 16) : ICONS.get('star', 16)}
                         </button>
                         <div class="session-block-topic-wrapper" id="topic-wrapper-${block.id}">
                             <input class="session-block-topic-input"
@@ -1009,10 +1002,7 @@ function renderBlockHtml(block, index) {
                             <div class="block-topic-dropdown" id="topic-dropdown-${block.id}" style="display:none;"></div>
                         </div>
                         <button class="block-remove-btn" onclick="removeBlock(${block.id})" aria-label="Remove">
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                                <line x1="3" y1="3" x2="11" y2="11"/>
-                                <line x1="11" y1="3" x2="3" y2="11"/>
-                            </svg>
+                            ${ICONS.get('x', 14)}
                         </button>
                     </div>
 
@@ -1384,7 +1374,7 @@ function renderBlockBulletsInPlace(block, blockId) {
             </div>
             <button class="correction-bullet-delete"
                     onmousedown="deleteCorrectionBullet(${blockId}, ${ci})"
-                    aria-label="Delete">×</button>
+                    aria-label="Delete">${ICONS.get('x', 12)}</button>
         </div>
     `).join('') + `
         <div class="correction-bullet correction-bullet-new">
@@ -1755,7 +1745,7 @@ function showPostSavePrompt(sessionId, skillIds, isRecurring) {
 
     prompt.innerHTML = `
         <div class="post-save-prompt-inner">
-            <button class="post-save-dismiss" onclick="document.getElementById('post-save-prompt').remove()">×</button>
+            <button class="post-save-dismiss" onclick="document.getElementById('post-save-prompt').remove()">${ICONS.get('x', 14)}</button>
             <div class="post-save-body">Session saved. ${bodyText}</div>
             <div class="post-save-actions">
                 <button class="post-save-btn" onmousedown="openGoalFromPrompt(_pendingGoalSkills); document.getElementById('post-save-prompt')?.remove();">
@@ -1814,7 +1804,7 @@ function showReflectionPrompt() {
 
     prompt.innerHTML = `
         <div class="post-save-prompt-inner">
-            <button class="post-save-dismiss" onclick="document.getElementById('reflection-prompt').remove()">×</button>
+            <button class="post-save-dismiss" onclick="document.getElementById('reflection-prompt').remove()">${ICONS.get('x', 14)}</button>
             <div class="post-save-body">Session saved. Want to capture a thought?</div>
             <div class="post-save-actions">
                 <button class="post-save-btn" onclick="document.getElementById('reflection-prompt').remove(); showReflectionOverlay();">
@@ -2227,7 +2217,7 @@ function renderActiveSkillsList(skills) {
         return `
         <div class="swipe-row" data-skill-id="${skill.id}">
             <div class="swipe-action-left swipe-action-remove">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+                ${ICONS.get('x', 16)}
                 remove
             </div>
             <div class="swipe-content">
@@ -4624,7 +4614,7 @@ function renderTimelineEntry(entry) {
         <div class="timeline-content">
             ${typeLabel ? `<span class="timeline-type-label">${typeLabel}</span>` : ''}
             <div class="timeline-title ${isPraise ? 'timeline-praise-text' : ''}">${entry.title}</div>
-            ${entry.body ? `<div class="timeline-subtitle">${entry.body}${hasHighlight ? ' <span class="timeline-star">★</span>' : ''}</div>` : ''}
+            ${entry.body ? `<div class="timeline-subtitle">${entry.body}${hasHighlight ? ` <span class="timeline-star">${ICONS.get('star-fill', 11)}</span>` : ''}</div>` : ''}
             ${isTappable ? `<div class="timeline-tap-hint">tap to review \u2192</div>` : ''}
         </div>
     </div>`;
@@ -4839,7 +4829,7 @@ function renderDetailBlockHtml(sessionSkill) {
     let skillRowHtml = '';
     if (skill) {
         const starHtml = isHighlight
-            ? `<button class="note-block-star" onmousedown="toggleDetailBlockHighlight(${sessionSkill.id})">★</button>`
+            ? `<button class="note-block-star" onmousedown="toggleDetailBlockHighlight(${sessionSkill.id})">${ICONS.get('star-fill', 14)}</button>`
             : '';
         skillRowHtml = `
             <div class="note-block-skill-row">
@@ -4849,7 +4839,7 @@ function renderDetailBlockHtml(sessionSkill) {
     } else if (isHighlight) {
         skillRowHtml = `
             <div class="note-block-highlight-row">
-                <button class="note-block-star" onmousedown="toggleDetailBlockHighlight(${sessionSkill.id})">★</button>
+                <button class="note-block-star" onmousedown="toggleDetailBlockHighlight(${sessionSkill.id})">${ICONS.get('star-fill', 14)}</button>
                 <span class="note-block-highlight-label">highlight</span>
             </div>`;
     }
@@ -5235,7 +5225,7 @@ function buildSkillHighlightsHtml(skillId) {
             <div class="note-block note-block--highlight note-block--gold-bg" id="hl-${item.type}-${item.id}">
                 <div class="note-block-highlight-row">
                     <button class="note-block-star active"
-                            onmousedown="toggleSkillHighlightItem('${item.type}', ${item.id}, '${skillId}')">★</button>
+                            onmousedown="toggleSkillHighlightItem('${item.type}', ${item.id}, '${skillId}')">${ICONS.get('star-fill', 14)}</button>
                     <span class="note-block-highlight-label">${dateStr}</span>
                 </div>
                 ${bodyHtml}${bulletsHtml}
@@ -6377,4 +6367,3 @@ function resetProfile() {
     document.getElementById('onboarding-1').classList.add('active');
     appState.currentScreen = 'onboarding-1';
 }
-

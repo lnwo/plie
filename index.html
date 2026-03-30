@@ -10,6 +10,9 @@
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta name="referrer" content="no-referrer">
 
+    <!-- Phosphor Icons -->
+    <script type="module" src="vendor/phosphor.js"></script>
+
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#5C4F49">
@@ -34,6 +37,334 @@
             <div class="nav-dots">
                 <div class="nav-dot" data-screen="welcome"></div>
                 <div class="nav-dot" data-screen="assessment"></div>
+                <div class="nav-dot" data-screen="profile"></div>
+            </div>
+        </header>
+
+        <!-- Onboarding Screen 1 — Welcome -->
+        <div class="onboarding-screen active" id="onboarding-1">
+            <div class="onboarding-content">
+                <h1 class="onboarding-title">welcome to <span class="brand">plié</span></h1>
+                <p class="onboarding-lead">A training companion for what happens outside the studio</p>
+                <p class="onboarding-body">Log classes and corrections, map your skills with photos and notes, and set goals that follow your training. Designed for dancers and teachers who value clarity and craft.</p>
+            </div>
+            <div class="onboarding-cta">
+                <div class="onboarding-dots">
+                    <div class="onboarding-dot active"></div>
+                    <div class="onboarding-dot"></div>
+                    <div class="onboarding-dot"></div>
+                </div>
+                <button class="btn-large" onclick="nextOnboarding()">get started</button>
+                <div class="onboarding-skip">
+                    <button onclick="skipOnboarding()" style="background:none;border:none;cursor:pointer;font-family:inherit;font-size:inherit;color:inherit;padding:0;">skip</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onboarding Screen 2 — Know where you stand -->
+        <div class="onboarding-screen" id="onboarding-2">
+            <div class="onboarding-logo-small">plié</div>
+            <div class="onboarding-content onboarding-content-top">
+                <h2 class="onboarding-heading">know where you stand</h2>
+                <p class="onboarding-lead">Answer the first four placement questions for a provisional level. The full assessment maps strengths and areas to refine.</p>
+                <p class="onboarding-body">Track technical stages (barre, centre, allegro, turns, flexibility) and artistry (musicality, repertoire). Save teacher corrections, attach photos and videos, and flag skills you want to prioritise.</p>
+
+                <div class="onboarding-examples">
+                    <div class="onboarding-example-row" onclick="this.classList.toggle('open')">
+                        <span class="onboarding-example-label">Flag plié → add photos → build a practice plan</span>
+                        <ph-icon class="onboarding-example-chevron" name="caret-down" size="16" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                        <div class="onboarding-example-detail">Mark any skill as "in focus" from The Barre. Attach photos or videos, log corrections from your teacher, and include it in a 4-week practice programme.</div>
+                    </div>
+                    <div class="onboarding-example-row" onclick="this.classList.toggle('open')">
+                        <span class="onboarding-example-label">Save a correction → see it on the skill page</span>
+                        <ph-icon class="onboarding-example-chevron" name="caret-down" size="16" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                        <div class="onboarding-example-detail">After class, log what your teacher said. Corrections link directly to the skill and appear chronologically — so you can see patterns over time.</div>
+                    </div>
+                    <div class="onboarding-example-row" onclick="this.classList.toggle('open')">
+                        <span class="onboarding-example-label">Set a goal → track it with milestones</span>
+                        <ph-icon class="onboarding-example-chevron" name="caret-down" size="16" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                        <div class="onboarding-example-detail">Goals can link to a specific skill or dimension. Add milestones to break them down — each one you tick off creates a timeline entry.</div>
+                    </div>
+                </div>
+
+                <p class="onboarding-note">The first 4–5 questions give a provisional badge. Complete the full placement for a detailed breakdown.</p>
+            </div>
+            <div class="onboarding-cta">
+                <div class="onboarding-dots">
+                    <div class="onboarding-dot"></div>
+                    <div class="onboarding-dot active"></div>
+                    <div class="onboarding-dot"></div>
+                </div>
+                <div class="onboarding-btn-row">
+                    <button class="btn-large" style="flex:1;" onclick="nextOnboarding()">how it works</button>
+                    <button class="btn-secondary onboarding-btn-secondary" onclick="nextOnboarding()">see examples</button>
+                </div>
+                <div class="onboarding-skip">
+                    <button onclick="skipOnboarding()" style="background:none;border:none;cursor:pointer;font-family:inherit;font-size:inherit;color:inherit;padding:0;">skip</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onboarding Screen 3 — End card -->
+        <div class="onboarding-screen" id="onboarding-3">
+            <div class="onboarding-logo-small">plié</div>
+            <div class="onboarding-content">
+                <h2 class="onboarding-heading">your growth starts here</h2>
+                <p class="onboarding-body" style="max-width: 300px; margin: 0 auto;">The plié is at the heart of classical technique. Begin here — log your first session and start tracking your progress.</p>
+            </div>
+            <div class="onboarding-cta">
+                <div class="onboarding-dots">
+                    <div class="onboarding-dot"></div>
+                    <div class="onboarding-dot"></div>
+                    <div class="onboarding-dot active"></div>
+                </div>
+                <button class="btn-large" onclick="completeOnboarding()">begin</button>
+                <div class="onboarding-skip">
+                    <button onclick="skipOnboarding()" style="background:none;border:none;cursor:pointer;font-family:inherit;font-size:inherit;color:inherit;padding:0;">skip</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assessment Screen -->
+        <div class="screen" id="assessment">
+            <div id="orientation-content"></div>
+        </div>
+
+        <!-- Completion Screen -->
+        <div class="screen" id="completion">
+            <div class="assessment-container">
+                <div class="assessment-header">
+                    <div class="assessment-logo">plié</div>
+                    <div class="assessment-title">placement quiz</div>
+                </div>
+
+                <div class="assessment-content" style="justify-content: center; text-align: center;">
+                    <h1 style="font-family: 'DM Serif Display', serif; font-size: var(--fs-display); font-weight: 400; color: var(--primary); margin-bottom: var(--sp-xl);">That's everything</h1>
+                    <p style="font-size: var(--fs-body); color: var(--text-secondary); line-height: 1.6; margin-bottom: var(--sp-2xl); max-width: 280px; margin-left: auto; margin-right: auto;">
+                        We'll use your answers to find your level and suggest where to focus.
+                    </p>
+                    <button class="btn-large" onclick="submitAssessment()" style="max-width: 280px; margin: 0 auto;">see my results</button>
+                </div>
+
+                <div class="assessment-footer">
+                    <button class="assessment-nav-btn" onclick="returnToLastQuestion()">back</button>
+                    <div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div class="screen" id="results">
+            <div class="assessment-container">
+                <div class="assessment-header">
+                    <div class="assessment-logo">plié</div>
+                    <div class="assessment-title">your results</div>
+                </div>
+
+                <div class="assessment-content" style="text-align: center; padding-bottom: var(--sp-2xl);">
+                    <div class="level-badge" id="resultLevelBadge" style="font-size: var(--fs-small); padding: 10px var(--sp-xl); margin-bottom: var(--sp-md);">IMPROVER</div>
+                    <h1 style="font-family: 'DM Serif Display', serif; font-size: var(--fs-display); font-weight: 400; color: var(--primary); margin-bottom: var(--sp-sm);" id="resultLevel">Improver</h1>
+                    <p style="font-size: var(--fs-body); color: var(--text-secondary); margin-bottom: var(--sp-xl);" id="resultLevelDescription">You have a solid base to build on</p>
+                    
+                    <!-- Dimension breakdown -->
+                    <div id="dimensionBreakdown" style="text-align: left; margin-bottom: var(--sp-xl);"></div>
+
+                    <div style="margin-bottom: var(--sp-lg);">
+                        <p style="font-size: var(--fs-caption); color: var(--text-muted); font-weight: 600; margin-bottom: var(--sp-xs); text-transform: uppercase; letter-spacing: 1.5px;">Strongest area</p>
+                        <p style="font-size: var(--fs-h3); color: var(--primary); font-weight: 600;" id="resultStrength">Flexibility</p>
+                    </div>
+
+                    <div style="margin-bottom: var(--sp-lg);">
+                        <p style="font-size: var(--fs-caption); color: var(--text-muted); font-weight: 600; margin-bottom: var(--sp-xs); text-transform: uppercase; letter-spacing: 1.5px;">Areas to develop</p>
+                        <p style="font-size: var(--fs-h3); color: var(--primary); font-weight: 600;" id="resultFocus">Turns and allegro</p>
+                    </div>
+
+                    <!-- What to work on -->
+                    <div id="resultWorkOn" style="text-align:left; background: var(--accent-wash); border-radius: var(--r-lg); padding: var(--sp-lg); margin-bottom: var(--sp-xl);"></div>
+
+                    <p style="font-size: var(--fs-small); color: var(--text-muted); line-height: 1.6; margin-bottom: var(--sp-xl); max-width: 300px; margin-left: auto; margin-right: auto;">
+                        Your training plan will reflect these results. Reassess any time to track your progress.
+                    </p>
+
+                    <button class="btn-large" onclick="showProfile()" style="max-width: 280px; margin: 0 auto;">continue to your profile</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Screen -->
+        <div class="screen" id="profile">
+
+            <!-- Sticky header — minimal, settings icon replaces level pill -->
+            <div class="profile-sticky-header">
+                <span class="profile-sticky-label">Profile</span>
+                <!-- levelBadge kept hidden for JS backward-compat -->
+                <span id="levelBadge" style="display:none;"></span>
+                <button class="profile-settings-btn" onclick="openSettings()" aria-label="Settings">
+                    <ph-icon name="sliders-horizontal" size="18" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                </button>
+            </div>
+
+            <!-- Above fold: status surface + card stack fill the viewport -->
+            <div class="profile-above-fold">
+
+                <!-- Status area — the background, not a card -->
+                <div class="profile-status" id="profileStatus">
+                    <!-- Rendered by renderProfileStatus() in app.js -->
+                </div>
+
+                <!-- Focus area card stack — anchored to bottom of above-fold -->
+                <div class="focus-card-stack" id="focusCardStack">
+                    <!-- Rendered by renderFocusCardStack() in app.js -->
+                </div>
+
+            </div>
+
+            <!-- My skills section — rendered by initProfile() -->
+            <div id="profile-my-skills"></div>
+
+            <!-- profileDimensions kept as empty div for any legacy JS references -->
+            <div id="profileDimensions" style="display:none;"></div>
+
+        </div>
+
+        <!-- Focus Area Sheet (bottom sheet, same pattern as session logger) -->
+        <div class="session-overlay" id="focus-area-overlay" onclick="closeFocusAreaSheetOnBackdrop(event)">
+            <div class="session-logger-sheet" onclick="event.stopPropagation()">
+                <div class="session-sheet-handle"></div>
+                <div class="session-logger-header" id="focus-sheet-header">
+                    <div>
+                        <div class="session-logger-eyebrow" id="focus-sheet-eyebrow">Focus area</div>
+                        <h2 class="session-logger-title" id="focus-sheet-title"></h2>
+                    </div>
+                    <button class="session-close-btn" onclick="closeFocusAreaSheet()">
+                        <ph-icon name="x" size="18" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                    </button>
+                </div>
+                <div class="focus-sheet-tab-row" id="focus-sheet-tabs"></div>
+                <div class="session-logger-body" id="focus-sheet-body"></div>
+            </div>
+        </div>
+
+        <!-- Settings Sheet -->
+        <div class="session-overlay" id="settings-overlay" onclick="closeSettingsOnBackdrop(event)">
+            <div class="session-logger-sheet" onclick="event.stopPropagation()">
+                <div class="session-sheet-handle"></div>
+                <div class="session-logger-header">
+                    <div>
+                        <div class="session-logger-eyebrow">plié</div>
+                        <h2 class="session-logger-title">Settings</h2>
+                    </div>
+                    <button class="session-close-btn" onclick="closeSettings()">
+                        <ph-icon name="x" size="18" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                    </button>
+                </div>
+                <div class="session-logger-body" id="settings-body">
+                    <!-- Rendered by renderSettings() -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Picture Picker Sheet -->
+        <div class="session-overlay" id="pic-picker-overlay" onclick="closePicPickerOnBackdrop(event)">
+            <div class="session-logger-sheet" style="height:70%;" onclick="event.stopPropagation()">
+                <div class="session-sheet-handle"></div>
+                <div class="session-logger-header">
+                    <div>
+                        <div class="session-logger-eyebrow">Profile</div>
+                        <h2 class="session-logger-title">Choose a picture</h2>
+                    </div>
+                    <button class="session-close-btn" onclick="closePicPicker()">
+                        <ph-icon name="x" size="18" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                    </button>
+                </div>
+                <div class="session-logger-body" id="pic-picker-body">
+                    <!-- Rendered by renderPicPicker() -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Action Button -->
+        <button class="fab" onclick="openFabActionSheet()" aria-label="Add">
+            <ph-icon name="plus" size="22" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+        </button>
+
+        <!-- FAB Action Sheet -->
+        <div id="fab-action-sheet" class="fab-action-sheet" style="display:none;" onmousedown="closeFabActionSheet()">
+            <div class="fab-action-sheet-inner" onclick="event.stopPropagation()">
+                <div class="fab-action-sheet-handle"></div>
+                <button class="fab-action-item" onmousedown="closeFabActionSheet(); openSessionLogger();">
+                    <span class="fab-action-icon">
+                        <ph-icon name="calendar-plus" size="20" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                    </span>
+                    <span class="fab-action-text">
+                        <span class="fab-action-label">Log a session</span>
+                        <span class="fab-action-sub">class notes &amp; corrections</span>
+                    </span>
+                    <ph-icon class="fab-action-chevron" name="caret-right" size="14" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                </button>
+                <button class="fab-action-item" onmousedown="closeFabActionSheet(); openSessionLogger('note');">
+                    <span class="fab-action-icon">
+                        <ph-icon name="note-pencil" size="20" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                    </span>
+                    <span class="fab-action-text">
+                        <span class="fab-action-label">Add a note</span>
+                        <span class="fab-action-sub">quick capture, no session needed</span>
+                    </span>
+                    <ph-icon class="fab-action-chevron" name="caret-right" size="14" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                </button>
+                <button class="fab-action-item" onmousedown="closeFabActionSheet(); openGoalCreator();">
+                    <span class="fab-action-icon">
+                        <ph-icon name="target" size="20" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                    </span>
+                    <span class="fab-action-text">
+                        <span class="fab-action-label">Set a goal</span>
+                        <span class="fab-action-sub">skill, intention, or habit</span>
+                    </span>
+                    <ph-icon class="fab-action-chevron" name="caret-right" size="14" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                </button>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <div class="nav-menu">
+                <div class="nav-item" onclick="navigateTo('barre')" data-nav="barre">
+                    <div class="nav-icon">
+                        <ph-icon name="person-simple-tai-chi" size="22" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                    </div>
+                    <div class="nav-label">The Barre</div>
+                </div>
+                <div class="nav-item" onclick="navigateTo('goals')" data-nav="goals">
+                    <div class="nav-icon">
+                        <ph-icon name="target" size="22" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                    </div>
+                    <div class="nav-label">Goals</div>
+                </div>
+                <div class="nav-item" onclick="navigateTo('learn')" data-nav="learn">
+                    <div class="nav-icon">
+                        <ph-icon name="book-open" size="22" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                    </div>
+                    <div class="nav-label">Learn</div>
+                </div>
+                <div class="nav-item" onclick="navigateTo('profile')" data-nav="profile">
+                    <div class="nav-icon">
+                        <ph-icon name="user" size="22" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                    </div>
+                    <div class="nav-label">Profile</div>
+                </div>
+            </div>
+        </nav>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/router.js"></script>
+    <script src="illustrations.js"></script>
+    <script src="app.js"></script>
+
+</body>
+</html>
                 <div class="nav-dot" data-screen="profile"></div>
             </div>
         </header>
