@@ -2911,7 +2911,7 @@ function renderGoalCard(goal, completed) {
             <div class="swipe-content">
                 <div class="goal-card ${completed ? 'goal-card-completed' : ''}">
                     ${tagsHtml ? `<div class="goal-tags">${tagsHtml}</div>` : ''}
-                    <div class="goal-card-title">${completed ? '<span class="goal-complete-tick">&#x2713;</span>' : ''}${goal.title}</div>
+                    <div class="goal-card-title">${completed ? '<span class="goal-complete-tick"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="11" fill="var(--sage)"/><polyline points="5.5,11 9,14.5 16.5,7.5" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : ''}${goal.title}</div>
                     ${goal.body ? `<div class="goal-card-body">${renderClampedHtml(nl2br(goal.body), 'gb-' + goal.id)}</div>` : ''}
                     ${markersHtml}
                     ${progressBarHtml}
