@@ -5546,19 +5546,18 @@ mark.search-highlight {
    GOAL CARD — updated styles
    ═══════════════════════════════════════ */
 
-.goal-card-completed {
-    background: var(--surface-raised);
-}
-
 .goal-card-completed .goal-card-title {
-    opacity: 0.55;
+    text-decoration: line-through;
+    color: var(--ink-3);
 }
-
 .goal-complete-tick {
-    color: var(--sage);
-    font-size: var(--fs-small);
-    margin-right: var(--sp-xs);
+    display: inline-flex;
+    align-items: center;
+    margin-right: var(--sp-sm);
     flex-shrink: 0;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
 }
 
 .goal-card-date::before {
