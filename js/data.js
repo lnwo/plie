@@ -15,6 +15,41 @@ const DATA = {
         { id: 'fouette',        french: 'Fouetté',        phonetic: 'fweh-TAY',          english: 'Whipped',           difficulty: 'advanced',     category: 'Turns',        dimensionId: 'turns',   aliases: ['fouette', 'whip', 'fouette turns', 'fouettés'] },
         { id: 'grand-jete',     french: 'Grand jeté',     phonetic: 'grahn zhuh-TAY',    english: 'Large throw',       difficulty: 'advanced',     category: 'Jumps',        dimensionId: 'allegro', aliases: ['grand jete', 'split jump', 'leap']            },
         { id: 'manege',         french: 'Manège',         phonetic: 'ma-NEZH',           english: 'Riding school',     difficulty: 'advanced',     category: 'Centre Work',  dimensionId: 'centre',  aliases: ['manege', 'travelling turns', 'en manege']     },
+        { id: 'chaine', french: 'Chaînés', phonetic: 'sheh-NAY', english: 'Chains', difficulty: 'beginner', category: 'Turns', dimensionId: 'turns', aliases: ['chaines', 'chain turns'] },
+
+        { id: 'piqué-turn', french: 'Piqué turn', phonetic: 'pee-KAY', english: 'Pricked turn', difficulty: 'improver', category: 'Turns', dimensionId: 'turns', aliases: ['pique turn', 'step turn'] },
+
+        { id: 'soutenu', french: 'Soutenu', phonetic: 'soo-tuh-NEW', english: 'Sustained turn', difficulty: 'improver', category: 'Turns', dimensionId: 'turns', aliases: ['soutenu'] },
+
+        { id: 'detourne', french: 'Détourné', phonetic: 'day-toor-NAY', english: 'Turned away', difficulty: 'improver', category: 'Turns', dimensionId: 'turns', aliases: ['detourne'] },
+
+        { id: 'renverse', french: 'Renversé', phonetic: 'rahn-vehr-SAY', english: 'Overturned', difficulty: 'intermediate', category: 'Turns', dimensionId: 'turns', aliases: ['renverse'] },
+
+        { id: 'tour-en-lair', french: 'Tour en l’air', phonetic: 'toor ahn LAIR', english: 'Turn in the air', difficulty: 'advanced', category: 'Turns', dimensionId: 'turns', aliases: ['tour en lair'] },
+
+        { id: 'italian-fouette', french: 'Fouetté à l’italienne', phonetic: 'fweh-TAY', english: 'Italian fouetté', difficulty: 'advanced', category: 'Turns', dimensionId: 'turns', aliases: ['italian fouette'] },
+        { id: 'saute', french: 'Sauté', phonetic: 'soh-TAY', english: 'Jumped', difficulty: 'beginner', category: 'Allegro', dimensionId: 'allegro', aliases: ['saute', 'jump'] },
+
+        { id: 'changement', french: 'Changement', phonetic: 'shahnzh-MAHN', english: 'Change', difficulty: 'beginner', category: 'Allegro', dimensionId: 'allegro', aliases: ['changement'] },
+
+        { id: 'echappe', french: 'Échappé', phonetic: 'ay-sha-PAY', english: 'Escaped', difficulty: 'beginner', category: 'Allegro', dimensionId: 'allegro', aliases: ['echappe'] },
+
+        { id: 'temps-leve', french: 'Temps levé', phonetic: 'tahn luh-VAY', english: 'Raised time', difficulty: 'improver', category: 'Allegro', dimensionId: 'allegro', aliases: ['temps leve'] },
+
+        { id: 'cabriole', french: 'Cabriole', phonetic: 'ka-bree-OL', english: 'Caper', difficulty: 'advanced', category: 'Allegro', dimensionId: 'allegro', aliases: ['cabriole'] },
+
+        { id: 'entrechat', french: 'Entrechat', phonetic: 'ahn-truh-SHA', english: 'Beaten jump', difficulty: 'intermediate', category: 'Allegro', dimensionId: 'allegro', aliases: ['entrechat', 'beats'] },
+
+        { id: 'brise', french: 'Brisé', phonetic: 'bree-ZAY', english: 'Broken', difficulty: 'advanced', category: 'Allegro', dimensionId: 'allegro', aliases: ['brise'] },
+
+        { id: 'grand-sissonne', french: 'Grand sissonne', phonetic: 'grahn see-SAWN', english: 'Large sissonne', difficulty: 'intermediate', category: 'Allegro', dimensionId: 'allegro', aliases: ['grand sissonne'] },
+        { id: 'releve-pointe', french: 'Relevé en pointe', phonetic: 'ruh-luh-VAY', english: 'Rise to pointe', difficulty: 'improver', category: 'Pointe Work', dimensionId: 'pointe', aliases: ['releve pointe'] },
+
+        { id: 'echappe-pointe', french: 'Échappé en pointe', phonetic: 'ay-sha-PAY', english: 'Escape on pointe', difficulty: 'improver', category: 'Pointe Work', dimensionId: 'pointe', aliases: ['echappe pointe'] },
+
+        { id: 'bourree-pointe', french: 'Bourrée', phonetic: 'boo-RAY', english: 'Tiny steps', difficulty: 'improver', category: 'Pointe Work', dimensionId: 'pointe', aliases: ['bourree pointe'] },
+
+        { id: 'piqué-pointe', french: 'Piqué en pointe', phonetic: 'pee-KAY', english: 'Step onto pointe', difficulty: 'intermediate', category: 'Pointe Work', dimensionId: 'pointe', aliases: ['pique pointe'] },
     ],
 
     folders: {
@@ -425,68 +460,134 @@ const DATA = {
             {
                 name: 'Musical accents',
                 chip: 'Rhythm',
-                description: 'The points of emphasis within a bar. Identifying and responding to musical accents gives movement clarity and rhythmic interest.',
-                keyPoints: ['Content coming soon.']
+                description: 'Accents are the points in the music that land with weight or emphasis. In class, they often determine where a movement feels sharp, suspended, or grounded. Missing them can make dancing look disconnected even if the steps are correct.',
+                keyPoints: [
+                    'Listen for where the music “lands” — often the start of a bar, but not always.',
+                    'Clap along to a waltz (3/4) and notice the stronger first beat: ONE-two-three.',
+                    'Try matching a tendu or plié to the accented beat rather than moving evenly through all counts.',
+                    'Look up a simple ballet class track and identify which counts feel heavier or lighter.',
+                    'Accents can be followed or resisted — both are used, but it should be a choice.'
+                ]
             },
             {
                 name: 'Syncopation',
                 chip: 'Rhythm',
-                description: 'Rhythm that falls between the beats, creating surprise and energy. Used sparingly in classical ballet but common in contemporary work.',
-                keyPoints: ['Content coming soon.']
+                description: 'Syncopation places emphasis between the main beats. It creates a feeling of suspension or surprise, and often appears in faster allegro or more complex combinations.',
+                keyPoints: [
+                    'Count “1 and 2 and” and notice the space between the numbers.',
+                    'Clap on the “and” instead of the number to feel the shift in emphasis.',
+                    'Listen to faster class music and try to hear where movement might sit between beats.',
+                    'Practise marking small steps (like jeté or glissade) on off-beats.',
+                    'If it feels rushed, it usually means the timing hasn’t settled yet.'
+                ]
             },
             {
                 name: 'The arc of a phrase',
                 chip: 'Phrasing',
-                description: 'Every musical phrase has a shape — a rise and fall of energy. Dancing the arc means responding to that shape rather than executing steps mechanically.',
-                keyPoints: ['Content coming soon.']
+                description: 'Most ballet music is structured in phrases that build and resolve. Dancing the phrase means recognising where it begins, develops, and finishes, rather than treating each step equally.',
+                keyPoints: [
+                    'Listen for musical “sentences” — often 8 counts, sometimes longer.',
+                    'Notice where the music seems to rise in intensity and where it resolves.',
+                    'Mark a simple port de bras and let it grow across the phrase rather than repeating the same quality.',
+                    'Avoid using full energy at the start — leave space for the phrase to build.',
+                    'Look up a familiar adagio and track where the music peaks.'
+                ]
             },
             {
                 name: 'Dancing through the music',
                 chip: 'Phrasing',
-                description: 'Moving with the music rather than to it — allowing the sound to flow through the body rather than simply marking time.',
-                keyPoints: ['Content coming soon.']
+                description: 'Movement doesn’t stop when one step ends and another begins. This is about allowing transitions to carry the phrase, rather than breaking it into separate actions.',
+                keyPoints: [
+                    'Notice where you tend to “reset” between steps — that’s where flow is lost.',
+                    'Practise linking movements slowly without stopping, even when marking.',
+                    'Listen to legato (smooth) passages and match that continuity in the body.',
+                    'Avoid treating counts as isolated checkpoints.',
+                    'The aim is continuity, not speed.'
+                ]
             },
             {
                 name: 'Soft and sharp contrast',
                 chip: 'Dynamics',
-                description: 'The interplay between sustained, fluid movement and quick, precise action. One of the primary tools for creating expressive texture.',
-                keyPoints: ['Content coming soon.']
+                description: 'Contrast in movement quality reflects contrast in the music. Without it, dancing can look flat even when rhythm is correct.',
+                keyPoints: [
+                    'Listen for sustained vs percussive sounds in the music.',
+                    'Mark the same phrase twice: once as smoothly as possible, once with clear accents.',
+                    'Notice how different qualities change the feel of the same steps.',
+                    'Look up contrasting excerpts (e.g. adagio vs allegro) and observe the difference.',
+                    'Clarity comes from contrast, not exaggeration.'
+                ]
             },
             {
                 name: 'Building to a climax',
                 chip: 'Dynamics',
-                description: 'Shaping a phrase or variation so that energy accumulates towards a peak moment, then releases.',
-                keyPoints: ['Content coming soon.']
+                description: 'Phrases often build towards a peak moment. Recognising this changes how you distribute energy across a combination.',
+                keyPoints: [
+                    'Listen for where the music becomes fullest or most intense.',
+                    'Mark a phrase and gradually increase size or energy towards that point.',
+                    'Avoid “peaking” too early — it flattens the rest of the phrase.',
+                    'Observe how professional dancers hold something back until the right moment.',
+                    'After the peak, allow the movement to resolve rather than stop abruptly.'
+                ]
             },
             {
                 name: 'Weight and lightness',
                 chip: 'Dynamics',
-                description: 'The quality of movement — heavy and grounded versus light and aerial. Both are valid and both require control.',
-                keyPoints: ['Content coming soon.']
+                description: 'Movement quality shifts between grounded and lifted. Both are present in ballet, often within the same phrase.',
+                keyPoints: [
+                    'Listen for heavier, grounded sections versus lighter, lifted ones.',
+                    'Use plié to connect to weight; use rise and extension to create lightness.',
+                    'Mark a simple sequence and exaggerate the difference between heavy and light.',
+                    'Look up contrasting repertoire and observe how weight changes the movement quality.',
+                    'Lightness is controlled, not loose.'
+                ]
             },
             {
                 name: 'Romantic style',
                 chip: 'Style',
-                description: 'The aesthetic of early 19th century ballet — ethereal, soft, and otherworldly. Associated with works like Giselle and La Sylphide.',
-                keyPoints: ['Content coming soon.']
+                description: 'Associated with early 19th-century ballets, this style is shaped by soft phrasing, continuous movement, and an almost weightless quality.',
+                keyPoints: [
+                    'Look up a Giselle Act II variation and observe the continuous flow of the upper body.',
+                    'Notice how transitions are softened rather than clearly segmented.',
+                    'Arms and head lead the phrasing as much as the legs.',
+                    'Mark port de bras with minimal sharpness or attack.',
+                    'The quality comes from continuity, not slowness.'
+                ]
             },
             {
                 name: 'Neoclassical style',
                 chip: 'Style',
-                description: 'Balanchine\'s reinvention of classical form — leaner, faster, more abstract. Less narrative, more musical.',
-                keyPoints: ['Content coming soon.']
+                description: 'A faster, more direct use of classical technique. Movement is often sharper, more exposed, and closely tied to the structure of the music.',
+                keyPoints: [
+                    'Look up Balanchine excerpts and notice the speed and precision.',
+                    'Steps are often more clearly defined rather than blended together.',
+                    'Musicality is exact — closely tied to counts and structure.',
+                    'Mark combinations with clearer starts and finishes.',
+                    'Less softness, more clarity.'
+                ]
             },
             {
                 name: 'Soviet school style',
                 chip: 'Style',
-                description: 'The Vaganova-influenced aesthetic of the Bolshoi and Mariinsky — expansive, dramatic, technically rigorous.',
-                keyPoints: ['Content coming soon.']
+                description: 'Characterised by expansive movement, strong line, and a more dramatic use of the music. Often associated with Vaganova-based training.',
+                keyPoints: [
+                    'Look up Bolshoi or Mariinsky performances and observe the scale of movement.',
+                    'Phrasing tends to be broad and sustained rather than quick and detailed.',
+                    'Use of épaulement and upper body is more pronounced.',
+                    'Mark phrases with fuller use of space and extension.',
+                    'Energy is carried through the whole phrase, not just individual steps.'
+                ]
             },
             {
                 name: 'Beginning and ending',
                 chip: 'Phrasing',
-                description: 'How a phrase starts and how it finishes. Both are as important as the movement in between.',
-                keyPoints: ['Content coming soon.']
+                description: 'How a movement starts and finishes shapes how it is perceived. These moments often align directly with the structure of the music.',
+                keyPoints: [
+                    'Listen for where the music begins — movement often starts just before or exactly on it.',
+                    'Practise preparing before the first count rather than reacting to it.',
+                    'Notice how endings are held or released with the music, not cut off early.',
+                    'Mark simple combinations focusing only on the first and last moments.',
+                    'A clear ending often matters more than what happens in the middle.'
+                ]
             }
         ]
     },
@@ -498,8 +599,7 @@ const DATA = {
         chips: ['All', 'Strength', 'Flexibility', 'Stability', 'Warm-up'],
         action: null,
         items: [
-            {
-                name: 'Theraband foot exercises',
+            { name: 'Theraband foot exercises',
                 chip: 'Strength',
                 description: 'Targeted resistance work for the intrinsic muscles of the foot. Builds the strength needed for a controlled, graduated relevé and a safe pointe.',
                 keyPoints: ['Work through the full range — from flat to three-quarter to full pointe.', 'Resist on the way down.', 'Keep the toes long, not gripped.']
@@ -511,82 +611,160 @@ const DATA = {
                 keyPoints: ['Micro-adjustments are normal — stillness is managed, not frozen.', 'Eyes on a fixed point.', 'Breathe.']
             },
             {
+                name: 'Floor stretch sequence',
+                chip: 'Warm-up',
+                description: 'A short mat-based sequence to prepare hips, hamstrings, and spine before class. It’s not about pushing range — it’s about arriving at the barre with the body already moving and responsive.',
+                keyPoints: [
+                    'Hamstrings: seated forward fold or one-leg stretch, 30–45 seconds each side.',
+                    'Hips: low lunge or lunge with back knee down, 30–45 seconds each side.',
+                    'Glutes: figure-four or external rotation stretch, 30 seconds each side.',
+                    'Spine: gentle roll-downs or supine twists to introduce movement through the back.',
+                    'Keep everything low-intensity — you should feel warmer, not stretched out.'
+                ]
+            },
+            {
                 name: 'Calf raises',
                 chip: 'Strength',
-                description: 'A fundamental exercise for building the calf and Achilles strength required for a high, stable relevé.',
-                keyPoints: ['Content coming soon.']
+                description: 'A simple, repeatable way to build the strength needed for relevé. This is less about effort and more about consistency — done regularly, it changes how stable you feel in class.',
+                keyPoints: [
+                    '2 sets of 10–15 slow rises on two legs.',
+                    'Optional: 1 set of 8–10 on each leg individually.',
+                    'Use a wall or barre lightly for balance, not support.',
+                    'Take 2 counts up, 2 counts down — don’t rush the lowering.',
+                    'Stop before form breaks rather than pushing extra reps.'
+                ]
             },
             {
                 name: 'Turnout muscle engagement',
                 chip: 'Strength',
-                description: 'Targeted activation of the deep external rotators — the muscles responsible for maintaining turnout without strain.',
-                keyPoints: ['Content coming soon.']
+                description: 'A way to reconnect to turnout outside of class. This isn’t about increasing range — it’s about recognising and holding the muscles that support it.',
+                keyPoints: [
+                    'Sit or lie with legs extended, gently rotate legs outward and return to parallel.',
+                    'Repeat 10–15 slow rotations without moving the pelvis.',
+                    'Alternative: stand in first position and lightly engage turnout without gripping.',
+                    'Focus on small, controlled movement rather than range.',
+                    'If the feet move more than the thighs, reset and reduce effort.'
+                ]
             },
             {
                 name: 'Core activation',
                 chip: 'Strength',
-                description: 'Engaging the deep abdominal and back muscles that stabilise the spine and pelvis during movement.',
-                keyPoints: ['Content coming soon.']
+                description: 'Establishes the quiet support needed for balance and control. This is less about visible effort and more about consistency of engagement.',
+                keyPoints: [
+                    'Supine position: engage low abdominals and hold for 20–30 seconds.',
+                    'Add slow leg lifts or toe taps while keeping the pelvis stable.',
+                    'Repeat 2–3 rounds.',
+                    'Keep breathing steady — avoid holding tension in the upper body.',
+                    'If the lower back lifts or arches, reduce the range of movement.'
+                ]
             },
             {
                 name: 'Hip flexor stretch',
                 chip: 'Flexibility',
-                description: 'Lengthening the muscles at the front of the hip — essential for a free, high arabesque and a clean attitude derrière.',
-                keyPoints: ['Content coming soon.']
+                description: 'Releases the front of the hip, which can tighten from sitting or repeated class work. Helps restore ease in movements behind the body.',
+                keyPoints: [
+                    'Low lunge position with back knee down, hold 30–60 seconds each side.',
+                    'Keep torso upright and hips level.',
+                    'Lightly engage the back leg glute to deepen the stretch.',
+                    'Repeat once or twice rather than forcing a single long hold.',
+                    'Avoid pushing into discomfort in the lower back.'
+                ]
             },
             {
                 name: 'Hamstring lengthening',
                 chip: 'Flexibility',
-                description: 'Progressive stretching of the hamstrings to support développé height and grand battement.',
-                keyPoints: ['Content coming soon.']
+                description: 'A simple way to maintain or improve range through the back of the legs between classes, without losing control.',
+                keyPoints: [
+                    'Seated forward fold or standing hamstring stretch, 30–45 seconds each side.',
+                    'Keep spine long rather than collapsing forward.',
+                    'Optional: gentle pulses or contract–relax for 2–3 cycles.',
+                    'Repeat both sides once.',
+                    'Stop before the stretch becomes passive or heavy.'
+                ]
             },
             {
                 name: 'Back cambrée stretch',
                 chip: 'Flexibility',
-                description: 'Mobilising the thoracic and lumbar spine for port de bras and back bends.',
-                keyPoints: ['Content coming soon.']
+                description: 'Introduces gentle extension through the spine. Useful before class to counter stiffness without forcing range.',
+                keyPoints: [
+                    'Standing or kneeling, place hands on hips or reach overhead.',
+                    'Gently arch back for 10–15 seconds, return to neutral.',
+                    'Repeat 3–5 times rather than holding a deep position.',
+                    'Keep the movement distributed through the spine.',
+                    'Avoid dropping into the lower back.'
+                ]
             },
             {
                 name: 'Splits progression',
                 chip: 'Flexibility',
-                description: 'A structured approach to working towards full splits, building flexibility safely over time.',
-                keyPoints: ['Content coming soon.']
+                description: 'A consistent approach to working towards splits over time. The aim is gradual change, not immediate depth.',
+                keyPoints: [
+                    'Front split position with hands supported, hold 30–60 seconds each side.',
+                    'Focus on keeping hips square rather than going lower.',
+                    'Optional: come out, then repeat for a second round.',
+                    'Add gentle pulses or small shifts forward/back if stable.',
+                    'Stop if alignment is lost — depth comes later.'
+                ]
             },
             {
                 name: 'Ankle stability drill',
                 chip: 'Stability',
-                description: 'Exercises targeting the ankle stabilisers — important for pointe work, landings, and balance.',
-                keyPoints: ['Content coming soon.']
+                description: 'A short set of exercises to improve control around the ankle joint. Particularly useful for anyone working towards pointe or improving balance.',
+                keyPoints: [
+                    'Single-leg balance for 30 seconds each side.',
+                    'Repeat 2–3 times per side.',
+                    'Progress by closing eyes or turning the head slowly.',
+                    'Keep the standing leg aligned — no rolling in or out.',
+                    'If balance is lost immediately, reduce difficulty rather than pushing through.'
+                ]
             },
             {
                 name: 'Relevé hold',
                 chip: 'Stability',
-                description: 'Sustaining a relevé position to build the endurance and control needed for pirouette preparation and pointe work.',
-                keyPoints: ['Content coming soon.']
+                description: 'Builds endurance at the top of relevé. This is where many movements begin and end, so holding it matters more than repeating it.',
+                keyPoints: [
+                    'Rise to relevé and hold for 20–30 seconds.',
+                    'Repeat 2–3 times.',
+                    'Use light support if needed to maintain alignment.',
+                    'Keep the height consistent — don’t gradually lower.',
+                    'Stop when you can’t maintain control at the top.'
+                ]
             },
             {
                 name: 'Proprioception exercises',
                 chip: 'Stability',
-                description: 'Training the body\'s awareness of its own position in space — the foundation of reliable balance.',
-                keyPoints: ['Content coming soon.']
+                description: 'Improves the body’s ability to adjust and correct balance without conscious effort. This carries directly into turns and transitions.',
+                keyPoints: [
+                    'Single-leg balance with small arm movements, 30 seconds each side.',
+                    'Repeat with eyes closed if stable.',
+                    'Add slow head turns to increase challenge.',
+                    'Work for 2–3 rounds total.',
+                    'Focus on recovering balance quickly, not avoiding loss entirely.'
+                ]
             },
             {
                 name: 'Joint mobilisation',
                 chip: 'Warm-up',
-                description: 'Gentle movement through the full range of each joint before class to prepare the body and reduce injury risk.',
-                keyPoints: ['Content coming soon.']
+                description: 'A brief sequence to move joints through range before class. Helps reduce stiffness and prepares the body for load.',
+                keyPoints: [
+                    'Ankles: slow circles or flex/point, 10–15 each direction.',
+                    'Hips: gentle rotations or open/close movements, 10 each side.',
+                    'Spine: roll-downs and roll-ups, 5–8 repetitions.',
+                    'Keep movements continuous and controlled.',
+                    'Total time: 3–5 minutes, not a full workout.'
+                ]
             },
             {
                 name: 'Barre warm-up sequence',
                 chip: 'Warm-up',
-                description: 'A structured sequence of exercises designed to warm the body progressively from feet to spine.',
-                keyPoints: ['Content coming soon.']
-            },
-            {
-                name: 'Floor stretch sequence',
-                chip: 'Warm-up',
-                description: 'A mat-based routine for releasing tension and preparing the hips, hamstrings, and back before training.',
-                keyPoints: ['Content coming soon.']
+                description: 'A simple structure to ease into class when needed. Not a replacement for class barre, but a way to arrive more prepared.',
+                keyPoints: [
+                    'Start with pliés: 1–2 slow sets in first and second.',
+                    'Add tendus: 4 each direction, each side.',
+                    'Include a few slow relevés to wake up the feet.',
+                    'Keep everything controlled and moderate in range.',
+                    'Total time: 5–10 minutes before class or at home.'
+                ]
             }
         ]
     },
@@ -613,80 +791,158 @@ const DATA = {
             {
                 name: 'The Sleeping Beauty',
                 chip: 'Classical',
-                description: 'A three-act ballet considered the pinnacle of the classical style. Petipa\'s choreography and Tchaikovsky\'s score are inseparable.',
-                keyPoints: ['Content coming soon.']
+                description: 'Often considered the purest expression of the classical style. Petipa’s choreography and Tchaikovsky’s score are tightly structured, leaving little room to hide — clarity, placement, and musical precision are exposed throughout.',
+                keyPoints: [
+                    'Choreography: Marius Petipa. Music: Pyotr Ilyich Tchaikovsky.',
+                    'Look at the Rose Adagio — sustained balances, transitions, and control under pressure.',
+                    'Notice how phrasing aligns closely with the structure of the music.',
+                    'Every position is held and shown — there is no rushing through steps.',
+                    'This is a useful reference for what “clean” classical technique looks like.'
+                ]
             },
             {
                 name: 'The Nutcracker',
                 chip: 'Classical',
-                description: 'A two-act Christmas ballet that has become one of the most performed works in the repertoire worldwide.',
-                keyPoints: ['Content coming soon.']
+                description: 'A gateway ballet for many, but structurally varied and musically rich. It moves between narrative clarity and a sequence of character and divertissement dances in Act II.',
+                keyPoints: [
+                    'Choreography: Marius Petipa (after Ivanov). Music: Pyotr Ilyich Tchaikovsky.',
+                    'Act I is driven by narrative and mime; Act II shifts to display and variation.',
+                    'Notice the clarity of character in each divertissement — each dance has a distinct quality.',
+                    'The Sugar Plum Fairy variation shows control, delicacy, and musical restraint.',
+                    'Useful for observing how style shifts within a single work.'
+                ]
             },
             {
                 name: 'Don Quixote',
                 chip: 'Classical',
-                description: 'A virtuosic, character-driven ballet based on Cervantes. Famous for its technically demanding pas de deux and vibrant Spanish flavour.',
-                keyPoints: ['Content coming soon.']
+                description: 'A technically demanding, character-driven ballet rooted in Spanish style. Known for its speed, attack, and virtuosity, particularly in the roles of Kitri and Basilio.',
+                keyPoints: [
+                    'Choreography: Marius Petipa (with later revisions). Music: Ludwig Minkus.',
+                    'Look at the grand pas de deux — fast footwork, multiple turns, and strong accents.',
+                    'Movement is direct and grounded compared to more lyrical works.',
+                    'Use of épaulement is bold and clearly defined.',
+                    'A good reference for projection, attack, and stamina.'
+                ]
             },
             {
                 name: 'La Bayadère',
                 chip: 'Classical',
-                description: 'A grand Petipa ballet set in ancient India. The Kingdom of the Shades scene is one of the most celebrated sequences in classical ballet.',
-                keyPoints: ['Content coming soon.']
+                description: 'A grand narrative ballet best known for the Kingdom of the Shades. Combines dramatic storytelling with one of the most structurally rigorous ensemble scenes in the repertoire.',
+                keyPoints: [
+                    'Choreography: Marius Petipa. Music: Ludwig Minkus.',
+                    'The Shades scene is about absolute uniformity — timing, spacing, and control.',
+                    'Notice the repetition of arabesque lines and the demand for consistency.',
+                    'The simplicity of the choreography exposes placement and balance.',
+                    'Often used as a benchmark for corps de ballet precision.'
+                ]
             },
             {
                 name: 'La Sylphide',
                 chip: 'Romantic',
-                description: 'The work that defined the Romantic era in ballet. White tutus, pointe work as ethereal illusion, and the unattainable ideal.',
-                keyPoints: ['Content coming soon.']
+                description: 'One of the defining works of the Romantic era. It introduced the aesthetic of lightness, softness, and the supernatural female figure on pointe.',
+                keyPoints: [
+                    'Choreography: August Bournonville (Danish version). Music: Herman Severin Løvenskiold.',
+                    'Footwork is quick and intricate, particularly in the Bournonville style.',
+                    'Upper body remains soft and understated.',
+                    'The Sylph should appear weightless, almost unattainable.',
+                    'A useful contrast to later, more expansive classical works.'
+                ]
             },
             {
                 name: 'Coppélia',
                 chip: 'Romantic',
-                description: 'A comic ballet about a toymaker\'s life-size doll. Lighter in tone than most Romantic works, with a happy ending.',
-                keyPoints: ['Content coming soon.']
+                description: 'A lighter, comedic ballet with detailed character work. It combines technical clarity with theatrical timing and precision.',
+                keyPoints: [
+                    'Choreography: Arthur Saint-Léon. Music: Léo Delibes.',
+                    'Swanilda’s role requires sharp musicality and clear character choices.',
+                    'Mime and gesture are central, not secondary.',
+                    'Movement is precise and often quick, without heaviness.',
+                    'A good reference for musical timing and character detail.'
+                ]
             },
             {
                 name: 'Les Sylphides',
                 chip: 'Romantic',
-                description: 'Fokine\'s plotless evocation of the Romantic spirit, set to Chopin. A pivotal work in the transition towards modern ballet.',
-                keyPoints: ['Content coming soon.']
+                description: 'A plotless ballet that distils the Romantic aesthetic into pure movement. Set to Chopin, it prioritises atmosphere, phrasing, and musical response over narrative.',
+                keyPoints: [
+                    'Choreography: Michel Fokine. Music: Frédéric Chopin.',
+                    'No story — focus is entirely on musicality and line.',
+                    'Transitions are continuous and understated.',
+                    'The corps moves as a single, cohesive presence.',
+                    'Useful for observing phrasing without narrative distraction.'
+                ]
             },
             {
                 name: 'Romeo and Juliet',
                 chip: 'Contemporary',
-                description: 'Prokofiev\'s score has inspired numerous choreographic versions. MacMillan\'s for the Royal Ballet is among the most celebrated.',
-                keyPoints: ['Content coming soon.']
+                description: 'A dramatic full-length ballet shaped as much by acting as technique. MacMillan’s version is particularly known for its emotional intensity and naturalistic movement.',
+                keyPoints: [
+                    'Choreography: Kenneth MacMillan. Music: Sergei Prokofiev.',
+                    'Movement often departs from strict classical form to serve the drama.',
+                    'Look at the balcony pas de deux — sustained lifts and shifting weight.',
+                    'Timing is closely tied to emotional phrasing, not just counts.',
+                    'A reference for integrating acting and technique.'
+                ]
             },
             {
                 name: 'Manon',
                 chip: 'Contemporary',
-                description: 'Kenneth MacMillan\'s intensely dramatic full-length ballet, set to Massenet. A demanding dramatic and technical role.',
-                keyPoints: ['Content coming soon.']
+                description: 'A psychologically driven ballet requiring sustained dramatic commitment. The choreography blends classical vocabulary with more grounded, expressive movement.',
+                keyPoints: [
+                    'Choreography: Kenneth MacMillan. Music: Jules Massenet (arranged).',
+                    'The central pas de deux demand both control and emotional clarity.',
+                    'Movement often appears off-centre or unstable by design.',
+                    'Weight and partnering are used to convey character.',
+                    'A strong example of narrative-driven choreography.'
+                ]
             },
             {
                 name: 'The Rite of Spring',
                 chip: 'Contemporary',
-                description: 'Stravinsky\'s revolutionary score has been choreographed by dozens of choreographers. Nijinsky\'s original caused a riot; Pina Bausch\'s is among the most powerful reinterpretations.',
-                keyPoints: ['Content coming soon.']
+                description: 'A break from classical form, both musically and choreographically. Known for its rhythmic complexity and physical intensity.',
+                keyPoints: [
+                    'Music: Igor Stravinsky. Original choreography: Vaslav Nijinsky.',
+                    'Look up both Nijinsky’s concept and later versions (e.g. Pina Bausch).',
+                    'Movement is grounded, often heavy and percussive.',
+                    'Rhythm is irregular and deliberately challenging.',
+                    'Useful for expanding understanding of musical response beyond classical structure.'
+                ]
             },
             {
                 name: 'Tchaikovsky',
                 chip: 'Composers',
-                description: 'Pyotr Ilyich Tchaikovsky (1840–1893). Composer of Swan Lake, The Sleeping Beauty, and The Nutcracker — the three scores that define the classical repertoire.',
-                keyPoints: ['Content coming soon.']
+                description: 'Composer of the three central works of the classical repertoire. His scores shaped how ballet uses music — structurally clear, emotionally expansive, and closely tied to choreography.',
+                keyPoints: [
+                    'Works include Swan Lake, The Sleeping Beauty, and The Nutcracker.',
+                    'Music is highly structured — phrases are clear and predictable.',
+                    'Often supports expansive, sustained movement.',
+                    'Listening outside of class helps internalise phring and timing.',
+                    'A useful foundation for understanding classical musicality.'
+                ]
             },
             {
                 name: 'Prokofiev',
                 chip: 'Composers',
-                description: 'Sergei Prokofiev (1891–1953). Composer of Romeo and Juliet and Cinderella. His scores are rhythmically complex and dramatically vivid.',
-                keyPoints: ['Content coming soon.']
+                description: 'Known for rhythmically complex and emotionally direct scores. His music challenges dancers to move beyond predictable phrasing.',
+                keyPoints: [
+                    'Works include Romeo and Juliet and Cinderella.',
+                    'Rhythms are less regular — phrasing requires attention.',
+                    'Music often shifts suddenly in tone or intensity.',
+                    'Encourages more nuanced timing and dynamic contrast.',
+                    'Listening actively helps with adaptability in class.'
+                ]
             },
             {
                 name: 'Delibes',
                 chip: 'Composers',
-                description: 'Léo Delibes (1836–1891). Composer of Coppélia and Sylvia. Tchaikovsky admired his ballet scores enormously.',
-                keyPoints: ['Content coming soon.']
+                description: 'A composer of refined, highly musical ballet scores. His work sits between the Romantic and classical traditions, with particular attention to clarity and charm.',
+                keyPoints: [
+                    'Works include Coppélia and Sylvia.',
+                    'Music is lighter and more detailed than Tchaikovsky.',
+                    'Supports quick footwork and precise timing.',
+                    'Phrasing is elegant rather than expansive.',
+                    'Useful for refining musical detail and articulation.'
+                ]
             }
         ]
     }
