@@ -389,9 +389,7 @@ function nextOnboarding() {
 function completeOnboarding() {
     document.querySelectorAll('.onboarding-screen').forEach(s => s.classList.remove('active'));
     storage.save('onboardingComplete', true);
-    appState.currentQuestion = 0;
-    showScreen('assessment');
-    renderQuestion();
+    showOrientationScreen();
 }
 
 function skipOnboarding() {
@@ -466,8 +464,565 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   5. ASSESSMENT SYSTEM
-   Quiz rendering, scoring, dimension calculation, results.
+   5. ORIENTATION CONVERSATION
+   Replaces the placement quiz. Entry: showOrientationScreen()
+   ═══════════════════════════════════════════════════════════════ */
+
+const ORIENTATION_QUESTIONS = [
+    {
+        id: 'q1', scored: false, type: 'single', dimension: 'About you',
+        text: 'Which best describes you?',
+        helper: null,
+        options: [
+            'Born to dance — Training since childhood',
+            'Building a foundation — Training for 3–7 years',
+            'Finding my feet — Training for 1–3 years',
+            'Just starting out — Less than a year',
+            'Coming back — Returning after a break',
+        ],
+    },
+    {
+        id: 'q2', scored: false, type: 'single', dimension: 'Your training',
+        text: 'How much time do you spend in class right now?',
+        helper: 'Think about a typical week, not your best or worst.',
+        options: [
+            'Not in class at the moment',
+            'Up to 2 hours a week',
+            '2 to 4 hours a week',
+            '4 to 6 hours a week',
+            '6 or more hours a week',
+        ],
+    },
+    {
+        id: 'q3', scored: true, type: 'multi', dimension: 'In class',
+        text: 'Which of these generally feel true for you in class?',
+        helper: null,
+        options: [
+            { text: 'I can get through centre combinations without relying on watching others', weight: 0.50 },
+            { text: 'I work on placement and alignment without needing to be reminded', weight: 0.60 },
+            { text: 'I feel settled and balanced in centre most of the time', weight: 0.50 },
+            { text: 'I find centre work challenging regardless of whether I know the steps', weight: 0.10 },
+            { text: 'I can focus on quality in centre, not just getting through it', weight: 0.80 },
+        ],
+    },
+    {
+        id: 'q4', scored: true, type: 'multi', dimension: 'Arms and upper body',
+        text: 'Which of these generally feel true about how you use your arms and upper body?',
+        helper: 'In ballet, the arms, head, and shoulders working together is called port de bras and épaulement.',
+        options: [
+            { text: 'My arms and legs tend to work as separate problems in class', weight: 0.10 },
+            { text: 'I can follow the port de bras in combinations but it doesn\'t always feel natural', weight: 0.30 },
+            { text: 'My arms and legs generally work together without too much conscious effort', weight: 0.55 },
+            { text: 'I use my head and shoulders as part of how I move through a combination', weight: 0.75 },
+            { text: 'I think about the shape and quality of my arms, not just their position', weight: 0.90 },
+        ],
+    },
+    {
+        id: 'q5', scored: true, type: 'multi', dimension: 'Slow work',
+        text: 'Which of these generally feel true about your slow work?',
+        helper: 'Adagio is the slow, sustained section of class: développé, arabesque, attitudes, and held balances.',
+        options: [
+            { text: 'I haven\'t done adagio work yet', weight: 0.00 },
+            { text: 'I find slow combinations difficult to sustain with control', weight: 0.15 },
+            { text: 'I can hold an arabesque or attitude without losing balance most of the time', weight: 0.45 },
+            { text: 'I can extend my leg with control in slow combinations', weight: 0.60 },
+            { text: 'I can sustain long slow phrases without rushing or losing shape', weight: 0.80 },
+            { text: 'I use the music to shape how I move through adagio', weight: 0.90 },
+        ],
+    },
+    {
+        id: 'q6', scored: true, type: 'multi', dimension: 'Turns',
+        text: 'Which of these generally feel true about your turning?',
+        helper: 'This is about pirouettes specifically.',
+        options: [
+            { text: 'I haven\'t started working on turns yet', weight: 0.00 },
+            { text: 'I\'m working towards a clean single, doing quarter and half turns', weight: 0.15 },
+            { text: 'I\'m landing a single pirouette most of the time', weight: 0.35 },
+            { text: 'I\'m working on doubles', weight: 0.55 },
+            { text: 'I can do reliable doubles', weight: 0.75 },
+            { text: 'I can do more than doubles consistently', weight: 0.95 },
+        ],
+    },
+    {
+        id: 'q7', scored: true, type: 'multi', dimension: 'Jumps',
+        text: 'Which of these generally feel true about your jump work?',
+        helper: 'Allegro is the jumping section of class. Petit allegro is small fast jumps, grand allegro is larger travelling jumps.',
+        options: [
+            { text: 'I haven\'t started jumps yet', weight: 0.00 },
+            { text: 'I find jumps physically demanding more than technically challenging', weight: 0.15 },
+            { text: 'I\'m confident doing basic jumps, sautés, échappés', weight: 0.30 },
+            { text: 'I\'m confident doing petit allegro combinations, changements, assemblés, glissade', weight: 0.50 },
+            { text: 'I\'m confident doing grand jeté', weight: 0.65 },
+            { text: 'I\'m confident doing sissonne and travelling grand allegro combinations', weight: 0.80 },
+            { text: 'I\'m confident getting through complex allegro combinations musically as well as technically', weight: 0.95 },
+        ],
+    },
+    {
+        id: 'q8', scored: true, type: 'multi', dimension: 'Musicality',
+        text: 'Which of these generally feel true about how you relate to music in class?',
+        helper: 'Phrasing means shaping your movement to the musical sentence, not just the beat.',
+        options: [
+            { text: 'I focus on getting the steps right, music comes later', weight: 0.10 },
+            { text: 'I can hear the counts but I don\'t always move with the phrasing', weight: 0.25 },
+            { text: 'I generally stay on the music and can feel when the tempo or mood shifts', weight: 0.50 },
+            { text: 'I naturally accent movements and breathe with the phrasing', weight: 0.70 },
+            { text: 'The music shapes how I dance, I respond to dynamics not just counts', weight: 0.90 },
+            { text: 'I find it easier to be musical in slow work than in allegro', weight: 0.50 },
+        ],
+    },
+    {
+        id: 'q9', scored: true, type: 'multi', dimension: 'Outside class',
+        text: 'Which of these generally feel true about how you engage with ballet outside class?',
+        helper: null,
+        options: [
+            { text: 'I\'m mostly focused on my own training right now', weight: 0.20 },
+            { text: 'I watch performances or recordings when I can', weight: 0.40 },
+            { text: 'I follow dancers or companies I admire', weight: 0.50 },
+            { text: 'I know some of the major works and what makes them significant', weight: 0.65 },
+            { text: 'I read or listen to things about ballet history, technique, or choreography', weight: 0.75 },
+            { text: 'Watching ballet has inspired how I think about movement and music', weight: 0.85 },
+        ],
+    },
+    {
+        id: 'q10', scored: true, type: 'single', dimension: 'Range',
+        text: 'How high can you hold your leg in à la seconde with control?',
+        helper: 'À la seconde means to the side. Stand on one leg and lift the other directly out to the side, with control and turnout. Not a kick.',
+        options: [
+            { text: 'Below hip height', weight: 0.10 },
+            { text: 'Around hip height', weight: 0.30 },
+            { text: 'Between hip and 90 degrees', weight: 0.50 },
+            { text: 'At 90 degrees or close to it', weight: 0.70 },
+            { text: 'Above 90 degrees with control', weight: 0.95 },
+        ],
+    },
+    {
+        id: 'q11', scored: true, type: 'single', dimension: 'Flexibility',
+        text: 'Which of these best describes your overall flexibility?',
+        helper: null,
+        options: [
+            { text: 'Flexibility is a significant challenge for me', weight: 0.10 },
+            { text: 'I have some flexibility but it\'s something I work on', weight: 0.30 },
+            { text: 'I\'m reasonably flexible and can work with what I have', weight: 0.50 },
+            { text: 'I\'m quite flexible, it\'s one of my stronger attributes', weight: 0.70 },
+            { text: 'I\'m very flexible, it rarely limits what I can do', weight: 0.90 },
+            { text: 'I\'m hypermobile — I have a lot of range but stability can be a challenge', weight: 0.75 },
+        ],
+    },
+    {
+        id: 'q12', scored: true, type: 'multi', dimension: 'Strength',
+        text: 'Which of these generally feel true about your strength and stability in class?',
+        helper: null,
+        options: [
+            { text: 'I fatigue noticeably during longer combinations', weight: 0.15 },
+            { text: 'My supporting leg feels stable when I\'m working on it', weight: 0.55 },
+            { text: 'I can hold balances with reasonable consistency', weight: 0.60 },
+            { text: 'My core feels engaged when I need it', weight: 0.65 },
+            { text: 'Strength feels like a bigger limitation for me than flexibility', weight: 0.20 },
+        ],
+    },
+    {
+        id: 'q13', scored: true, type: 'multi', dimension: 'Turnout',
+        text: 'Which of these generally feel true about your turnout?',
+        helper: null,
+        options: [
+            { text: 'I find it hard to maintain turnout through a full combination', weight: 0.15 },
+            { text: 'My turnout feels consistent without me thinking about it constantly', weight: 0.70 },
+            { text: 'I notice my turnout drops when I\'m tired or focusing on something else', weight: 0.35 },
+            { text: 'My turnout feels like a physical limitation rather than something I can train', weight: 0.10 },
+            { text: 'I\'ve improved my turnout noticeably through training', weight: 0.60 },
+        ],
+    },
+    {
+        id: 'q14', scored: true, type: 'single', dimension: 'Pointe',
+        text: 'What\'s your experience with pointe work?',
+        helper: null,
+        options: [
+            { text: 'I haven\'t started and I\'m not interested right now', weight: 0.10 },
+            { text: 'I haven\'t started but I\'m working towards starting', weight: 0.30 },
+            { text: 'I\'ve been on pointe for less than a year', weight: 0.50 },
+            { text: 'I\'ve been on pointe for 1 to 3 years', weight: 0.70 },
+            { text: 'I\'ve been on pointe for 3 years or more', weight: 0.90 },
+        ],
+    },
+];
+
+const ORIENTATION_GOALS_OPTIONS = [
+    'Getting back into ballet',
+    'Building a regular practice',
+    'Working towards pointe',
+    'Improving my technique',
+    'Preparing for a performance',
+    'Enjoying ballet as part of my life',
+];
+
+const PERSONAS = {
+    duckling: {
+        level: 'duckling',
+        name: 'Duckling',
+        description: 'You\'re building the foundations. Ballet is still relatively new to you, whether you\'ve just started or you\'re finding your footing after a long break. You\'re learning how the vocabulary works, what your body can do, and how to listen to your teacher. Classes might feel like a lot to take in at once, and that\'s exactly where you should be.',
+    },
+    deer: {
+        level: 'deer',
+        name: 'Deer',
+        description: 'You know your way around a class. You\'ve got the basics under your feet and you\'re starting to work on the details. You can follow combinations without watching someone else for every step, and you\'re beginning to notice the difference between getting through something and doing it well. You\'re in the part of the journey where things start to connect.',
+    },
+    swan: {
+        level: 'swan',
+        name: 'Swan',
+        description: 'You\'re working with real depth now. You\'ve been training long enough that the foundations are solid and you\'re building on top of them. You bring attention to quality, not just execution. You know what you\'re working on and why. Classes feel like a place to develop, not just survive.',
+    },
+    firebird: {
+        level: 'firebird',
+        name: 'Firebird',
+        description: 'Ballet is a serious part of your life. You\'ve been at this for a long time. Your technique has real consistency, you\'re musical, and you have a clear sense of what you\'re reaching for. You might still be working on the same things you\'ve always worked on — that\'s the nature of ballet — but you\'re doing it with depth and intention.',
+    },
+};
+
+function showOrientationScreen() {
+    appState.currentQuestion     = 0;
+    appState._orientationAnswers = {};
+    appState._assessmentWritten  = false;
+    showScreen('assessment');
+    document.getElementById('orientation-content').innerHTML = `
+        <div class="orientation-opening">
+            <div class="orient-logo">plié</div>
+            <h1 class="orient-display-title">Find your starting point</h1>
+            <p class="orient-opening-body">A few questions to help shape what Plié gives you along the way.</p>
+            <div class="orient-opening-actions">
+                <button class="btn-orient-primary" onclick="startOrientationQuiz()">let's go →</button>
+                <button class="orient-text-link" onclick="showOrientationLevelPicker()">skip quiz, I want to set my level →</button>
+            </div>
+        </div>
+    `;
+}
+
+function startOrientationQuiz() {
+    appState.currentQuestion     = 0;
+    appState._orientationAnswers = {};
+    appState._assessmentWritten  = false;
+    showScreen('assessment');
+    document.querySelector('.bottom-nav')?.classList.remove('visible');
+    document.querySelector('.fab')?.classList.remove('visible');
+    renderOrientationQuestion();
+}
+
+function renderOrientationQuestion() {
+    if (appState.currentQuestion >= ORIENTATION_QUESTIONS.length) {
+        showOrientationGoals();
+        return;
+    }
+
+    const q        = ORIENTATION_QUESTIONS[appState.currentQuestion];
+    const answers  = appState._orientationAnswers || {};
+    const current  = answers[q.id];
+    const progress = ((appState.currentQuestion + 1) / (ORIENTATION_QUESTIONS.length + 1)) * 100;
+
+    const optHtml = q.options.map((opt, i) => {
+        const text = typeof opt === 'string' ? opt : opt.text;
+        const sel  = q.type === 'single'
+            ? current === i
+            : Array.isArray(current) && current.includes(i);
+        const fn   = q.type === 'single'
+            ? `orientSelectOption('${q.id}', ${i})`
+            : `orientToggleMulti('${q.id}', ${i})`;
+        return `<button class="orient-option${sel ? ' selected' : ''}" onclick="${fn}">${text}</button>`;
+    }).join('');
+
+    document.getElementById('orientation-content').innerHTML = `
+        <div class="orientation-container">
+            <div class="orient-header">
+                <div class="orient-header-inner">
+                    <div class="orient-logo">plié</div>
+                    <div class="orient-header-right">
+                        <span class="orient-counter">${appState.currentQuestion + 1} / ${ORIENTATION_QUESTIONS.length}</span>
+                        <button class="orient-close-btn" onclick="exitOrientation()">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="orient-quiz-subtitle">orientation</div>
+                <div class="orient-progress-track">
+                    <div class="orient-progress-bar" style="width:${progress}%"></div>
+                </div>
+            </div>
+            <div class="orient-body">
+                ${q.dimension ? `<div class="orient-dimension">${q.dimension}</div>` : ''}
+                <div class="orient-question">${q.text}</div>
+                ${q.helper ? `<div class="orient-helper">${q.helper}</div>` : ''}
+                ${q.type === 'multi' ? `<div class="orient-select-hint">select all that apply</div>` : ''}
+                <div class="orient-options">${optHtml}</div>
+            </div>
+            <div class="orient-footer">
+                <button class="orient-nav-btn" onclick="orientPrev()" ${appState.currentQuestion === 0 ? 'disabled' : ''}>back</button>
+                <button class="orient-nav-btn orient-footer-skip" onclick="showOrientationLevelPicker()">skip quiz</button>
+                <button class="orient-nav-btn orient-nav-next" onclick="orientNext()">next</button>
+            </div>
+        </div>
+    `;
+}
+
+function orientSelectOption(qId, idx) {
+    if (!appState._orientationAnswers) appState._orientationAnswers = {};
+    const current = appState._orientationAnswers[qId];
+    appState._orientationAnswers[qId] = current === idx ? undefined : idx;
+    renderOrientationQuestion();
+}
+
+function orientToggleMulti(qId, idx) {
+    if (!appState._orientationAnswers) appState._orientationAnswers = {};
+    if (!Array.isArray(appState._orientationAnswers[qId])) appState._orientationAnswers[qId] = [];
+    const arr = appState._orientationAnswers[qId];
+
+    // Mutually exclusive first option for questions starting with "I haven't"
+    const q = ORIENTATION_QUESTIONS[appState.currentQuestion];
+    const firstOptText = typeof q.options[0] === 'string' ? q.options[0] : q.options[0].text;
+    const hasExclusive = firstOptText.startsWith("I haven't");
+
+    if (hasExclusive && idx === 0) {
+        if (arr.includes(0)) { arr.splice(arr.indexOf(0), 1); }
+        else { appState._orientationAnswers[qId] = [0]; }
+    } else if (hasExclusive) {
+        if (arr.includes(0)) arr.splice(arr.indexOf(0), 1);
+        const pos = arr.indexOf(idx);
+        if (pos > -1) arr.splice(pos, 1); else arr.push(idx);
+    } else {
+        const pos = arr.indexOf(idx);
+        if (pos > -1) arr.splice(pos, 1); else arr.push(idx);
+    }
+
+    // Patch just the options to avoid full re-render flicker
+    const container = document.querySelector('.orient-options');
+    if (!container) return;
+    container.innerHTML = q.options.map((opt, i) => {
+        const text = typeof opt === 'string' ? opt : opt.text;
+        const sel  = appState._orientationAnswers[qId].includes(i);
+        return `<button class="orient-option${sel ? ' selected' : ''}" onclick="orientToggleMulti('${qId}', ${i})">${text}</button>`;
+    }).join('');
+}
+
+function orientNext() { appState.currentQuestion++; renderOrientationQuestion(); }
+function orientPrev() { if (appState.currentQuestion > 0) { appState.currentQuestion--; renderOrientationQuestion(); } }
+
+function showOrientationGoals() {
+    const current = appState._orientationAnswers['goals'] || [];
+    document.getElementById('orientation-content').innerHTML = `
+        <div class="orientation-container">
+            <div class="orient-header">
+                <div class="orient-header-inner">
+                    <div class="orient-logo">plié</div>
+                    <div class="orient-header-right">
+                        <span class="orient-counter">almost done</span>
+                        <button class="orient-close-btn" onclick="exitOrientation()">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="orient-quiz-subtitle">orientation</div>
+                <div class="orient-progress-track">
+                    <div class="orient-progress-bar" style="width:96%"></div>
+                </div>
+            </div>
+            <div class="orient-body">
+                <div class="orient-question">What are you working toward?</div>
+                <div class="orient-options" id="orient-goals-options">
+                    ${ORIENTATION_GOALS_OPTIONS.map((opt, i) => {
+                        const sel = current.includes(i);
+                        return `<button class="orient-option${sel ? ' selected' : ''}" onclick="orientToggleGoal(${i})">${opt}</button>`;
+                    }).join('')}
+                </div>
+            </div>
+            <div class="orient-footer">
+                <button class="orient-nav-btn" onclick="orientPrev()">back</button>
+                <button class="orient-nav-btn orient-nav-next" onclick="finishOrientationQuiz()">done →</button>
+            </div>
+        </div>
+    `;
+}
+
+function orientToggleGoal(idx) {
+    if (!appState._orientationAnswers) appState._orientationAnswers = {};
+    if (!Array.isArray(appState._orientationAnswers['goals'])) appState._orientationAnswers['goals'] = [];
+    const arr = appState._orientationAnswers['goals'];
+    const pos = arr.indexOf(idx);
+    if (pos > -1) arr.splice(pos, 1); else arr.push(idx);
+    const container = document.getElementById('orient-goals-options');
+    if (!container) return;
+    container.innerHTML = ORIENTATION_GOALS_OPTIONS.map((opt, i) => {
+        const sel = appState._orientationAnswers['goals'].includes(i);
+        return `<button class="orient-option${sel ? ' selected' : ''}" onclick="orientToggleGoal(${i})">${opt}</button>`;
+    }).join('');
+}
+
+function finishOrientationQuiz() {
+    const persona = scoreOrientation(appState._orientationAnswers || {});
+    showOrientationResults(persona);
+}
+
+function scoreOrientation(answers) {
+    const scored = ORIENTATION_QUESTIONS.filter(q => q.scored);
+    let total = 0, count = 0;
+
+    scored.forEach(q => {
+        const ans = answers[q.id];
+        if (ans === undefined || ans === null) return;
+
+        if (q.type === 'single') {
+            const opt = q.options[ans];
+            if (opt && typeof opt.weight === 'number') { total += opt.weight; count++; }
+        } else {
+            const sel = Array.isArray(ans) ? ans : [];
+            if (!sel.length) return;
+            const avg = sel.reduce((s, i) => s + (q.options[i]?.weight ?? 0), 0) / sel.length;
+            total += avg; count++;
+        }
+    });
+
+    if (!count) return 'duckling';
+    const score = total / count;
+    if (score >= 0.70) return 'firebird';
+    if (score >= 0.48) return 'swan';
+    if (score >= 0.28) return 'deer';
+    return 'duckling';
+}
+
+function showOrientationResults(suggestedPersona) {
+    appState._suggestedPersona = suggestedPersona;
+    const p = PERSONAS[suggestedPersona];
+
+    document.getElementById('orientation-content').innerHTML = `
+        <div class="orientation-container">
+            <div class="orient-body orient-results-body">
+                <h1 class="orient-result-name">${p.name}</h1>
+                <p class="orient-result-desc">${p.description}</p>
+                <div class="orient-adjust-label">adjust your level</div>
+                <div class="orient-persona-list">
+                    ${Object.entries(PERSONAS).map(([key, persona]) => `
+                        <button class="orient-persona-btn${key === suggestedPersona ? ' active' : ''}"
+                                onclick="selectResultPersona('${key}')">
+                            ${persona.name}
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+            <div class="orient-footer">
+                <button class="orient-nav-btn orient-nav-next" onclick="confirmOrientationLevel('${suggestedPersona}')">this is me →</button>
+            </div>
+        </div>
+    `;
+}
+
+function selectResultPersona(key) {
+    appState._suggestedPersona = key;
+    showOrientationResults(key);
+    // Update confirm button to use new selection
+    const confirmBtn = document.querySelector('.orient-nav-next');
+    if (confirmBtn) confirmBtn.setAttribute('onclick', `confirmOrientationLevel('${key}')`);
+}
+
+function confirmOrientationLevel(personaKey) {
+    const persona = PERSONAS[personaKey];
+    if (!persona) return;
+
+    appState.persona = personaKey;
+    appState.level   = persona.level;
+
+    // Synthesise dimension scores from persona level so focus cards show as assessed.
+    // The orientation quiz doesn't score individual dimensions, so we use the midpoint
+    // of each level band as a uniform approximation across all tech/artistry dimensions.
+    const levelRaw = { duckling: 0.5, deer: 1.5, swan: 2.5, firebird: 3.5 }[personaKey] ?? 0.5;
+    appState.dimensions = {
+        barre:       getDimensionStage(levelRaw),
+        centre:      getDimensionStage(levelRaw),
+        allegro:     getDimensionStage(levelRaw),
+        turns:       getDimensionStage(levelRaw),
+        flexibility: getDimensionStage(levelRaw),
+        musicality:  getDimensionStage(levelRaw),
+        knowledge:   getDimensionStage(levelRaw),
+        pointe:      null,
+    };
+
+    if (!appState._assessmentWritten) {
+        const assessment = {
+            id:          Date.now(),
+            type:        'placement',
+            date:        new Date().toISOString().split('T')[0],
+            completedAt: Date.now(),
+            answers:     { ...(appState._orientationAnswers || {}) },
+            level:       persona.level,
+            persona:     personaKey,
+            levelLabel:  persona.name,
+            dimensions:  appState.dimensions,
+        };
+        appState.assessments = appState.assessments || [];
+        appState.assessments.push(assessment);
+        storage.save('assessments', appState.assessments);
+
+        appendTimelineEntry({
+            type:     'assessment',
+            objectId: assessment.id,
+            title:    `Completed orientation`,
+            body:     persona.name,
+            date:     assessment.date,
+        });
+        appState._assessmentWritten = true;
+    }
+
+    // TODO: account creation — no backend yet, proceed directly
+    storage.save('onboardingComplete', true);
+    showScreen('profile');
+    document.querySelector('.bottom-nav')?.classList.add('visible');
+    document.querySelector('.fab')?.classList.add('visible');
+    navigateTo('barre');
+}
+
+function showOrientationLevelPicker() {
+    showScreen('assessment');
+    document.getElementById('orientation-content').innerHTML = `
+        <div class="orientation-container">
+            <div class="orient-header">
+                <div class="orient-logo">plié</div>
+                <button class="orient-close-btn" onclick="exitOrientation()">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/></svg>
+                </button>
+            </div>
+            <div class="orient-body">
+                <div class="orient-question">Choose your level</div>
+                <p class="orient-helper" style="margin-bottom: var(--sp-xl);">This is your starting point. Your training picture fills in as you log sessions.</p>
+                <div class="orient-persona-picker">
+                    ${Object.entries(PERSONAS).map(([key, p]) => `
+                        <button class="orient-persona-pick-btn" onclick="confirmOrientationLevel('${key}')">
+                            <div class="orient-persona-pick-name">${p.name}</div>
+                            <div class="orient-persona-pick-desc">${p.description}</div>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function exitOrientation() {
+    const answers = appState._orientationAnswers || {};
+    const hasAnswers = Object.values(answers).some(v =>
+        v !== undefined && (!Array.isArray(v) || v.length > 0));
+
+    if (hasAnswers) {
+        confirmOrientationLevel(scoreOrientation(answers));
+    } else {
+        appState.level = 'not-assessed';
+        storage.save('onboardingComplete', true);
+        if (!appState.timeline?.length) {
+            appendTimelineEntry({ type: 'manual', title: 'Joined plié', body: null, date: new Date().toISOString().split('T')[0] });
+        }
+        showScreen('profile');
+        document.querySelector('.bottom-nav')?.classList.add('visible');
+        document.querySelector('.fab')?.classList.add('visible');
+        navigateTo('barre');
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   5b. LEGACY ASSESSMENT SYSTEM (superseded — kept for reference)
    ═══════════════════════════════════════════════════════════════ */
 
 function startPlacementQuiz() {
@@ -678,13 +1233,11 @@ function calculateResults() {
     const avg = answeredRaw.length > 0 ? answeredRaw.reduce((s, v) => s + v, 0) / answeredRaw.length : -1;
 
     let level, levelLabel, levelDescription;
-    if (avg < 0)       { level = 'not-assessed'; levelLabel = 'Not assessed'; levelDescription = "Complete the quiz to find your level"; }
-    else if (avg >= 3.8) { level = 'advanced'; levelLabel = 'Advanced'; levelDescription = "You're working at an advanced level"; }
-    else if (avg >= 3.0) { level = 'upper-intermediate'; levelLabel = 'Upper Intermediate'; levelDescription = "You're working at a strong level"; }
-    else if (avg >= 2.2) { level = 'intermediate'; levelLabel = 'Intermediate'; levelDescription = "Your technique is developing well"; }
-    else if (avg >= 1.5) { level = 'improver'; levelLabel = 'Improver'; levelDescription = "You have a solid base to build on"; }
-    else if (avg >= 0.8) { level = 'elementary'; levelLabel = 'Elementary'; levelDescription = "You're building core foundations"; }
-    else                 { level = 'beginner'; levelLabel = 'Beginner'; levelDescription = "You're at the start of your training"; }
+    if (avg < 0)      { level = 'not-assessed'; levelLabel = 'Not assessed';  levelDescription = "Complete the quiz to find your level"; }
+    else if (avg >= 3) { level = 'firebird';    levelLabel = 'Firebird';      levelDescription = "Ballet is a serious part of your life. Technique has real consistency."; }
+    else if (avg >= 2) { level = 'swan';        levelLabel = 'Swan';          levelDescription = "You're working with real depth. Foundations are solid and you're building on them."; }
+    else if (avg >= 1) { level = 'deer';        levelLabel = 'Deer';          levelDescription = "You know your way around a class. Basics are there — working on the details."; }
+    else               { level = 'duckling';    levelLabel = 'Duckling';      levelDescription = "You're building the foundations. Learning how it all works."; }
 
     appState.level = level;
 
@@ -810,7 +1363,11 @@ function skipToProfile() {
     if (sessionSkills)    appState.sessionSkills    = sessionSkills;
     if (corrections)      appState.corrections      = corrections;
     if (assessments)      appState.assessments      = assessments;
-    if (goals)            appState.goals            = goals;
+    if (goals)            appState.goals            = goals.map(g => {
+        if (g.status) return g;
+        if (g.completed === true || g.completedAt) return { ...g, status: 'completed' };
+        return { ...g, status: 'active' };
+    });
     if (timeline)         appState.timeline         = timeline;
     if (skillNotes)       appState.skillNotes       = skillNotes;
 
@@ -820,6 +1377,7 @@ function skipToProfile() {
         appState.hidePointe     = prefs.hidePointe     ?? false;
         appState.profilePicture = prefs.profilePicture ?? null;
         appState.displayName    = prefs.displayName    ?? null;
+        appState.trainingState  = prefs.trainingState  ?? 'active';
         appState._exploreAllDoneShown = prefs._exploreAllDoneShown ?? false;
     }
 
@@ -831,6 +1389,7 @@ function skipToProfile() {
     const latest = placements[placements.length - 1];
     if (latest) {
         appState.level      = latest.level;
+        appState.persona    = latest.persona || null;
         appState.dimensions = latest.dimensions;
         appState.answers    = latest.answers;
     }
@@ -851,6 +1410,7 @@ function savePreferences() {
         hidePointe:     appState.hidePointe,
         profilePicture: appState.profilePicture,
         displayName:    appState.displayName,
+        trainingState:  appState.trainingState,
         _exploreAllDoneShown: appState._exploreAllDoneShown,
     });
 }
@@ -864,19 +1424,13 @@ function renderProfileStatus() {
     if (!el) return;
 
     const level = appState.level || 'not-assessed';
-    const levelLabels = {
-        'beginner':          'Beginner',
-        'elementary':        'Elementary',
-        'improver':          'Improver',
-        'intermediate':      'Intermediate',
-        'upper-intermediate':'Upper Intermediate',
-        'advanced':          'Advanced',
-        'not-assessed':      'Not yet assessed',
-    };
-    const levelName = levelLabels[level] || 'Not yet assessed';
+    const levelName = { duckling: 'Duckling', deer: 'Deer', swan: 'Swan', firebird: 'Firebird' }[level] || 'Not yet assessed';
 
-    // Animal watermark — matches level
-    const animalSrc = ILLUSTRATIONS.levels[level] || null;
+    // Animal watermark — maps new level IDs to illustration keys
+    const LEVEL_TO_ILLUS = { duckling: 'beginner', deer: 'improver', swan: 'intermediate', firebird: 'advanced',
+                              beginner: 'beginner', elementary: 'beginner', improver: 'improver',
+                              intermediate: 'intermediate', 'upper-intermediate': 'intermediate', advanced: 'advanced' };
+    const animalSrc = ILLUSTRATIONS.levels[LEVEL_TO_ILLUS[level]] || null;
 
     // Avatar — uploaded photo, default illustration, or placeholder SVG
     let avatarContent;
@@ -900,8 +1454,9 @@ function renderProfileStatus() {
         .filter(a => a.type === 'placement')
         .slice(-1)[0];
     const assessedText = latestAssessment
-        ? `from your placement quiz · ${formatTimelineDate(latestAssessment.date)}`
+        ? `orientation quiz · ${formatTimelineDate(latestAssessment.date)}`
         : null;
+    const isAssessed = level !== 'not-assessed';
 
     el.innerHTML = `
         ${animalSrc ? `
@@ -930,6 +1485,13 @@ function renderProfileStatus() {
             </div>
         </div>
     `;
+
+    // Append orientation quiz CTA button via DOM (not inline HTML)
+    const quizBtn = document.createElement('button');
+    quizBtn.className = isAssessed ? 'profile-quiz-cta profile-quiz-retake' : 'profile-quiz-cta';
+    quizBtn.textContent = isAssessed ? 'retake orientation quiz →' : 'start orientation quiz →';
+    quizBtn.addEventListener('click', () => startOrientationQuiz());
+    el.appendChild(quizBtn);
 }
 
 function defaultAvatarSvg() {
@@ -945,6 +1507,9 @@ function defaultAvatarSvg() {
 }
 
 function buildInsightSentence(level) {
+    if (appState.trainingState === 'resting')    return 'Taking a break.';
+    if (appState.trainingState === 'recovering') return 'Focusing on recuperating.';
+
     // Priority queue: session today > milestone > correction pattern > assessment fallback
     const today = new Date().toISOString().split('T')[0];
     const lastSession = (appState.sessions || [])
@@ -987,13 +1552,18 @@ function buildInsightSentence(level) {
 
     // 4. Assessment-based fallback per level
     const fallbacks = {
+        'duckling':  'You\'re at the start of something. Log your first session to begin building a picture of your training.',
+        'deer':      'A solid foundation developing well. Log sessions to start seeing where your corrections cluster.',
+        'swan':      'Your technique is developing well. Log sessions to track where the most growth is happening.',
+        'firebird':  'You\'re working at a high level. The app is most useful as a record of nuance at this stage.',
+        'not-assessed': 'Take the placement quiz to get a picture of where you are and where to focus.',
+        // backward compat
         'beginner':          'You\'re at the start of something. Log your first session to begin building a picture of your training.',
-        'elementary':        'Core positions are coming together. The barre is where the foundation is being laid — trust the repetition.',
+        'elementary':        'You\'re at the start of something. Log your first session to begin building a picture of your training.',
         'improver':          'A solid foundation developing well. Log sessions to start seeing where your corrections cluster.',
         'intermediate':      'Your technique is developing well. Log sessions to track where the most growth is happening.',
-        'upper-intermediate':'Strong across the board. The work now is refinement — quality over acquisition.',
+        'upper-intermediate':'Your technique is developing well. Log sessions to track where the most growth is happening.',
         'advanced':          'You\'re working at a high level. The app is most useful as a record of nuance at this stage.',
-        'not-assessed':      'Take the placement quiz to get a picture of where you are and where to focus.',
     };
     return fallbacks[level] || fallbacks['not-assessed'];
 }
@@ -1625,6 +2195,40 @@ function renderSettings() {
         <!-- My training -->
         <div class="settings-section">
             <div class="settings-section-label">My training</div>
+            <div class="settings-row settings-row--stacked">
+                <div class="settings-row-label">Training state</div>
+                <div class="training-state-selector">
+                    ${['active', 'resting', 'recovering'].map(s => `
+                    <button class="training-state-opt${appState.trainingState === s ? ' selected' : ''}"
+                            onmousedown="setTrainingState('${s}')">${s}</button>`).join('')}
+                </div>
+            </div>
+            ${(() => {
+                const p = appState._trainingStatePrompt;
+                if (!p) return '';
+                const goalWord = p.count === 1 ? 'goal' : `${p.count} goals`;
+                const itThem   = p.count === 1 ? 'it'   : 'them';
+                if (p.type === 'pause') {
+                    const stateWord = p.state === 'recovering' ? 'recuperating' : 'resting';
+                    return `<div class="training-state-prompt">
+                        <div class="training-state-prompt-body">You have ${p.count === 1 ? 'an active goal' : `${p.count} active goals`}. Do you want to pause ${itThem} while you're ${stateWord}?</div>
+                        <div class="training-state-prompt-actions">
+                            <button class="training-state-prompt-btn" onmousedown="pauseGoalsForTrainingState()">pause ${goalWord}</button>
+                            <button class="training-state-prompt-btn training-state-prompt-dismiss" onmousedown="dismissTrainingStatePrompt()">not now</button>
+                        </div>
+                    </div>`;
+                }
+                if (p.type === 'reactivate') {
+                    return `<div class="training-state-prompt">
+                        <div class="training-state-prompt-body">You have ${p.count === 1 ? 'a paused goal' : `${p.count} paused goals`} from before your break. Do you want to reactivate ${itThem}?</div>
+                        <div class="training-state-prompt-actions">
+                            <button class="training-state-prompt-btn" onmousedown="reactivateGoalsForTrainingState()">reactivate</button>
+                            <button class="training-state-prompt-btn training-state-prompt-dismiss" onmousedown="dismissTrainingStatePrompt()">leave them</button>
+                        </div>
+                    </div>`;
+                }
+                return '';
+            })()}
             <div class="settings-row">
                 <div>
                     <div class="settings-row-label">Pointe work</div>
@@ -1717,9 +2321,61 @@ function renderSettings() {
     `;
 }
 
+function setTrainingState(state) {
+    const prev = appState.trainingState;
+    appState.trainingState = state;
+    savePreferences();
+
+    const activeGoals = (appState.goals || []).filter(g => g.status === 'active');
+    const pausedByTraining = (appState.goals || []).filter(g => g.status === 'paused' && g.pausedByTrainingState);
+
+    if (prev === 'active' && (state === 'resting' || state === 'recovering') && activeGoals.length > 0) {
+        appState._trainingStatePrompt = { type: 'pause', count: activeGoals.length, state };
+    } else if ((prev === 'resting' || prev === 'recovering') && state === 'active' && pausedByTraining.length > 0) {
+        appState._trainingStatePrompt = { type: 'reactivate', count: pausedByTraining.length };
+    } else {
+        appState._trainingStatePrompt = null;
+    }
+
+    renderSettings();
+}
+
+function pauseGoalsForTrainingState() {
+    const now = Date.now();
+    (appState.goals || []).forEach(g => {
+        if (g.status === 'active') {
+            g.status = 'paused';
+            g.pausedAt = now;
+            g.pausedByTrainingState = true;
+        }
+    });
+    storage.save('goals', appState.goals);
+    appState._trainingStatePrompt = null;
+    renderSettings();
+}
+
+function reactivateGoalsForTrainingState() {
+    (appState.goals || []).forEach(g => {
+        if (g.status === 'paused' && g.pausedByTrainingState) {
+            g.status = 'active';
+            g.pausedAt = null;
+            g.pausedByTrainingState = false;
+        }
+    });
+    storage.save('goals', appState.goals);
+    appState._trainingStatePrompt = null;
+    renderSettings();
+}
+
+function dismissTrainingStatePrompt() {
+    appState._trainingStatePrompt = null;
+    renderSettings();
+}
+
 function togglePointeSetting(btn) {
-    appState.hidePointe = !btn.classList.contains('on');
-    btn.classList.toggle('on', !appState.hidePointe);
+    const isOn = btn.classList.contains('on');
+    appState.hidePointe = isOn;
+    btn.classList.toggle('on', !isOn);
     savePreferences();
     renderFocusCardStack();
 }

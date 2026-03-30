@@ -31,8 +31,7 @@ function navigateTo(section) {
 
     const routes = {
         barre:   () => showBarreScreen(),
-        assess:  () => showAssessScreen(),
-        goals:   () => showGoalsScreen(),
+        goals:   () => { showGoalsScreen(); window.scrollTo({ top: 0, behavior: 'instant' }); },
         learn:   () => showLearnScreen(),
         profile: () => { showScreen('profile'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
     };

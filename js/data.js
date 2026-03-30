@@ -50,6 +50,13 @@ const DATA = {
         { id: 'bourree-pointe', french: 'Bourrée', phonetic: 'boo-RAY', english: 'Tiny steps', difficulty: 'improver', category: 'Pointe Work', dimensionId: 'pointe', aliases: ['bourree pointe'] },
 
         { id: 'piqué-pointe', french: 'Piqué en pointe', phonetic: 'pee-KAY', english: 'Step onto pointe', difficulty: 'intermediate', category: 'Pointe Work', dimensionId: 'pointe', aliases: ['pique pointe'] },
+        { id: 'releve',         french: 'Relevé',         phonetic: 'ruh-luh-VAY',       english: 'Raised',            difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['releve', 'rise', 'elevate']                   },
+        { id: 'eleve',          french: 'Élevé',          phonetic: 'ay-luh-VAY',        english: 'Lifted',            difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['eleve', 'straight rise']                      },
+        { id: 'retire',         french: 'Retiré',         phonetic: 'ruh-tee-RAY',       english: 'Withdrawn',         difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['retire', 'passé position']                    },
+        { id: 'passe',          french: 'Passé',          phonetic: 'pa-SAY',            english: 'Passed',            difficulty: 'beginner',     category: 'Centre Work',  dimensionId: 'centre',  aliases: ['passe', 'retire']                             },
+        { id: 'coupe',          french: 'Coupé',          phonetic: 'koo-PAY',           english: 'Cut',               difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['coupe', 'cut step']                           },
+        { id: 'balance',        french: 'Balancé',        phonetic: 'ba-lahn-SAY',       english: 'Rocking step',      difficulty: 'beginner',     category: 'Centre Work',  dimensionId: 'centre',  aliases: ['balance', 'waltz step']                       },
+        { id: 'port-de-bras',   french: 'Port de bras',   phonetic: 'por duh BRAH',      english: 'Carriage of arms',  difficulty: 'beginner',     category: 'Centre Work',  dimensionId: 'centre',  aliases: ['port de bras', 'arm movement']                },
     ],
 
     folders: {
@@ -287,9 +294,18 @@ const DATA = {
     stageLabels: ['Just starting', 'Early stages', 'Developing', 'Comfortable', 'Strong'],
 
     levelLabels: {
-        'beginner': 'BEGINNER', 'elementary': 'ELEMENTARY', 'improver': 'IMPROVER',
-        'intermediate': 'INTERMEDIATE', 'upper-intermediate': 'UPPER INTERMEDIATE',
-        'advanced': 'ADVANCED', 'not-assessed': 'NOT YET ASSESSED'
+        'duckling':          'DUCKLING',
+        'deer':              'DEER',
+        'swan':              'SWAN',
+        'firebird':          'FIREBIRD',
+        'not-assessed':      'NOT YET ASSESSED',
+        // backward compat for stored assessments from the old 6-level system
+        'beginner':          'DUCKLING',
+        'elementary':        'DUCKLING',
+        'improver':          'DEER',
+        'intermediate':      'SWAN',
+        'upper-intermediate':'SWAN',
+        'advanced':          'FIREBIRD',
     },
 
     dimensionNames: {
@@ -948,51 +964,4 @@ const DATA = {
     }
     ],
 
-    profileCapabilities: [
-        {
-            id: 'log-session',
-            label: 'AFTER CLASS',
-            title: 'Log a session',
-            description: 'Record what you worked on and save corrections while they\'re fresh.',
-            doneMessage: 'You\'ve logged your first session!',
-            action: "openSessionLogger()",
-            isDone: () => appState.sessions.length > 0,
-        },
-        {
-            id: 'save-correction',
-            label: 'FEEDBACK',
-            title: 'Save a correction',
-            description: 'Write down what your teacher said — log a session and add a correction block.',
-            doneMessage: 'You\'ve saved your first correction!',
-            action: "openSessionLogger()",
-            isDone: () => appState.corrections.filter(c => c.source === 'teacher').length > 0,
-        },
-        {
-            id: 'set-goal',
-            label: 'PLANNING',
-            title: 'Set a goal',
-            description: 'Give your practice a target. Goals can link to a skill or dimension.',
-            doneMessage: 'You\'ve set your first goal!',
-            action: "openGoalCreator()",
-            isDone: () => appState.goals.length > 0,
-        },
-        {
-            id: 'track-skill',
-            label: 'SKILLS',
-            title: 'Track a skill',
-            description: 'Flag a skill as in focus from The Barre to start building your personal record.',
-            doneMessage: 'You\'re tracking your first skill!',
-            action: "navigateTo('barre')",
-            isDone: () => appState.skills.some(s => s.flagged),
-        },
-        {
-            id: 'study-repertoire',
-            label: 'LEARN',
-            title: 'Study repertoire',
-            description: 'Explore the skill library, knowledge pages, and repertoire in Learn.',
-            doneMessage: 'You\'ve explored the library!',
-            action: "navigateTo('learn')",
-            isDone: () => !!storage.load('hasVisitedLearn'),
-        },
-    ],
 };
