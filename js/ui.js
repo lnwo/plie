@@ -11,6 +11,7 @@ function escapeHtml(str) {
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
+<<<<<<< Updated upstream
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
 }
@@ -59,6 +60,9 @@ function initClampedTexts(root) {
             moreBtn.style.display = '';
         }
     });
+=======
+        .replace(/"/g, '&quot;');
+>>>>>>> Stashed changes
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -2726,7 +2730,7 @@ function renderGoalsScreen() {
         <div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
             ${goalsHtml}
             <button class="add-goal-btn" onclick="openGoalCreator()">+ set a goal</button>
-            ${(appState.goals || []).length > 0 ? `<div style="text-align:center; margin-top: var(--sp-xl);"><button class="text-link-btn" onclick="showAllGoalsScreen()">view past goals →</button></div>` : ''}
+            ${(appState.goals || []).length > 0 ? `<div style="text-align:center; margin-top: var(--sp-xl);"><button class="text-link-btn" onclick="showAllGoalsScreen()">view all goals →</button></div>` : ''}
         </div>
     `;
 
@@ -3078,9 +3082,14 @@ function openGoalCreator() {
         overlay.id = 'goal-creator-overlay';
         overlay.className = 'session-overlay'; // reuse sheet styles
         document.body.appendChild(overlay);
+<<<<<<< Updated upstream
         overlay.addEventListener('mousedown', (e) => {
             if (e.target === overlay) confirmDiscardGoal();
         });
+=======
+        overlay.addEventListener('touchstart', _goalTabTouchHandler, { passive: true });
+        overlay.addEventListener('click', _goalTabClickHandler);
+>>>>>>> Stashed changes
     }
 
     renderGoalCreator();
@@ -3114,9 +3123,14 @@ function openGoalCreatorWithSuggestion(title, dimensionId, skillId, rationale, m
         overlay.id = 'goal-creator-overlay';
         overlay.className = 'session-overlay';
         document.body.appendChild(overlay);
+<<<<<<< Updated upstream
         overlay.addEventListener('mousedown', (e) => {
             if (e.target === overlay) confirmDiscardGoal();
         });
+=======
+        overlay.addEventListener('touchstart', _goalTabTouchHandler, { passive: true });
+        overlay.addEventListener('click', _goalTabClickHandler);
+>>>>>>> Stashed changes
     }
 
     renderGoalCreator();
@@ -3171,9 +3185,14 @@ function openGoalEditor(goalId) {
         overlay.id = 'goal-creator-overlay';
         overlay.className = 'session-overlay';
         document.body.appendChild(overlay);
+<<<<<<< Updated upstream
         overlay.addEventListener('mousedown', (e) => {
             if (e.target === overlay) confirmDiscardGoal();
         });
+=======
+        overlay.addEventListener('touchstart', _goalTabTouchHandler, { passive: true });
+        overlay.addEventListener('click', _goalTabClickHandler);
+>>>>>>> Stashed changes
     }
     renderGoalCreator();
     document.querySelector('.fab')?.classList.remove('visible');
@@ -3194,6 +3213,23 @@ function closeGoalCreator() {
     overlay.addEventListener('transitionend', () => {
         appState._goalDraft = null;
     }, { once: true });
+}
+
+// Persistent event delegation handlers for goal type tabs — attached once on overlay creation,
+// survive innerHTML replacement. touchstart fires immediately; click handles keyboard/mouse.
+let _goalTabTouchTarget = null;
+function _goalTabTouchHandler(e) {
+    const tab = e.target.closest('.goal-type-tab');
+    if (!tab) return;
+    _goalTabTouchTarget = tab;
+    setGoalType(tab.dataset.type);
+}
+function _goalTabClickHandler(e) {
+    const tab = e.target.closest('.goal-type-tab');
+    if (!tab) return;
+    // Avoid double-firing when touchstart already handled it
+    if (_goalTabTouchTarget === tab) { _goalTabTouchTarget = null; return; }
+    setGoalType(tab.dataset.type);
 }
 
 function renderGoalCreator() {
@@ -3495,10 +3531,13 @@ function renderGoalCreator() {
         </div>
     `;
 
+<<<<<<< Updated upstream
     // Attach tab + type card listeners via JS (inline handlers in innerHTML unreliable in Safari)
     document.querySelectorAll('#goal-type-tabs .goal-type-tab, .goal-type-card').forEach(btn => {
         btn.addEventListener('click', () => setGoalType(btn.dataset.type));
     });
+=======
+>>>>>>> Stashed changes
 }
 
 function selectGoalCategory(cat) {

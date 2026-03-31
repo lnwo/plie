@@ -5669,7 +5669,7 @@ mark.search-highlight {
 }
 
 .goal-card-date::before {
-    content: "created ";
+    content: "Created ";
 }
 
 .goal-milestone:last-child {
@@ -8049,6 +8049,8 @@ button, a, input, select, textarea,
     margin-bottom: -1px;
     transition: color .15s, border-color .15s;
     white-space: nowrap;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 .goal-type-tab.active {
     color: var(--ink);
