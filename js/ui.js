@@ -130,8 +130,8 @@ function openSessionLogger(mode) {
         _mode:           mode || 'session',
     };
 
-    // Auto-create first block and focus its title
-    addBlock(true);
+    // Auto-create first block and focus its title (not needed for note mode)
+    if (mode !== 'note') addBlock(true);
 
     let overlay = document.getElementById('session-logger-overlay');
     if (!overlay) {
@@ -422,7 +422,6 @@ function renderSessionLogger() {
                          id="note-editor"
                          class="note-editor"
                          spellcheck="true">${escapeHtml(s.generalNotes || '')}</div>
-                    <div class="note-editor-hint">Saved as a personal note — just for you.</div>
                 </div>
                 ` : `
                 <!-- Date -->
@@ -5626,8 +5625,12 @@ function expandSkillNotes(skillId) {
             <div class="skill-note-text">${renderClampedHtml(nl2br(n.text), 'sn-' + n.id)}</div>
         </div>
     `).join('');
-    // Remove the see more button
-    list.nextElementSibling?.remove();
+    // Replace see-more with hide button
+    const seeMoreBtn = list.nextElementSibling;
+    if (seeMoreBtn && seeMoreBtn.classList.contains('skill-see-more-btn')) {
+        seeMoreBtn.textContent = 'hide';
+        seeMoreBtn.onclick = () => renderSkillNotesSectionInPlace(skillId, list.closest('.skill-detail-section'));
+    }
     requestAnimationFrame(() => initClampedTexts(list));
 }
 
