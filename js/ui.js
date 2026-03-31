@@ -149,6 +149,7 @@ function openSessionLogger(mode) {
     document.querySelector('.fab')?.classList.remove('visible');
     document.querySelector('.bottom-nav')?.classList.remove('visible');
 
+    void overlay.offsetHeight; // force reflow so translateY(100%) is established before transition
     requestAnimationFrame(() => overlay.classList.add('open'));
 
     // Swipe-to-dismiss on handle
@@ -882,7 +883,8 @@ function addBlock(focusTitle = false) {
         requestAnimationFrame(() => {
             const blocks = document.querySelectorAll('.block-bullet-entry');
             const last = blocks[blocks.length - 1];
-            last?.focus();
+            const firstLine = last?.querySelector('div');
+            (firstLine || last)?.focus();
         });
     }
 }
@@ -1102,10 +1104,11 @@ function checkBlockTitleForSkills(blockId, text) {
 }
 
 function updateBlockBullets(blockId, el) {
-    const divs = el.querySelectorAll('div');
-    const text = divs.length
-        ? Array.from(divs).map(d => d.textContent || '').join('\n').trimEnd()
-        : (el.textContent || '').trimEnd();
+    const divs = Array.from(el.querySelectorAll('div'));
+    const divText = divs.map(d => d.textContent || '').join('\n').trimEnd();
+    // Fall back to innerText when all divs are empty — handles iOS/WebKit inserting
+    // text as direct text nodes rather than into the child div structure.
+    const text = divText || (el.innerText || '').trimEnd();
     updateBlockField(blockId, 'text', text);
     checkBlockTitleForSkills(blockId, text);
 }
