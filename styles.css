@@ -4125,8 +4125,9 @@ h1, h2, .screen-heading {
     color: var(--ink-2);
 }
 
-.goal-tag-skill { background: var(--gold-wash); color: var(--primary); }
-.goal-tag-dim   { background: var(--surface-warm); color: var(--ink-2); border: 1px solid var(--border); }
+.goal-tag-skill   { background: var(--gold-wash); color: var(--primary); font-weight: 600; }
+.goal-tag-dim     { background: var(--surface-warm); color: var(--ink-2); border: 1px solid var(--border); }
+.goal-tag-cadence { font-weight: 400; color: var(--ink-5); background: transparent; border: 1px solid rgba(26,23,20,0.10); }
 
 .goal-milestones {
     display: flex;
@@ -5622,9 +5623,27 @@ mark.search-highlight {
     border-top: 1px solid var(--border-light);
 }
 
+.goal-card-footer-left {
+    display: flex;
+    align-items: baseline;
+    gap: 0;
+    flex: 1;
+    min-width: 0;
+}
+
 .goal-card-date {
     font-size: var(--fs-caption);
     color: var(--ink-3);
+}
+
+.goal-card-expiry {
+    font-size: var(--fs-caption);
+    font-weight: 400;
+    color: var(--ink-5);
+}
+
+.goal-card-expiry.goal-expiry-near {
+    color: var(--coral);
 }
 
 .goal-swipe-hint {
@@ -6002,7 +6021,8 @@ button, a, input, select, textarea,
     font-size: var(--fs-caption);
     color: var(--ink-3);
     cursor: pointer;
-    padding: 0;
+    padding: 12px 8px;
+    margin: -12px -8px;
     text-decoration: underline;
     text-underline-offset: 2px;
     transition: color 0.15s ease;
@@ -7977,6 +7997,14 @@ button, a, input, select, textarea,
     color: #fff;
 }
 
+.goal-period-resolved {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    font-weight: 400;
+    color: var(--ink-5);
+    margin-top: var(--sp-xs);
+}
+
 /* Skill chips in goal creator */
 .goal-skill-chips {
     display: flex;
@@ -8123,10 +8151,8 @@ button, a, input, select, textarea,
 
 /* Type badge on goal card */
 .goal-tag-type {
-    background: var(--surface-warm, #FDF8F3);
-    color: var(--ink-2);
-    border: 1px solid var(--border-soft, #EEEBE6);
-    font-style: italic;
+    font-weight: 600;
+    color: var(--ink-3);
 }
 
 /* Discard confirm state */

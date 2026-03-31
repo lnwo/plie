@@ -3491,7 +3491,7 @@ function toggleGoalDateCalendar() {
     const d = appState._goalDraft;
     if (!d) return;
     const todayStr = new Date().toISOString().split('T')[0];
-    const presets = ['This week', 'Two weeks', 'This month', 'Three months', 'Choose a date'];
+    const presets = ['A week', 'Two weeks', 'A month', 'Three months', 'Choose a date'];
     const isRealDate = d.commitmentPeriod && !presets.includes(d.commitmentPeriod) && /^\d{4}-\d{2}-\d{2}$/.test(d.commitmentPeriod);
     renderGoalDateCalendar(isRealDate ? d.commitmentPeriod : todayStr);
 }
