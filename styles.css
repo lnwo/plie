@@ -1319,7 +1319,7 @@ h1, h2, .screen-heading {
 
 .fab {
     position: fixed;
-    bottom: 84px;
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
     right: 20px;
     width: 52px;
     height: 52px;
@@ -1329,7 +1329,7 @@ h1, h2, .screen-heading {
     border: none;
     box-shadow: var(--shadow-3);
     cursor: pointer;
-    z-index: 200;
+    z-index: 1050;
     display: none;
     align-items: center;
     justify-content: center;
