@@ -1012,6 +1012,7 @@ function renderBlockHtml(block, index) {
                     <div class="session-block-fields">
                         <div class="block-bullet-entry"
                              contenteditable="true"
+                             data-block-id="${block.id}"
                              oninput="updateBlockBullets(${block.id}, this)"
                              >${bulletDivsHtml}</div>
 
@@ -1508,6 +1509,18 @@ function appendTimelineEntry({ type, objectId = null, title, body = null, date }
 function saveSession() {
     const s = appState.currentSession;
     if (!s) return;
+
+    // Flush all block-bullet-entry contenteditables — captures text that oninput
+    // may not have committed (e.g. paste, IME, or tapping Save immediately).
+    document.querySelectorAll('.block-bullet-entry[data-block-id]').forEach(el => {
+        const blockId = parseInt(el.dataset.blockId, 10);
+        const block = getBlockById(blockId);
+        if (!block) return;
+        const divs = Array.from(el.querySelectorAll('div'));
+        const divText = divs.map(d => d.textContent || '').join('\n').trimEnd();
+        const text = divText || (el.innerText || '').trimEnd();
+        if (text) block.text = text;
+    });
 
     // Flush any pending new-bullet inputs — if the user typed in a correction
     // row and tapped Save without pressing Enter, capture it before processing.
@@ -2719,7 +2732,7 @@ function showAllGoalsScreen() {
         ...keys.filter(k => !FIXED_ORDER.includes(k) && !monthNames.includes(k)).sort((a, b) => b - a),
     ];
 
-    const TYPE_LABELS   = { skill: 'a skill', intention: 'a feeling or state', habit: 'a habit' };
+    const TYPE_LABELS   = { skill: 'Skill', intention: 'Feeling / state', habit: 'Habit' };
     const STATUS_LABELS = { active: 'active', completed: 'completed', paused: 'paused', letgo: 'let go' };
 
     function renderAllGoalCard(g) {
@@ -2870,34 +2883,46 @@ function renderGoalGroup(category, goals) {
     `;
 }
 
+function calcGoalExpiry(goal) {
+    if (!goal.commitmentPeriod) return null;
+    const created = new Date(goal.createdAt);
+    if (isNaN(created.getTime())) return null;
+    const p = goal.commitmentPeriod;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(p)) return new Date(p + 'T12:00:00');
+    const d = new Date(created);
+    if (p === 'A week')           d.setDate(d.getDate() + 7);
+    else if (p === 'Two weeks')   d.setDate(d.getDate() + 14);
+    else if (p === 'A month')     d.setMonth(d.getMonth() + 1);
+    else if (p === 'Three months') d.setMonth(d.getMonth() + 3);
+    else return null;
+    return d;
+}
+
+function formatExpiryDate(dt) {
+    if (!dt || isNaN(dt.getTime())) return null;
+    const now = new Date();
+    const opts = dt.getFullYear() === now.getFullYear()
+        ? { day: 'numeric', month: 'short' }
+        : { day: 'numeric', month: 'short', year: 'numeric' };
+    return dt.toLocaleDateString('en-GB', opts);
+}
+
 function renderGoalCard(goal, completed) {
     const markers = (goal.progressMarkers || goal.milestones || []);
     const doneMarkers = markers.filter(m => m.done).length;
     const progress = markers.length > 0 ? doneMarkers / markers.length : null;
 
-    const TYPE_LABELS = { skill: 'a skill', intention: 'a feeling or state', habit: 'a habit' };
+    const TYPE_LABELS = { skill: 'Skill', intention: 'Feeling / state', habit: 'Habit' };
     const typeLabel = TYPE_LABELS[goal.goalType] || goal.goalType || null;
-
-    function formatPeriod(p) {
-        if (!p) return null;
-        // ISO date format YYYY-MM-DD
-        if (/^\d{4}-\d{2}-\d{2}$/.test(p)) {
-            const dt = new Date(p + 'T12:00:00');
-            return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-        }
-        return p;
-    }
 
     const linkedSkill = goal.skillId
         ? (appState.skills || []).find(s => s.id === goal.skillId)
         : null;
-    const periodDisplay = formatPeriod(goal.commitmentPeriod);
 
     const tagsHtml = [
         typeLabel ? `<span class="goal-tag goal-tag-type">${typeLabel}</span>` : null,
         linkedSkill ? `<span class="goal-tag goal-tag-skill">${linkedSkill.french}</span>` : null,
-        periodDisplay ? `<span class="goal-tag">${periodDisplay}</span>` : null,
-        goal.howOften ? `<span class="goal-tag">${goal.howOften.startsWith('x') ? goal.howOften.slice(1) + '× a week' : goal.howOften}</span>` : null,
+        goal.howOften ? `<span class="goal-tag goal-tag-cadence">${goal.howOften.startsWith('x') ? goal.howOften.slice(1) + '× a week' : goal.howOften}</span>` : null,
     ].filter(Boolean).join('');
 
     const MARKER_CAP = 4;
@@ -2947,8 +2972,17 @@ function renderGoalCard(goal, completed) {
                     ${markersHtml}
                     ${progressBarHtml}
                     <div class="goal-card-footer">
-                        <span class="goal-card-date">${formatTimelineDate(new Date(goal.createdAt).toISOString().split('T')[0])}</span>
-                        ${!completed ? `<button class="goal-edit-btn" onclick="openGoalEditor(${goal.id})">edit</button>` : ''}
+                        <div class="goal-card-footer-left">
+                            <span class="goal-card-date">${formatTimelineDate(new Date(goal.createdAt).toISOString().split('T')[0])}</span>${(() => {
+                                const exp = calcGoalExpiry(goal);
+                                const expStr = formatExpiryDate(exp);
+                                if (!expStr) return '';
+                                const daysLeft = exp ? Math.ceil((exp - new Date()) / 86400000) : null;
+                                const nearClass = daysLeft !== null && daysLeft <= 3 && daysLeft >= 0 ? ' goal-expiry-near' : '';
+                                return ` <span class="goal-card-expiry${nearClass}">· expires ${expStr}</span>`;
+                            })()}
+                        </div>
+                        ${!completed ? `<button class="goal-edit-btn" onmousedown="openGoalEditor(${goal.id})">edit</button>` : ''}
                     </div>
                 </div>
             </div>
@@ -3114,7 +3148,7 @@ function renderGoalCreator() {
         'feel it click in centre without the mirror',
     ];
 
-    const periodOptions = ['This week', 'Two weeks', 'This month', 'Three months', 'Choose a date'];
+    const periodOptions = ['A week', 'Two weeks', 'A month', 'Three months', 'Choose a date'];
     const howOftenOptions = ['Every class', 'Every week', 'set a number', 'other'];
 
     function periodChipsHtml() {
@@ -3135,6 +3169,10 @@ function renderGoalCreator() {
             dateDisplayHtml = `<span class="date-display-label" style="color:var(--ink-3);font-weight:400;">Tap to pick a date</span>`;
         }
 
+        const draftCreatedAt = d.createdAt || new Date().toISOString();
+        const resolvedExpiry = calcGoalExpiry({ createdAt: draftCreatedAt, commitmentPeriod: d.commitmentPeriod });
+        const resolvedExpiryStr = (d.commitmentPeriod && resolvedExpiry) ? formatExpiryDate(resolvedExpiry) : null;
+
         return `
             <div class="goal-period-chips">
                 ${periodOptions.map(p => {
@@ -3149,6 +3187,7 @@ function renderGoalCreator() {
                     </div>
                 </div>
             ` : ''}
+            ${resolvedExpiryStr ? `<p class="goal-period-resolved">until ${resolvedExpiryStr}</p>` : ''}
         `;
     }
 
