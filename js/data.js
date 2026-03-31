@@ -604,7 +604,16 @@ const DATA = {
                     'Mark simple combinations focusing only on the first and last moments.',
                     'A clear ending often matters more than what happens in the middle.'
                 ]
-            }
+            },
+            // ── Vocabulary ─────────────────────────────────────
+            { name: 'Bar',       chip: 'Rhythm',    description: 'A unit of music divided by bar lines. Most ballet music is in 3/4 or 4/4 time.',                                 keyPoints: ['Content coming soon.'] },
+            { name: 'Beat',      chip: 'Rhythm',    description: 'The underlying pulse of the music. Every count in a combination maps to a beat.',                                 keyPoints: ['Content coming soon.'] },
+            { name: 'Count',     chip: 'Rhythm',    description: 'A numbered position within a bar. Counting gives movement its structure and timing.',                             keyPoints: ['Content coming soon.'] },
+            { name: 'Downbeat',  chip: 'Rhythm',    description: 'The first and strongest beat of a bar. In 4/4, this is beat 1; in 3/4 (waltz), also beat 1.',                   keyPoints: ['Content coming soon.'] },
+            { name: 'Upbeat',    chip: 'Rhythm',    description: 'The beat or beats immediately before the downbeat. Preparations and entrances often happen on the upbeat.',       keyPoints: ['Content coming soon.'] },
+            { name: 'Tempo',     chip: 'Rhythm',    description: 'The speed of the music, measured in beats per minute. It affects how movements feel and how much time each step takes.', keyPoints: ['Content coming soon.'] },
+            { name: 'Dynamics',  chip: 'Dynamics',  description: 'Variations in energy, force, and quality of movement. In music, dynamics refer to loudness; in dance, to how movement is performed.', keyPoints: ['Content coming soon.'] },
+            { name: 'Phrase',    chip: 'Phrasing',  description: 'A musical sentence — a group of notes that form a complete unit of expression, usually 4 or 8 bars in ballet.',   keyPoints: ['Content coming soon.'] },
         ]
     },
     {

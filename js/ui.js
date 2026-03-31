@@ -6512,21 +6512,15 @@ function saveKnowledgeItem(skillId, popoverEl, type) {
 
 /* ═══════════════════════════════════════════════════════════════
    GLOSSARY
-   All terms from the skill library + musicality vocabulary.
-   Definitions to be completed — marked as such.
+   All skills from the skill library + ballet vocabulary terms
+   (positions, directions, concepts). Definitions to be completed.
+   Musicality terms live in the Musicality learn section.
    ═══════════════════════════════════════════════════════════════ */
 
-// Musicality and theory terms not covered by skill pages
-const GLOSSARY_MUSIC_TERMS = [
-    { term: 'Bar',          category: 'Musicality' },
-    { term: 'Beat',         category: 'Musicality' },
-    { term: 'Count',        category: 'Musicality' },
-    { term: 'Downbeat',     category: 'Musicality' },
-    { term: 'Dynamics',     category: 'Musicality' },
-    { term: 'Phrase',       category: 'Musicality' },
-    { term: 'Tempo',        category: 'Musicality' },
-    { term: 'Upbeat',       category: 'Musicality' },
-    // Ballet vocabulary
+// Ballet vocabulary terms — concepts, positions, and directions that aren't individual skills.
+// Musicality terms (Bar, Beat, Count, Downbeat, Dynamics, Phrase, Tempo, Upbeat) live in
+// the Musicality learn section. Skills (Port de bras, Relevé, Retiré) live in the skill library.
+const GLOSSARY_BALLET_TERMS = [
     { term: 'À la seconde', category: 'Position'   },
     { term: 'Adagio',       category: 'Style'      },
     { term: 'Allegro',      category: 'Style'      },
@@ -6544,9 +6538,6 @@ const GLOSSARY_MUSIC_TERMS = [
     { term: 'Épaulement',   category: 'Technique'  },
     { term: 'Five positions', category: 'Foundation' },
     { term: 'Pas de deux',  category: 'Structure'  },
-    { term: 'Port de bras', category: 'Technique'  },
-    { term: 'Relevé',       category: 'Technique'  },
-    { term: 'Retiré',       category: 'Position'   },
     { term: 'Spotting',     category: 'Technique'  },
     { term: 'Turnout',      category: 'Foundation' },
 ];
@@ -6561,8 +6552,8 @@ function buildGlossaryTerms() {
         _isSkill:   true,
     }));
 
-    // Merge with music/vocabulary terms
-    const all = [...skillTerms, ...GLOSSARY_MUSIC_TERMS];
+    // Merge with ballet vocabulary terms
+    const all = [...skillTerms, ...GLOSSARY_BALLET_TERMS];
 
     // Sort alphabetically, stripping leading accents for sort key
     return all.sort((a, b) => normaliseStr(a.term).localeCompare(normaliseStr(b.term)));
