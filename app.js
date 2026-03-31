@@ -390,9 +390,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (onboardingDone || hasData) {
         // Never overwrite a real level with not-assessed
         if (!appState.level) appState.level = 'not-assessed';
-        navigateTo('barre');
         document.querySelector('.bottom-nav')?.classList.add('visible');
         document.querySelector('.fab')?.classList.add('visible');
+        _restoreLastScreen(storage.load('currentScreen'));
     } else {
         // New user — ensure nav is hidden during onboarding
         document.querySelector('.bottom-nav')?.classList.remove('visible');
@@ -1293,6 +1293,7 @@ function skipToProfile() {
     const goals            = storage.load('goals');
     const timeline         = storage.load('timeline');
     const skillNotes       = storage.load('skillNotes');
+    const learnNotes       = storage.load('learnNotes');
 
     if (sessions)         appState.sessions         = sessions;
     if (sessionTemplates) appState.sessionTemplates = sessionTemplates;
@@ -1306,6 +1307,7 @@ function skipToProfile() {
     });
     if (timeline)         appState.timeline         = timeline;
     if (skillNotes)       appState.skillNotes       = skillNotes;
+    if (learnNotes)       appState.learnNotes       = learnNotes;
 
     // Load preferences
     const prefs = storage.load('preferences');

@@ -8,10 +8,12 @@ const STORAGE_KEYS = {
     goals:              'plie:goals',
     timeline:           'plie:timeline',
     skillNotes:         'plie:skillNotes',
+    learnNotes:         'plie:learnNotes',
     onboardingComplete: 'plie:onboardingComplete',
     hasVisitedLearn:    'plie:hasVisitedLearn',
     preferences:        'plie:preferences',
     gettingStarted:     'plie:gettingStarted',
+    currentScreen:      'plie:currentScreen',
 };
 
 const storage = {
@@ -114,6 +116,7 @@ let appState = {
     goals:            [],
     timeline:         [],
     skillNotes:       [],
+    learnNotes:       [],
 
     // Misc
     notes:      [],

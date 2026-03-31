@@ -8,6 +8,11 @@ function showScreen(screenId) {
     document.getElementById(screenId)?.classList.add('active');
     appState.currentScreen = screenId;
 
+    // Persist so a refresh returns to this screen
+    if (!screenId.startsWith('onboarding') && !['assessment', 'completion', 'results'].includes(screenId)) {
+        storage.save('currentScreen', screenId);
+    }
+
     const isAppScreen = !['assessment', 'completion', 'results'].includes(screenId) && !screenId.startsWith('onboarding');
     if (!screenId.startsWith('onboarding')) {
         const nav = document.querySelector('.bottom-nav');
@@ -121,6 +126,64 @@ function _restoreScreenById(screenId, scrollY) {
         appState.currentNav = 'barre';
         showBarreScreen();
     }
+}
+
+/* ── Restore screen after refresh ─────────────────────────────
+   Called once on load for returning users. Rebuilds whatever
+   screen was active when the user last left the app.
+   ──────────────────────────────────────────────────────────── */
+
+function _restoreLastScreen(screenId) {
+    if (!screenId) { navigateTo('barre'); return; }
+
+    // Top-level nav screens
+    if (screenId === 'barre-screen')         { navigateTo('barre');   return; }
+    if (screenId === 'goals-screen')         { navigateTo('goals');   return; }
+    if (screenId === 'learn-screen')         { navigateTo('learn');   return; }
+    if (screenId === 'profile')              { navigateTo('profile'); return; }
+    if (screenId === 'all-goals-screen')     { navigateTo('goals');   showAllGoalsScreen(); return; }
+    if (screenId === 'skill-library-screen') { navigateTo('learn');   showLearnSkillLibrary(); return; }
+
+    // session-detail-{id}
+    const sessionMatch = screenId.match(/^session-detail-(\d+)$/);
+    if (sessionMatch) {
+        const id = Number(sessionMatch[1]);
+        if ((appState.sessions || []).find(s => s.id === id)) {
+            navigateTo('barre');
+            showSessionDetail(id);
+            return;
+        }
+    }
+
+    // skill-detail-{skillId}
+    const skillMatch = screenId.match(/^skill-detail-(.+)$/);
+    if (skillMatch) {
+        const skillId = skillMatch[1];
+        if (DATA.skills.find(s => s.id === skillId)) {
+            navigateTo('learn');
+            showSkillDetail(skillId);
+            return;
+        }
+    }
+
+    // skill-knowledge-{skillId}
+    const knowMatch = screenId.match(/^skill-knowledge-(.+)$/);
+    if (knowMatch) {
+        navigateTo('learn');
+        showSkillKnowledgePage(knowMatch[1]);
+        return;
+    }
+
+    // pointer-detail-{index}
+    const pointerMatch = screenId.match(/^pointer-detail-(\d+)$/);
+    if (pointerMatch) {
+        navigateTo('learn');
+        showPointerDetail(Number(pointerMatch[1]));
+        return;
+    }
+
+    // Unknown or removed screen — fall back safely
+    navigateTo('barre');
 }
 
 /* ── Swipe-to-go-back gesture ──────────────────────────────────
