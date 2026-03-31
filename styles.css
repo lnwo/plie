@@ -1885,7 +1885,8 @@ h1, h2, .screen-heading {
     justify-content: space-between;
     align-items: center;
     padding: 0 var(--sp-lg);
-    margin-bottom: var(--sp-lg);
+    margin-top: var(--sp-xl);
+    margin-bottom: var(--sp-md);
 }
 
 .barre-section-label {
@@ -4110,8 +4111,8 @@ h1, h2, .screen-heading {
     text-transform: uppercase;
     letter-spacing: 1.5px;
     color: var(--ink-3);
-    margin-bottom: var(--sp-sm);
-    margin-top: var(--sp-lg);
+    margin-top: var(--sp-xl);
+    margin-bottom: var(--sp-md);
 }
 
 .goal-card {
@@ -5163,7 +5164,7 @@ mark.search-highlight {
     text-transform: uppercase;
     letter-spacing: 1.5px;
     color: var(--ink-3);
-    margin-bottom: var(--sp-sm);
+    margin-bottom: var(--sp-md);
 }
 
 .skill-know-description {
@@ -6150,7 +6151,7 @@ button, a, input, select, textarea,
     font-variant: small-caps;
     letter-spacing: 0.04em;
     color: var(--ink-5);
-    margin-bottom: var(--sp-sm);
+    margin-bottom: var(--sp-md);
     padding: 0 var(--sp-xs);
 }
 
@@ -7196,7 +7197,7 @@ button, a, input, select, textarea,
     letter-spacing: .09em;
     text-transform: uppercase;
     color: var(--ink-3);
-    margin-bottom: var(--sp-sm);
+    margin-bottom: var(--sp-md);
 }
 .focus-sheet-divider {
     height: 1px;
