@@ -130,8 +130,8 @@ function openSessionLogger(mode) {
         _mode:           mode || 'session',
     };
 
-    // Auto-create first block and focus its title
-    addBlock(true);
+    // Auto-create first block and focus its title (not needed for note mode)
+    if (mode !== 'note') addBlock(true);
 
     let overlay = document.getElementById('session-logger-overlay');
     if (!overlay) {
@@ -416,6 +416,14 @@ function renderSessionLogger() {
 
             <div class="session-logger-body" id="session-logger-body">
 
+                ${isNoteMode ? `
+                <div class="session-field" style="padding-top: var(--sp-sm);">
+                    <div contenteditable="true"
+                         id="note-editor"
+                         class="note-editor"
+                         spellcheck="true">${escapeHtml(s.generalNotes || '')}</div>
+                </div>
+                ` : `
                 <!-- Date -->
                 <div class="session-field">
                     <label class="session-field-label">Date</label>
@@ -434,7 +442,7 @@ function renderSessionLogger() {
 
                 <!-- Notes & corrections blocks -->
                 <div class="session-field" style="margin-bottom: var(--sp-sm);">
-                    <label class="session-field-label">${isNoteMode ? 'Notes' : 'Notes &amp; corrections'}</label>
+                    <label class="session-field-label">Notes &amp; corrections</label>
                 </div>
 
                 <div id="session-blocks-container">
@@ -442,14 +450,15 @@ function renderSessionLogger() {
                 </div>
 
                 <button class="add-block-btn" onclick="addBlock()">+ add notes &amp; corrections</button>
+                `}
 
                 <div style="height: var(--sp-3xl);"></div>
 
             </div>
 
             <div class="session-logger-footer">
-                <button class="session-discard-btn" onclick="closeSessionLogger()">discard</button>
-                <button class="btn-large session-save-btn" onclick="saveSession()">${isNoteMode ? 'save note' : 'save session'}</button>
+                <button class="session-discard-btn" onmousedown="closeSessionLogger()">discard</button>
+                <button class="btn-large session-save-btn" onmousedown="saveSession()">${isNoteMode ? 'save note' : 'save session'}</button>
             </div>
         </div>
     `;
@@ -1575,6 +1584,13 @@ function saveSession() {
         el.innerText = ''; // clear so it doesn't double-save
     });
 
+    // Note mode: capture text from the single contenteditable
+    const isNoteMode = s._mode === 'note';
+    if (isNoteMode) {
+        const noteEl = document.getElementById('note-editor');
+        s.generalNotes = noteEl ? (noteEl.innerText || '').replace(/\n+$/, '') : '';
+    }
+
     const now = Date.now();
     let seq = 0; // monotonic sequence within this save — guarantees unique IDs
     const nextId = () => now + (++seq);
@@ -1589,6 +1605,7 @@ function saveSession() {
         sessionLocation: s.sessionLocation || null,
         classType:       s.classType       || null,
         notes:           s.generalNotes    || null,
+        isNote:          isNoteMode || null,
     };
 
     if (s._isEdit) {
@@ -1724,24 +1741,34 @@ function saveSession() {
     // 3. Write timeline entry (new sessions only — edits don't create duplicate entries)
     if (!s._isEdit) {
         const template = appState.sessionTemplates.find(t => t.id === s.templateId);
-        const sessionLabel = session.sessionName || template?.name || 'Session';
-        const classTypeLabel = session.classType
-            ? (ALL_CLASS_TYPES.find(ct => ct.id === session.classType)?.label || session.classType)
-            : null;
+        if (isNoteMode) {
+            const firstLine = (session.notes || '').split('\n')[0].trim() || 'Note';
+            appendTimelineEntry({
+                type:     'note',
+                objectId: session.id,
+                title:    firstLine,
+                date:     session.date,
+            });
+        } else {
+            const sessionLabel = session.sessionName || template?.name || 'Session';
+            const classTypeLabel = session.classType
+                ? (ALL_CLASS_TYPES.find(ct => ct.id === session.classType)?.label || session.classType)
+                : null;
 
-        const bodyParts = [
-            classTypeLabel,
-            skillCount      ? `${skillCount} skill${skillCount !== 1 ? 's' : ''}`               : null,
-            correctionCount ? `${correctionCount} correction${correctionCount !== 1 ? 's' : ''}` : null,
-        ].filter(Boolean);
+            const bodyParts = [
+                classTypeLabel,
+                skillCount      ? `${skillCount} skill${skillCount !== 1 ? 's' : ''}`               : null,
+                correctionCount ? `${correctionCount} correction${correctionCount !== 1 ? 's' : ''}` : null,
+            ].filter(Boolean);
 
-        appendTimelineEntry({
-            type:     'session',
-            objectId: session.id,
-            title:    sessionLabel,
-            body:     bodyParts.join(' · ') || null,
-            date:     session.date,
-        });
+            appendTimelineEntry({
+                type:     'session',
+                objectId: session.id,
+                title:    sessionLabel,
+                body:     bodyParts.join(' · ') || null,
+                date:     session.date,
+            });
+        }
     }
 
     // Getting started completion hooks
@@ -4797,15 +4824,17 @@ function renderTimelineEntry(entry) {
         </div>`;
     }
     const isPraise   = entry.isPraise;
-    const isTappable = entry.type === 'session' && entry.objectId;
+    const isNote     = entry.type === 'note';
+    const isTappable = (entry.type === 'session' || isNote) && entry.objectId;
     const typeKey    = isPraise ? 'praise' : (entry.type || 'manual');
-    const typeLabels = { session: 'Session', milestone: 'Milestone', assessment: 'Assessment', praise: 'Praise \u2605', manual: '' };
+    const typeLabels = { session: 'Session', note: 'Note', milestone: 'Milestone', assessment: 'Assessment', praise: 'Praise \u2605', manual: '' };
     const typeLabel  = typeLabels[typeKey] || '';
     const hasHighlight = entry.type === 'session' && entry.objectId &&
         appState.sessionSkills.some(ss => ss.sessionId === entry.objectId && ss.isHighlight);
+    const tapAction  = isNote ? `showNoteDetail(${entry.objectId})` : `showSessionDetail(${entry.objectId})`;
     return `
     <div class="timeline-item timeline-item-${typeKey} ${isTappable ? 'timeline-item-tappable' : ''}"
-         ${isTappable ? `onclick="showSessionDetail(${entry.objectId})"` : ''}>
+         ${isTappable ? `onclick="${tapAction}"` : ''}>
         <div class="timeline-content">
             ${typeLabel ? `<span class="timeline-type-label">${typeLabel}</span>` : ''}
             <div class="timeline-title ${isPraise ? 'timeline-praise-text' : ''}">${entry.title}</div>
@@ -4916,36 +4945,74 @@ function showSessionDetail(sessionId) {
         document.querySelector('.app-container').appendChild(screen);
     }
 
-    const classTypeLabel = session.classType
-        ? ALL_CLASS_TYPES.find(ct => ct.id === session.classType)?.label || session.classType
-        : null;
-
-    const template = appState.sessionTemplates.find(t => t.id === session.templateId);
-    const sessionTitle = session.sessionName || template?.name || 'Session';
-    const location = template?.location || session.sessionLocation || null;
+    const isNote = !!session.isNote;
 
     const datePart = new Date(session.date).toLocaleDateString('en-GB', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
     });
-    const metaParts = [datePart, classTypeLabel].filter(Boolean);
 
-    // Get SessionSkills for this session
-    const sessionSkillRecords = appState.sessionSkills.filter(ss => ss.sessionId === sessionId);
+    let bodyHtml;
+    let heroHtml;
+    let editAction;
 
-    // Render blocks from SessionSkill records
-    const blocksHtml = sessionSkillRecords.length > 0
-        ? sessionSkillRecords.map(ss => renderDetailBlockHtml(ss)).join('')
-        : `<div class="session-detail-empty">No notes recorded for this session.</div>`;
+    if (isNote) {
+        const noteText = session.notes || '';
+        const lines = noteText.split('\n');
+        const titleLine = escapeHtml(lines[0] || '');
+        const bodyLines = escapeHtml(lines.slice(1).join('\n'));
+        const noteContentHtml = titleLine
+            ? `<span class="note-detail-line-title">${titleLine}</span>${bodyLines ? `<span class="note-detail-line-body">${bodyLines}</span>` : ''}`
+            : `<span class="note-detail-line-body" style="color:var(--ink-4);font-style:italic;">No content.</span>`;
+        heroHtml = `
+            <div class="session-detail-hero">
+                <h1 class="session-detail-title">Note</h1>
+                <div class="session-detail-meta">${datePart}</div>
+            </div>`;
+        bodyHtml = `<div class="note-detail-body">${noteContentHtml}</div>`;
+        editAction = `openNoteEditor(${sessionId})`;
+    } else {
+        const classTypeLabel = session.classType
+            ? ALL_CLASS_TYPES.find(ct => ct.id === session.classType)?.label || session.classType
+            : null;
+        const template = appState.sessionTemplates.find(t => t.id === session.templateId);
+        const sessionTitle = session.sessionName || template?.name || 'Session';
+        const location = template?.location || session.sessionLocation || null;
+        const metaParts = [datePart, classTypeLabel].filter(Boolean);
 
-    // Session-level notes block (if any)
-    const sessionNotesHtml = session.notes ? `
-        <div class="detail-block">
-            <div class="detail-block-header">
-                <span class="detail-block-topic">General</span>
+        const sessionSkillRecords = appState.sessionSkills.filter(ss => ss.sessionId === sessionId);
+        const blocksHtml = sessionSkillRecords.length > 0
+            ? sessionSkillRecords.map(ss => renderDetailBlockHtml(ss)).join('')
+            : `<div class="session-detail-empty">No notes recorded for this session.</div>`;
+        const sessionNotesHtml = session.notes ? `
+            <div class="detail-block">
+                <div class="detail-block-header">
+                    <span class="detail-block-topic">General</span>
+                </div>
+                <div class="detail-block-notes">${session.notes}</div>
             </div>
-            <div class="detail-block-notes">${session.notes}</div>
-        </div>
-    ` : '';
+        ` : '';
+
+        heroHtml = `
+            <div class="session-detail-hero">
+                <h1 class="session-detail-title">${sessionTitle}</h1>
+                <div class="session-detail-meta">${metaParts.join(' · ')}</div>
+                ${location ? `<div class="session-detail-location">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                        <circle cx="6" cy="5" r="2"/><path d="M6 1a4 4 0 0 1 4 4c0 3-4 7-4 7S2 8 2 5a4 4 0 0 1 4-4z"/>
+                    </svg>
+                    ${location}
+                </div>` : ''}
+            </div>`;
+        bodyHtml = `
+            <div class="session-detail-section">
+                <div class="session-detail-section-label">Notes &amp; corrections</div>
+                <div class="session-detail-blocks">
+                    ${sessionNotesHtml}
+                    ${blocksHtml}
+                </div>
+            </div>`;
+        editAction = `openSessionEditor(${sessionId})`;
+    }
 
     screen.innerHTML = `
         <div class="session-detail-view">
@@ -4957,41 +5024,55 @@ function showSessionDetail(sessionId) {
                     back
                 </button>
                 <div style="display:flex;gap:var(--sp-sm);">
-                    <button class="session-detail-edit" onclick="openSessionEditor(${sessionId})">edit</button>
+                    <button class="session-detail-edit" onclick="${editAction}">edit</button>
                     <button class="session-detail-edit" style="color:var(--error);border-color:var(--coral-soft);"
                             onclick="deleteSession(${sessionId})">delete</button>
                 </div>
             </div>
 
-            <div class="session-detail-hero">
-                <h1 class="session-detail-title">${sessionTitle}</h1>
-                <div class="session-detail-meta">${metaParts.join(' · ')}</div>
-                ${location ? `<div class="session-detail-location">
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-                        <circle cx="6" cy="5" r="2"/><path d="M6 1a4 4 0 0 1 4 4c0 3-4 7-4 7S2 8 2 5a4 4 0 0 1 4-4z"/>
-                    </svg>
-                    ${location}
-                </div>` : ''}
-            </div>
-
-            <div class="session-detail-section">
-                <div class="session-detail-section-label">Notes &amp; corrections</div>
-                <div class="session-detail-blocks">
-                    ${sessionNotesHtml}
-                    ${blocksHtml}
-                </div>
-            </div>
+            ${heroHtml}
+            ${bodyHtml}
 
             <div style="height: 120px;"></div>
         </div>
     `;
 
     showScreen(`session-detail-${sessionId}`);
-    requestAnimationFrame(() => initDetailBlockSeeMore());
+    if (!isNote) requestAnimationFrame(() => initDetailBlockSeeMore());
 }
+
 
 function closeSessionDetail(sessionId, returnTo) {
     goBack();
+}
+
+function showNoteDetail(sessionId) {
+    showSessionDetail(sessionId);
+}
+
+function openNoteEditor(sessionId) {
+    const session = appState.sessions.find(s => s.id === sessionId);
+    if (!session) return;
+    appState.currentSession = {
+        id:           session.id,
+        date:         session.date,
+        generalNotes: session.notes || '',
+        blocks:       [],
+        _mode:        'note',
+        _isEdit:      true,
+    };
+    let overlay = document.getElementById('session-logger-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'session-logger-overlay';
+        overlay.className = 'session-overlay';
+        document.body.appendChild(overlay);
+    }
+    renderSessionLogger();
+    document.querySelector('.fab')?.classList.remove('visible');
+    document.querySelector('.bottom-nav')?.classList.remove('visible');
+    requestAnimationFrame(() => overlay.classList.add('open'));
+    attachSheetSwipe();
 }
 
 function renderDetailBlockHtml(sessionSkill) {
@@ -5544,8 +5625,12 @@ function expandSkillNotes(skillId) {
             <div class="skill-note-text">${renderClampedHtml(nl2br(n.text), 'sn-' + n.id)}</div>
         </div>
     `).join('');
-    // Remove the see more button
-    list.nextElementSibling?.remove();
+    // Replace see-more with hide button
+    const seeMoreBtn = list.nextElementSibling;
+    if (seeMoreBtn && seeMoreBtn.classList.contains('skill-see-more-btn')) {
+        seeMoreBtn.textContent = 'hide';
+        seeMoreBtn.onclick = () => renderSkillNotesSectionInPlace(skillId, list.closest('.skill-detail-section'));
+    }
     requestAnimationFrame(() => initClampedTexts(list));
 }
 
