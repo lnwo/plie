@@ -4359,6 +4359,9 @@ function showPointerDetail(index) {
     if (!pointer) return;
 
     const screenId = `pointer-detail-${index}`;
+
+    if (appState.currentScreen !== screenId) pushNavHistory();
+
     let screen = document.getElementById(screenId);
     if (!screen) {
         screen = document.createElement('div');
@@ -4369,7 +4372,7 @@ function showPointerDetail(index) {
 
     screen.innerHTML = `
         <div class="skill-detail-header">
-            <button class="session-detail-back" onclick="navigateTo('learn')">
+            <button class="session-detail-back" onclick="goBack()">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="13 4 7 10 13 16"/>
                 </svg>
@@ -4451,7 +4454,7 @@ function showLearnSection(sectionId) {
 
     screen.innerHTML = `
         <div class="skill-detail-header">
-            <button class="session-detail-back" onclick="navigateTo('learn')">
+            <button class="session-detail-back" onclick="goBack()">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="13 4 7 10 13 16"/>
                 </svg>
@@ -6489,7 +6492,7 @@ function renderGlossaryScreen(query) {
 
     screen.innerHTML = `
         <div class="skill-detail-header">
-            <button class="session-detail-back" onclick="navigateTo('learn')">
+            <button class="session-detail-back" onclick="goBack()">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="13 4 7 10 13 16"/>
                 </svg>
