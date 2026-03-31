@@ -6194,7 +6194,7 @@ function renderSkillLibCard(ref, query) {
         <div class="glossary-term-row glossary-term-skill" onclick="showSkillKnowledgePage('${ref.id}', 'skill-library-screen')">
             <div class="glossary-term-main">
                 <span class="glossary-term-name">${displayName}</span>
-                ${ref.english ? `<span class="glossary-term-alt">${displayEnglish}</span>` : ''}
+                ${query && ref.english ? `<span class="glossary-term-alt">${displayEnglish}</span>` : ''}
                 ${correctionCount > 0 ? `<span class="skill-lib-inline-count"><span class="skill-lib-indicator-count">${correctionCount}</span></span>` : ''}
             </div>
             <div class="glossary-term-meta">
