@@ -883,8 +883,22 @@ function addBlock(focusTitle = false) {
         requestAnimationFrame(() => {
             const blocks = document.querySelectorAll('.block-bullet-entry');
             const last = blocks[blocks.length - 1];
-            const firstLine = last?.querySelector('div');
-            (firstLine || last)?.focus();
+            if (!last) return;
+            const firstLine = last.querySelector('div');
+            const target = firstLine || last;
+            target.focus();
+            // Place cursor inside the div via Selection API so the first keystroke
+            // lands inside the <div> child, not as a bare text node on the parent.
+            if (firstLine) {
+                try {
+                    const range = document.createRange();
+                    range.setStart(firstLine, 0);
+                    range.collapse(true);
+                    const sel = window.getSelection();
+                    sel?.removeAllRanges();
+                    sel?.addRange(range);
+                } catch (_) {}
+            }
         });
     }
 }
@@ -1107,11 +1121,9 @@ function checkBlockTitleForSkills(blockId, text) {
 }
 
 function updateBlockBullets(blockId, el) {
-    const divs = Array.from(el.querySelectorAll('div'));
-    const divText = divs.map(d => d.textContent || '').join('\n').trimEnd();
-    // Fall back to innerText when all divs are empty — handles iOS/WebKit inserting
-    // text as direct text nodes rather than into the child div structure.
-    const text = divText || (el.innerText || '').trimEnd();
+    // innerText captures visible text with newlines regardless of whether the
+    // browser placed content in <div> children or as bare text nodes.
+    const text = (el.innerText || '').replace(/\n+$/, '');
     updateBlockField(blockId, 'text', text);
     checkBlockTitleForSkills(blockId, text);
 }
@@ -1516,9 +1528,7 @@ function saveSession() {
         const blockId = parseInt(el.dataset.blockId, 10);
         const block = getBlockById(blockId);
         if (!block) return;
-        const divs = Array.from(el.querySelectorAll('div'));
-        const divText = divs.map(d => d.textContent || '').join('\n').trimEnd();
-        const text = divText || (el.innerText || '').trimEnd();
+        const text = (el.innerText || '').replace(/\n+$/, '');
         if (text) block.text = text;
     });
 
