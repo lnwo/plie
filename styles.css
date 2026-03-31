@@ -5074,63 +5074,9 @@ h1, h2, .screen-heading {
 .skill-lib-cards {
     display: flex;
     flex-direction: column;
-    gap: var(--sp-sm);
 }
 
-/* Skill card — matches active-skill-card (Barre corrections in focus) */
-.skill-lib-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: var(--surface);
-    border: 0.5px solid rgba(26,23,20,0.10);
-    border-radius: var(--r-lg);
-    padding: var(--sp-lg);
-    cursor: pointer;
-    transition: all 0.2s var(--ease-out);
-    min-height: 44px;
-    gap: var(--sp-md);
-}
-
-.skill-lib-card:hover {
-    box-shadow: var(--shadow-md);
-    border-color: var(--gold-mid);
-}
-
-.skill-lib-card:active {
-    background: var(--gold-wash);
-}
-
-/* TODO: update by-category internal card view to match this style */
-
-.skill-lib-card-main { flex: 1; min-width: 0; }
-
-.skill-lib-card-name {
-    font-size: var(--fs-body);
-    font-weight: 600;
-    color: var(--ink);
-    line-height: 1.2;
-}
-
-.skill-lib-card-english {
-    font-size: var(--fs-caption);
-    color: var(--ink-3);
-    margin-top: 2px;
-}
-
-.skill-lib-card-meta {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 4px;
-    flex-shrink: 0;
-}
-
-.skill-lib-card-indicators {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
+/* TODO: update by-category internal card view to use flat row style */
 
 .skill-lib-indicator {
     display: inline-flex;
