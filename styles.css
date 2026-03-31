@@ -3324,7 +3324,7 @@ h1, h2, .screen-heading {
 
 /* Placeholder: single empty div shows hint text */
 .block-bullet-entry > div:only-child:empty::before {
-    content: "— What happened…";
+    content: "What happened…";
     color: var(--ink-4);
 }
 

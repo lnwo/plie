@@ -149,6 +149,7 @@ function openSessionLogger(mode) {
     document.querySelector('.fab')?.classList.remove('visible');
     document.querySelector('.bottom-nav')?.classList.remove('visible');
 
+    void overlay.offsetHeight; // force reflow so translateY(100%) is established before transition
     requestAnimationFrame(() => overlay.classList.add('open'));
 
     // Swipe-to-dismiss on handle
@@ -201,6 +202,7 @@ function closeSessionLogger() {
         appState._addingNewTemplate = false;
         appState._draftTemplate = null;
         appState._showMoreClassTypes = false;
+        overlay.innerHTML = '';
     }, { once: true });
 }
 
