@@ -5477,15 +5477,17 @@ function renderSkillCorrectionsGrouped(corrections) {
             : '';
         const itemsHtml = items.map(c => `
             <div class="skill-corr-item${c.isRecurring ? ' is-recurring' : ''}">
-                <div class="skill-corr-text">${c.text}</div>
+                <div class="skill-corr-text">&ldquo;${c.text}&rdquo;</div>
                 ${c.isRecurring ? `<span class="skill-correction-recurring">recurring</span>` : ''}
             </div>
         `).join('');
         return `
             <div class="skill-corr-group">
-                <div class="skill-corr-group-date">${dateStr}</div>
                 ${itemsHtml}
-                ${sessionLink}
+                <div class="skill-corr-meta">
+                    ${sessionLink}
+                    <span class="skill-corr-group-date">${dateStr}</span>
+                </div>
             </div>
         `;
     }).join('');

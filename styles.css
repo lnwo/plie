@@ -4641,9 +4641,8 @@ h1, h2, .screen-heading {
 }
 
 .skill-corr-group-date {
-    font-size: var(--fs-small);
+    font-size: var(--fs-caption);
     color: var(--ink-5);
-    margin-bottom: var(--sp-xs);
 }
 
 .skill-corr-item {
@@ -4657,17 +4656,24 @@ h1, h2, .screen-heading {
 
 .skill-corr-text {
     font-size: var(--fs-body);
-    color: var(--ink);
+    font-style: italic;
+    color: var(--ink-3);
     line-height: 1.55;
+}
+
+.skill-corr-meta {
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-sm);
+    margin-top: var(--sp-xs);
 }
 
 .skill-corr-source {
     display: inline-block;
-    margin-top: var(--sp-xs);
     background: none;
     border: none;
     font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
+    font-size: var(--fs-caption);
     color: var(--ink-5);
     cursor: pointer;
     padding: 0;
