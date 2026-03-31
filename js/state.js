@@ -119,6 +119,7 @@ let appState = {
     notes:      [],
     persona:    null,
     currentNav: null,
+    navHistory: [],   // stack of { screenId, scrollY? } — for back navigation
 
     // Active session being constructed — never persisted mid-flight
     currentSession: null,

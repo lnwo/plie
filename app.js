@@ -370,6 +370,8 @@ function handleOnboardingSwipe() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    initSwipeBack();
+
     document.querySelectorAll('.onboarding-screen').forEach(screen => {
         screen.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, false);
         screen.addEventListener('touchend', e => { touchEndX = e.changedTouches[0].screenX; handleOnboardingSwipe(); }, false);
