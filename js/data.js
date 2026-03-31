@@ -1026,6 +1026,22 @@ const DATA = {
                     'See the Tendu entry in the skill library.'
                 ],
                 inspiration: 'Watch any footage of Sylvie Guillem at the barre — the precision of the foot through each position of a tendu is as good a model as exists.'
+            },
+            {
+                name: 'Spotting',
+                type: 'pointer',
+                question: 'How do I spot properly in turns?',
+                insight: 'Content coming soon.',
+                whatToTry: ['Content coming soon.'],
+                inspiration: null
+            },
+            {
+                name: 'Turnout',
+                type: 'pointer',
+                question: 'How do I improve my turnout without straining?',
+                insight: 'Content coming soon.',
+                whatToTry: ['Content coming soon.'],
+                inspiration: null
             }
         ]
     }

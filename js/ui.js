@@ -6538,8 +6538,7 @@ const GLOSSARY_BALLET_TERMS = [
     { term: 'Épaulement',   category: 'Technique'  },
     { term: 'Five positions', category: 'Foundation' },
     { term: 'Pas de deux',  category: 'Structure'  },
-    { term: 'Spotting',     category: 'Technique'  },
-    { term: 'Turnout',      category: 'Foundation' },
+    // Spotting and Turnout live in Pointers
 ];
 
 function buildGlossaryTerms() {
@@ -6557,6 +6556,37 @@ function buildGlossaryTerms() {
 
     // Sort alphabetically, stripping leading accents for sort key
     return all.sort((a, b) => normaliseStr(a.term).localeCompare(normaliseStr(b.term)));
+}
+
+function showGlossaryTermDetail(term, category) {
+    const screenId = `glossary-term-${term.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`;
+    pushNavHistory();
+    let screen = document.getElementById(screenId);
+    if (!screen) {
+        screen = document.createElement('div');
+        screen.id = screenId;
+        screen.className = 'screen';
+        document.querySelector('.app-container').appendChild(screen);
+    }
+    screen.innerHTML = `
+        <div class="skill-detail-header">
+            <button class="session-detail-back" onclick="goBack()">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="13 4 7 10 13 16"/>
+                </svg>
+                back
+            </button>
+        </div>
+        <div class="skill-detail-hero">
+            <div class="skill-detail-category">${category ? category.toUpperCase() : ''}</div>
+            <h1 class="skill-detail-title">${term}</h1>
+        </div>
+        <div class="skill-know-section">
+            <p class="skill-know-stub-notice">Definition coming soon.</p>
+        </div>
+        <div style="height: 120px;"></div>
+    `;
+    showScreen(screenId);
 }
 
 function showGlossary() {
@@ -6593,17 +6623,17 @@ function renderGlossaryScreen(query) {
         <div class="glossary-group" id="gl-${letter}">
             <div class="glossary-group-label">${letter}</div>
             ${groups[letter].map(t => `
-                <div class="glossary-term-row ${t._isSkill ? 'glossary-term-skill' : ''}"
-                     ${t._isSkill ? `onclick="showSkillKnowledgePage('${t.skillId}', 'glossary-screen')"` : ''}>
+                <div class="glossary-term-row glossary-term-skill"
+                     onclick="${t._isSkill
+                         ? `showSkillKnowledgePage('${t.skillId}', 'glossary-screen')`
+                         : `showGlossaryTermDetail('${t.term.replace(/'/g, "\\'")}', '${(t.category || '').replace(/'/g, "\\'")}')`}">
                     <div class="glossary-term-main">
                         <span class="glossary-term-name">${t.term}</span>
                         ${t.alt ? `<span class="glossary-term-alt">${t.alt}</span>` : ''}
                     </div>
                     <div class="glossary-term-meta">
                         <span class="glossary-term-category">${t.category || ''}</span>
-                        ${t._isSkill
-                            ? `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="4 2 8 6 4 10"/></svg>`
-                            : `<span class="glossary-term-stub">definition coming soon</span>`}
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="4 2 8 6 4 10"/></svg>
                     </div>
                 </div>
             `).join('')}
