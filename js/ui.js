@@ -11,7 +11,6 @@ function escapeHtml(str) {
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
-<<<<<<< Updated upstream
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
 }
@@ -60,9 +59,6 @@ function initClampedTexts(root) {
             moreBtn.style.display = '';
         }
     });
-=======
-        .replace(/"/g, '&quot;');
->>>>>>> Stashed changes
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -3082,14 +3078,11 @@ function openGoalCreator() {
         overlay.id = 'goal-creator-overlay';
         overlay.className = 'session-overlay'; // reuse sheet styles
         document.body.appendChild(overlay);
-<<<<<<< Updated upstream
         overlay.addEventListener('mousedown', (e) => {
             if (e.target === overlay) confirmDiscardGoal();
         });
-=======
         overlay.addEventListener('touchstart', _goalTabTouchHandler, { passive: true });
         overlay.addEventListener('click', _goalTabClickHandler);
->>>>>>> Stashed changes
     }
 
     renderGoalCreator();
@@ -3123,14 +3116,11 @@ function openGoalCreatorWithSuggestion(title, dimensionId, skillId, rationale, m
         overlay.id = 'goal-creator-overlay';
         overlay.className = 'session-overlay';
         document.body.appendChild(overlay);
-<<<<<<< Updated upstream
         overlay.addEventListener('mousedown', (e) => {
             if (e.target === overlay) confirmDiscardGoal();
         });
-=======
         overlay.addEventListener('touchstart', _goalTabTouchHandler, { passive: true });
         overlay.addEventListener('click', _goalTabClickHandler);
->>>>>>> Stashed changes
     }
 
     renderGoalCreator();
@@ -3185,14 +3175,11 @@ function openGoalEditor(goalId) {
         overlay.id = 'goal-creator-overlay';
         overlay.className = 'session-overlay';
         document.body.appendChild(overlay);
-<<<<<<< Updated upstream
         overlay.addEventListener('mousedown', (e) => {
             if (e.target === overlay) confirmDiscardGoal();
         });
-=======
         overlay.addEventListener('touchstart', _goalTabTouchHandler, { passive: true });
         overlay.addEventListener('click', _goalTabClickHandler);
->>>>>>> Stashed changes
     }
     renderGoalCreator();
     document.querySelector('.fab')?.classList.remove('visible');
@@ -3531,13 +3518,10 @@ function renderGoalCreator() {
         </div>
     `;
 
-<<<<<<< Updated upstream
     // Attach tab + type card listeners via JS (inline handlers in innerHTML unreliable in Safari)
     document.querySelectorAll('#goal-type-tabs .goal-type-tab, .goal-type-card').forEach(btn => {
         btn.addEventListener('click', () => setGoalType(btn.dataset.type));
     });
-=======
->>>>>>> Stashed changes
 }
 
 function selectGoalCategory(cat) {
