@@ -3041,7 +3041,7 @@ function renderGoalCard(goal, completed) {
                                 if (!expStr) return '';
                                 const daysLeft = exp ? Math.ceil((exp - new Date()) / 86400000) : null;
                                 const nearClass = daysLeft !== null && daysLeft <= 3 && daysLeft >= 0 ? ' goal-expiry-near' : '';
-                                return ` <span class="goal-card-expiry${nearClass}">· expires ${expStr}</span>`;
+                                return ` <span class="goal-card-expiry${nearClass}">· Expires ${expStr}</span>`;
                             })()}
                         </div>
                         ${!completed ? `<button class="goal-edit-btn" onmousedown="openGoalEditor(${goal.id})">edit</button>` : ''}
@@ -4818,8 +4818,8 @@ function formatTimelineDate(dateStr) {
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
 
-    if (d.toDateString() === today.toDateString()) return 'Today';
-    if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    if (d.toDateString() === today.toDateString()) return 'today';
+    if (d.toDateString() === yesterday.toDateString()) return 'yesterday';
     return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
@@ -6183,7 +6183,6 @@ function renderSkillLibrary(query, activeTab) {
 function renderSkillLibCard(ref, query) {
     const user = appState.skills.find(s => s.id === ref.id);
     const isFlagged = user?.flagged || false;
-    const isTracked = user?.tracked || false;
     const hasNotes = (appState.skillNotes || []).some(n => n.skillId === ref.id);
     const correctionCount = appState.corrections.filter(c => c.skillId === ref.id).length;
 
@@ -6192,20 +6191,18 @@ function renderSkillLibCard(ref, query) {
     const displayEnglish = query ? highlightMatch(ref.english, query) : ref.english;
 
     return `
-        <div class="skill-lib-card" onclick="showSkillKnowledgePage('${ref.id}', 'skill-library-screen')">
-            <div class="skill-lib-card-main">
-                <div class="skill-lib-card-name">
-                    ${displayName}
-                    ${correctionCount > 0 ? `<span class="skill-lib-inline-count"><span class="skill-lib-indicator-count">${correctionCount}</span></span>` : ''}
-                </div>
-                ${query && displayEnglish !== ref.english ? `<div class="skill-lib-card-english">${displayEnglish}</div>` : ''}
+        <div class="glossary-term-row glossary-term-skill" onclick="showSkillKnowledgePage('${ref.id}', 'skill-library-screen')">
+            <div class="glossary-term-main">
+                <span class="glossary-term-name">${displayName}</span>
+                ${ref.english ? `<span class="glossary-term-alt">${displayEnglish}</span>` : ''}
+                ${correctionCount > 0 ? `<span class="skill-lib-inline-count"><span class="skill-lib-indicator-count">${correctionCount}</span></span>` : ''}
             </div>
-            <div class="skill-lib-card-meta">
+            <div class="glossary-term-meta">
+                <span class="glossary-term-category">${ref.category || ''}</span>
+                ${isFlagged ? `<span class="skill-lib-indicator" title="In focus">${ICONS.get('flag', 10)}</span>` : ''}
+                ${hasNotes ? `<span class="skill-lib-indicator" title="Has notes">${ICONS.get('edit', 10)}</span>` : ''}
                 <!-- TODO: decide whether to reinstate skill level badge (difficulty-badge) permanently -->
-                <div class="skill-lib-card-indicators">
-                    ${isFlagged ? `<span class="skill-lib-indicator" title="In focus">${ICONS.get('flag', 10)}</span>` : ''}
-                    ${hasNotes ? `<span class="skill-lib-indicator" title="Has notes">${ICONS.get('edit', 10)}</span>` : ''}
-                </div>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="4 2 8 6 4 10"/></svg>
             </div>
         </div>
     `;
