@@ -441,13 +441,7 @@ function renderSessionLogger() {
                     ${blocksHtml}
                 </div>
 
-                <button class="add-block-btn" onclick="addBlock()">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                        <line x1="7" y1="2" x2="7" y2="12"/>
-                        <line x1="2" y1="7" x2="12" y2="7"/>
-                    </svg>
-                    add notes &amp; corrections
-                </button>
+                <button class="add-block-btn" onclick="addBlock()">+ add notes &amp; corrections</button>
 
                 <div style="height: var(--sp-3xl);"></div>
 
@@ -1003,8 +997,7 @@ function renderBlockHtml(block, index) {
                         <button class="block-star-btn ${block.isHighlight ? 'active' : ''}"
                                 onmousedown="toggleBlockHighlight(${block.id})"
                                 aria-label="Highlight">
-                            <span class="star-outline">${ICONS.get('star', 16)}</span>
-                            <span class="star-filled">${ICONS.get('star-fill', 16)}</span>
+                            <svg class="star-icon" width="16" height="16" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                         </button>
                         <div class="session-block-topic-wrapper" id="topic-wrapper-${block.id}">
                             <input class="session-block-topic-input"
@@ -2705,12 +2698,7 @@ function renderGoalsScreen() {
         </div>
         <div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
             ${goalsHtml}
-            <button class="add-goal-btn" onclick="openGoalCreator()">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                    <line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/>
-                </svg>
-                set a goal
-            </button>
+            <button class="add-goal-btn" onclick="openGoalCreator()">+ set a goal</button>
             ${goals.length > 0 ? `<div style="text-align:center; margin-top: var(--sp-xl);"><button class="text-link-btn" onclick="showAllGoalsScreen()">view past goals →</button></div>` : ''}
         </div>
     `;
@@ -3299,12 +3287,7 @@ function renderGoalCreator() {
             <div class="session-field">
                 <label class="session-field-label">Milestones <span class="session-field-optional">optional</span></label>
                 <div id="goal-markers-list">${markersHtml}</div>
-                <button class="add-block-btn" style="margin-top: var(--sp-sm);" onmousedown="addProgressMarker()">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                        <line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/>
-                    </svg>
-                    add a step
-                </button>
+                <button class="add-block-btn" style="margin-top: var(--sp-sm);" onmousedown="addProgressMarker()">+ add a step</button>
             </div>
             <div class="session-field">
                 <label class="session-field-label">Work on this for</label>

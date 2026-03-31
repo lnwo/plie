@@ -384,6 +384,37 @@ h1, h2, .screen-heading {
     justify-content: center;
 }
 
+/* Tertiary — low-commitment dismissal, always paired with a primary, never standalone */
+.btn-tertiary {
+    background: transparent;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    font-size: var(--fs-body);
+    color: var(--ink-4);
+    cursor: pointer;
+    padding: 0;
+    text-transform: lowercase;
+    transition: color 0.2s ease;
+}
+
+.btn-tertiary:hover { color: var(--ink-2); }
+
+/* Navigation text link — ink-4, → suffix, signals page navigation not form action */
+.btn-nav-text-link {
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    font-size: var(--fs-small);
+    color: var(--ink-4);
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.2s ease;
+}
+
+.btn-nav-text-link:hover { color: var(--ink-2); }
+
 .skip-text {
     color: var(--ink-3);
     text-decoration: none;
@@ -2450,8 +2481,9 @@ h1, h2, .screen-heading {
     background: none;
     border: none;
     font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
     font-size: var(--fs-body);
-    color: var(--ink-3);
+    color: var(--ink-4);
     cursor: pointer;
     padding: 16px var(--sp-md);
     flex-shrink: 0;
@@ -2955,27 +2987,19 @@ h1, h2, .screen-heading {
 /* ── Notes & corrections blocks ── */
 
 .add-block-btn {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-sm);
-    width: 100%;
-    background: var(--surface);
-    border: 1.5px dashed var(--border);
-    border-radius: var(--r-md);
-    padding: 14px var(--sp-lg);
+    background: none;
+    border: none;
     font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
     font-size: var(--fs-small);
-    color: var(--ink-3);
+    color: var(--ink-4);
     cursor: pointer;
-    transition: all 0.2s var(--ease-out);
+    padding: var(--sp-xs) 0;
+    transition: color 0.2s ease;
     margin-bottom: var(--sp-sm);
 }
 
-.add-block-btn:hover {
-    border-color: var(--gold-mid);
-    color: var(--primary);
-    background: var(--gold-wash);
-}
+.add-block-btn:hover { color: var(--ink-2); }
 
 .session-block {
     background: var(--surface-warm);
@@ -3062,9 +3086,8 @@ h1, h2, .screen-heading {
     color: var(--gold);
 }
 
-.block-star-btn .star-filled { display: none; }
-.block-star-btn.active .star-outline { display: none; }
-.block-star-btn.active .star-filled { display: inline-flex; }
+.block-star-btn .star-icon { fill: none; stroke: currentColor; stroke-width: 1.8px; }
+.block-star-btn.active .star-icon { fill: currentColor; }
 
 .block-mode-toggle {
     display: flex;
@@ -4066,28 +4089,20 @@ h1, h2, .screen-heading {
    ═══════════════════════════════════════ */
 
 .add-goal-btn {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-sm);
-    width: 100%;
     background: none;
-    border: 1.5px dashed var(--border);
-    border-radius: var(--r-lg);
-    padding: var(--sp-md) var(--sp-lg);
+    border: none;
     font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
     font-size: var(--fs-body);
-    color: var(--ink-3);
+    color: var(--ink-4);
     cursor: pointer;
-    transition: all 0.2s var(--ease-out);
+    padding: var(--sp-xs) 0;
+    transition: color 0.2s ease;
     margin-top: var(--sp-md);
-    justify-content: center;
+    display: block;
 }
 
-.add-goal-btn:hover {
-    border-color: var(--gold-mid);
-    color: var(--primary);
-    background: var(--gold-wash);
-}
+.add-goal-btn:hover { color: var(--ink-2); }
 
 .goals-group-label {
     font-size: var(--fs-caption);
@@ -4701,7 +4716,8 @@ h1, h2, .screen-heading {
     border: none;
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-small);
-    color: var(--gold-mid);
+    color: var(--gold);
+    font-weight: 500;
     cursor: pointer;
     padding: var(--sp-sm) 0;
     display: block;
@@ -5124,22 +5140,17 @@ mark.search-highlight {
 
 .skill-know-personal-btn {
     background: none;
-    border: 1.5px solid var(--gold-soft);
-    border-radius: var(--r-full);
+    border: none;
     font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-caption);
-    font-weight: 500;
-    color: var(--primary);
+    font-weight: 400;
+    font-size: var(--fs-small);
+    color: var(--ink-4);
     cursor: pointer;
-    padding: 5px 12px;
-    transition: all 0.2s ease;
-    white-space: nowrap;
+    padding: 0;
+    transition: color 0.2s ease;
 }
 
-.skill-know-personal-btn:hover {
-    border-color: var(--primary);
-    background: var(--gold-wash);
-}
+.skill-know-personal-btn:hover { color: var(--ink-2); }
 
 .skill-know-section {
     padding: 0 var(--sp-lg);
@@ -6038,13 +6049,12 @@ button, a, input, select, textarea,
     background: none;
     border: none;
     font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
     font-size: var(--fs-caption);
-    color: var(--ink-3);
+    color: var(--ink-4);
     cursor: pointer;
     padding: 12px 8px;
     margin: -12px -8px;
-    text-decoration: underline;
-    text-underline-offset: 2px;
     transition: color 0.15s ease;
     white-space: nowrap;
 }
