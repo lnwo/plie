@@ -989,7 +989,7 @@ function renderBlockHtml(block, index) {
     const bulletLines = blockText ? blockText.split('\n') : [];
     const bulletDivsHtml = bulletLines.length
         ? bulletLines.map(l => `<div>${escapeHtml(l) || '<br>'}</div>`).join('')
-        : '<div></div>';
+        : '<div><br></div>';
 
     return `
         <div class="swipe-row" data-block-id="${block.id}">
@@ -1003,7 +1003,8 @@ function renderBlockHtml(block, index) {
                         <button class="block-star-btn ${block.isHighlight ? 'active' : ''}"
                                 onmousedown="toggleBlockHighlight(${block.id})"
                                 aria-label="Highlight">
-                            ${block.isHighlight ? ICONS.get('star-fill', 16) : ICONS.get('star', 16)}
+                            <span class="star-outline">${ICONS.get('star', 16)}</span>
+                            <span class="star-filled">${ICONS.get('star-fill', 16)}</span>
                         </button>
                         <div class="session-block-topic-wrapper" id="topic-wrapper-${block.id}">
                             <input class="session-block-topic-input"
@@ -1326,8 +1327,6 @@ function toggleBlockHighlight(blockId) {
     const btn = blockEl.querySelector('.block-star-btn');
     if (btn) {
         btn.classList.toggle('active', block.isHighlight);
-        const path = btn.querySelector('path');
-        if (path) path.setAttribute('fill', block.isHighlight ? 'currentColor' : 'none');
     }
 }
 
@@ -5029,21 +5028,24 @@ function renderDetailBlockHtml(sessionSkill) {
     const bgClass = (isHighlight && !skill) ? ' note-block--gold-bg' : '';
 
     // Skill row — shown only when a skill is linked
+    const starBtn = `<button class="note-block-star${isHighlight ? ' active' : ''}" onmousedown="toggleDetailBlockHighlight(${sessionSkill.id})">${isHighlight ? ICONS.get('star-fill', 14) : ICONS.get('star', 14)}</button>`;
     let skillRowHtml = '';
     if (skill) {
-        const starHtml = isHighlight
-            ? `<button class="note-block-star" onmousedown="toggleDetailBlockHighlight(${sessionSkill.id})">${ICONS.get('star-fill', 14)}</button>`
-            : '';
         skillRowHtml = `
             <div class="note-block-skill-row">
                 <span class="note-block-skill-name">${skill.french}</span>
-                <span class="note-block-skill-right">${starHtml}<button class="note-block-view-link" onclick="showSkillDetail('${skill.id}', appState.currentScreen)">view →</button></span>
+                <span class="note-block-skill-right">${starBtn}<button class="note-block-view-link" onclick="showSkillDetail('${skill.id}', appState.currentScreen)">view →</button></span>
             </div>`;
     } else if (isHighlight) {
         skillRowHtml = `
             <div class="note-block-highlight-row">
-                <button class="note-block-star" onmousedown="toggleDetailBlockHighlight(${sessionSkill.id})">${ICONS.get('star-fill', 14)}</button>
+                ${starBtn}
                 <span class="note-block-highlight-label">highlight</span>
+            </div>`;
+    } else {
+        skillRowHtml = `
+            <div class="note-block-highlight-row note-block-highlight-row--inactive">
+                ${starBtn}
             </div>`;
     }
 

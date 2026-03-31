@@ -3062,6 +3062,10 @@ h1, h2, .screen-heading {
     color: var(--gold);
 }
 
+.block-star-btn .star-filled { display: none; }
+.block-star-btn.active .star-outline { display: none; }
+.block-star-btn.active .star-filled { display: inline-flex; }
+
 .block-mode-toggle {
     display: flex;
     border-bottom: 1.5px solid var(--border-mid);
@@ -3763,9 +3767,13 @@ h1, h2, .screen-heading {
 .note-block-star {
     all: unset;
     font-size: 13px;
-    color: var(--gold);
+    color: var(--ink-5);
     cursor: pointer;
     line-height: 1;
+}
+
+.note-block-star.active {
+    color: var(--gold);
 }
 
 .note-block-highlight-row {
@@ -3775,6 +3783,12 @@ h1, h2, .screen-heading {
     padding: 7px 12px 6px;
     background: var(--gold-wash);
     border-bottom: 0.5px solid rgba(196,144,12,0.15);
+}
+
+.note-block-highlight-row--inactive {
+    background: none;
+    border-bottom: none;
+    padding: 4px 12px 2px;
 }
 
 .note-block-highlight-label {
