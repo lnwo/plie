@@ -5424,8 +5424,11 @@ function showSkillDetail(skillId, returnTo) {
             <div class="skill-detail-hero" id="skill-hero-${skillId}">
                 <div class="skill-detail-category">${refSkill.category}</div>
                 <h1 class="skill-detail-title">${refSkill.french}</h1>
-                <div class="skill-detail-phonetic">${refSkill.phonetic}</div>
-                <div class="skill-detail-english">${refSkill.english}</div>
+                <div class="skill-know-meta-row">
+                    <span class="skill-detail-phonetic">${refSkill.phonetic}</span>
+                    <span class="skill-know-meta-dot">·</span>
+                    <span class="skill-detail-english">${refSkill.english}</span>
+                </div>
                 <div class="skill-detail-meta-row">
                     ${sessionCount > 0 ? `<span class="skill-detail-session-count">worked on ${sessionCount} time${sessionCount !== 1 ? 's' : ''}</span>` : ''}
                     ${lastSession ? `<span class="skill-detail-last-worked">last: ${formatTimelineDate(lastSession.date)}</span>` : ''}
@@ -5879,9 +5882,22 @@ function saveLearnNote(sectionId, itemName) {
     const notesSectionEl = document.getElementById(`learn-notes-section-${sectionId}-${slug}`);
     if (notesSectionEl) renderLearnNotesSectionInPlace(sectionId, itemName, notesSectionEl);
 
-    // Refresh section list to show/update note indicator
+    // Update note indicator on the section list row without navigating
     const sectionScreen = document.getElementById(`learn-section-${sectionId}`);
-    if (sectionScreen) showLearnSection(sectionId);
+    if (sectionScreen) {
+        const rows = sectionScreen.querySelectorAll('.glossary-term-main');
+        rows.forEach(main => {
+            const nameEl = main.querySelector('.glossary-term-name');
+            if (nameEl && nameEl.textContent === itemName) {
+                if (!main.querySelector('.learn-note-indicator')) {
+                    const indicator = document.createElement('span');
+                    indicator.className = 'learn-note-indicator';
+                    indicator.innerHTML = ICONS.get('fab-note', 16);
+                    nameEl.after(indicator);
+                }
+            }
+        });
+    }
 }
 
 function deleteLearnNote(noteId, sectionId, itemName) {
@@ -6183,7 +6199,7 @@ function renderSkillLibCard(ref, query) {
                 ${query && displayEnglish !== ref.english ? `<div class="skill-lib-card-english">${displayEnglish}</div>` : ''}
             </div>
             <div class="skill-lib-card-meta">
-                <span class="difficulty-badge difficulty-${ref.difficulty}">${ref.difficulty}</span>
+                <!-- TODO: decide whether to reinstate skill level badge (difficulty-badge) permanently -->
                 <div class="skill-lib-card-indicators">
                     ${isFlagged ? `<span class="skill-lib-indicator" title="In focus">${ICONS.get('flag', 10)}</span>` : ''}
                     ${hasNotes ? `<span class="skill-lib-indicator" title="Has notes">${ICONS.get('edit', 10)}</span>` : ''}
@@ -6349,8 +6365,7 @@ function showSkillKnowledgePage(skillId, returnTo) {
                     <span class="skill-detail-phonetic">${ref.phonetic}</span>
                     <span class="skill-know-meta-dot">·</span>
                     <span class="skill-detail-english">${ref.english}</span>
-                    <span class="skill-know-meta-dot">·</span>
-                    <span class="skill-know-difficulty">${ref.difficulty}</span>
+                    <!-- TODO: decide whether to reinstate skill level (beginner/improver/etc) permanently -->
                 </div>
                 <button class="skill-know-personal-btn" style="margin-top: var(--sp-sm);"
                         onclick="showSkillDetail('${skillId}', '${screenId}')">

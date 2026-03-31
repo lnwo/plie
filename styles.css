@@ -5139,6 +5139,18 @@ h1, h2, .screen-heading {
     flex-shrink: 0;
 }
 
+.learn-note-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gold-wash);
+    color: var(--gold);
+    border-radius: var(--r-xs);
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
 .skill-lib-indicator-count {
     background: var(--gold-wash);
     border-radius: var(--r-full);
@@ -6506,9 +6518,9 @@ button, a, input, select, textarea,
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 0;
+    padding: 14px 0;
     border-bottom: 1px solid var(--border-light);
-    min-height: 44px;
+    min-height: 52px;
     gap: var(--sp-md);
 }
 
@@ -6527,8 +6539,9 @@ button, a, input, select, textarea,
 
 .glossary-term-main {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--sp-sm);
     flex: 1;
 }
 
