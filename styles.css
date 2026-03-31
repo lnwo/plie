@@ -6354,7 +6354,7 @@ button, a, input, select, textarea,
 }
 
 .post-save-prompt-inner {
-    background: var(--surface);
+    background: var(--surface-warm);
     border: 1px solid var(--border-mid);
     border-radius: var(--r-md);
     box-shadow: var(--shadow-2);
@@ -6368,7 +6368,7 @@ button, a, input, select, textarea,
     right: var(--sp-sm);
     background: none;
     border: none;
-    color: var(--ink-3);
+    color: var(--ink-6);
     cursor: pointer;
     font-size: 16px;
     line-height: 1;
@@ -6396,9 +6396,10 @@ button, a, input, select, textarea,
 }
 
 .post-save-btn {
-    background: var(--brown-btn);
+    background: var(--ink);
     color: #fff;
-    border: 1px solid var(--brown-btn);
+    border: 1px solid var(--ink);
+    box-shadow: inset 0 0 0 1px var(--ink-3);
     border-radius: var(--r-md);
     padding: 7px 14px;
     font-family: 'DM Sans', sans-serif;
@@ -6413,7 +6414,7 @@ button, a, input, select, textarea,
 
 .post-save-btn-muted {
     background: transparent;
-    color: var(--ink-3);
+    color: var(--ink-5);
     border: none;
     padding: 7px 10px;
     font-family: 'DM Sans', sans-serif;
