@@ -29,7 +29,7 @@
 - Hosted on GitHub Pages ✅
 - Storage: localStorage only ✅
 - Cross-device sync / cloud backup ⬜
-- Font: Georgia (headings), DM Sans (UI) — Cormorant Garamond retired ✅
+- Font: EB Garamond italic (tab screen titles, skill names on cards/detail pages), DM Sans 600 (all sheet/overlay headings), DM Sans (UI) — Georgia and Cormorant Garamond retired ✅
 - Radius: 4px components, 9999px pills, 12px sheets/cards ✅
 
 ---
@@ -130,7 +130,7 @@ The Barre
   │     Variants: Active / Resting / Recovering / named session if scheduled
   ├── Active skills ✅
   │     Each skill card:
-  │       ├── Skill name (Georgia) + category ✅
+  │       ├── Skill name (EB Garamond italic, --ink, 24px) + category ✅
   │       ├── Last correction (italic, quoted) ✅
   │       ├── Last worked on ✅
   │       ├── Swipe to remove ✅

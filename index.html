@@ -72,17 +72,17 @@
                 <div class="onboarding-examples">
                     <div class="onboarding-example-row" onclick="this.classList.toggle('open')">
                         <span class="onboarding-example-label">Flag plié → add photos → build a practice plan</span>
-                        <ph-icon class="onboarding-example-chevron" name="caret-down" size="16" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                        <ph-caret-down class="onboarding-example-chevron" size="16" weight="light" style="display:inline-flex;align-items:center;"></ph-caret-down>
                         <div class="onboarding-example-detail">Mark any skill as "in focus" from The Barre. Attach photos or videos, log corrections from your teacher, and include it in a 4-week practice programme.</div>
                     </div>
                     <div class="onboarding-example-row" onclick="this.classList.toggle('open')">
                         <span class="onboarding-example-label">Save a correction → see it on the skill page</span>
-                        <ph-icon class="onboarding-example-chevron" name="caret-down" size="16" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                        <ph-caret-down class="onboarding-example-chevron" size="16" weight="light" style="display:inline-flex;align-items:center;"></ph-caret-down>
                         <div class="onboarding-example-detail">After class, log what your teacher said. Corrections link directly to the skill and appear chronologically — so you can see patterns over time.</div>
                     </div>
                     <div class="onboarding-example-row" onclick="this.classList.toggle('open')">
                         <span class="onboarding-example-label">Set a goal → track it with milestones</span>
-                        <ph-icon class="onboarding-example-chevron" name="caret-down" size="16" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                        <ph-caret-down class="onboarding-example-chevron" size="16" weight="light" style="display:inline-flex;align-items:center;"></ph-caret-down>
                         <div class="onboarding-example-detail">Goals can link to a specific skill or dimension. Add milestones to break them down — each one you tick off creates a timeline entry.</div>
                     </div>
                 </div>
@@ -200,7 +200,7 @@
                 <!-- levelBadge kept hidden for JS backward-compat -->
                 <span id="levelBadge" style="display:none;"></span>
                 <button class="profile-settings-btn" onclick="openSettings()" aria-label="Settings">
-                    <ph-icon name="sliders-horizontal" size="18" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                    <ph-sliders-horizontal size="18" weight="light" style="display:inline-flex;align-items:center;"></ph-sliders-horizontal>
                 </button>
             </div>
 
@@ -237,7 +237,7 @@
                         <h2 class="session-logger-title" id="focus-sheet-title"></h2>
                     </div>
                     <button class="session-close-btn" onclick="closeFocusAreaSheet()">
-                        <ph-icon name="x" size="18" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                        <ph-x size="18" weight="light" style="display:inline-flex;align-items:center;"></ph-x>
                     </button>
                 </div>
                 <div class="focus-sheet-tab-row" id="focus-sheet-tabs"></div>
@@ -255,7 +255,7 @@
                         <h2 class="session-logger-title">Settings</h2>
                     </div>
                     <button class="session-close-btn" onclick="closeSettings()">
-                        <ph-icon name="x" size="18" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                        <ph-x size="18" weight="light" style="display:inline-flex;align-items:center;"></ph-x>
                     </button>
                 </div>
                 <div class="session-logger-body" id="settings-body">
@@ -274,7 +274,7 @@
                         <h2 class="session-logger-title">Choose a picture</h2>
                     </div>
                     <button class="session-close-btn" onclick="closePicPicker()">
-                        <ph-icon name="x" size="18" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                        <ph-x size="18" weight="light" style="display:inline-flex;align-items:center;"></ph-x>
                     </button>
                 </div>
                 <div class="session-logger-body" id="pic-picker-body">
@@ -285,7 +285,7 @@
 
         <!-- Floating Action Button -->
         <button class="fab" onclick="openFabActionSheet()" aria-label="Add">
-            <ph-icon name="plus" size="22" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+            <ph-plus size="22" weight="light" style="display:inline-flex;align-items:center;"></ph-plus>
         </button>
 
         <!-- FAB Action Sheet -->
@@ -294,33 +294,33 @@
                 <div class="fab-action-sheet-handle"></div>
                 <button class="fab-action-item" onmousedown="closeFabActionSheet(); openSessionLogger();">
                     <span class="fab-action-icon">
-                        <ph-icon name="calendar-plus" size="20" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                        <ph-calendar-plus size="20" weight="light" style="display:inline-flex;align-items:center;"></ph-calendar-plus>
                     </span>
                     <span class="fab-action-text">
                         <span class="fab-action-label">Log a session</span>
                         <span class="fab-action-sub">class notes &amp; corrections</span>
                     </span>
-                    <ph-icon class="fab-action-chevron" name="caret-right" size="14" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                    <ph-caret-right class="fab-action-chevron" size="14" weight="light" style="display:inline-flex;align-items:center;"></ph-caret-right>
                 </button>
                 <button class="fab-action-item" onmousedown="closeFabActionSheet(); openSessionLogger('note');">
                     <span class="fab-action-icon">
-                        <ph-icon name="note-pencil" size="20" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                        <ph-note-pencil size="20" weight="light" style="display:inline-flex;align-items:center;"></ph-note-pencil>
                     </span>
                     <span class="fab-action-text">
                         <span class="fab-action-label">Add a note</span>
                         <span class="fab-action-sub">quick capture, no session needed</span>
                     </span>
-                    <ph-icon class="fab-action-chevron" name="caret-right" size="14" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                    <ph-caret-right class="fab-action-chevron" size="14" weight="light" style="display:inline-flex;align-items:center;"></ph-caret-right>
                 </button>
                 <button class="fab-action-item" onmousedown="closeFabActionSheet(); openGoalCreator();">
                     <span class="fab-action-icon">
-                        <ph-icon name="target" size="20" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                        <ph-target size="20" weight="light" style="display:inline-flex;align-items:center;"></ph-target>
                     </span>
                     <span class="fab-action-text">
                         <span class="fab-action-label">Set a goal</span>
                         <span class="fab-action-sub">skill, intention, or habit</span>
                     </span>
-                    <ph-icon class="fab-action-chevron" name="caret-right" size="14" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                    <ph-caret-right class="fab-action-chevron" size="14" weight="light" style="display:inline-flex;align-items:center;"></ph-caret-right>
                 </button>
             </div>
         </div>
@@ -330,25 +330,25 @@
             <div class="nav-menu">
                 <div class="nav-item" onclick="navigateTo('barre')" data-nav="barre">
                     <div class="nav-icon">
-                        <ph-icon name="person-simple-tai-chi" size="22" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                        <ph-person-simple-tai-chi size="22" weight="light" style="display:inline-flex;align-items:center;"></ph-person-simple-tai-chi>
                     </div>
                     <div class="nav-label">The Barre</div>
                 </div>
                 <div class="nav-item" onclick="navigateTo('goals')" data-nav="goals">
                     <div class="nav-icon">
-                        <ph-icon name="target" size="22" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                        <ph-target size="22" weight="light" style="display:inline-flex;align-items:center;"></ph-target>
                     </div>
                     <div class="nav-label">Goals</div>
                 </div>
                 <div class="nav-item" onclick="navigateTo('learn')" data-nav="learn">
                     <div class="nav-icon">
-                        <ph-icon name="book-open" size="22" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                        <ph-book-open size="22" weight="light" style="display:inline-flex;align-items:center;"></ph-book-open>
                     </div>
                     <div class="nav-label">Learn</div>
                 </div>
                 <div class="nav-item" onclick="navigateTo('profile')" data-nav="profile">
                     <div class="nav-icon">
-                        <ph-icon name="user" size="22" weight="light" style="display:inline-flex;align-items:center;"></ph-icon>
+                        <ph-user size="22" weight="light" style="display:inline-flex;align-items:center;"></ph-user>
                     </div>
                     <div class="nav-label">Profile</div>
                 </div>
@@ -356,15 +356,6 @@
         </nav>
     </div>
 
-    <script src="js/data.js"></script>
-    <script src="js/state.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/router.js"></script>
-    <script src="illustrations.js"></script>
-    <script src="app.js"></script>
-
-</body>
-</html>
                 <div class="nav-dot" data-screen="profile"></div>
             </div>
         </header>

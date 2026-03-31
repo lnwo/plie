@@ -15,12 +15,18 @@
 ═══════════════════════════════════════════════════════════════ */
  
 const ICONS = {
+    _svg: {
+        'cat-pointe':      (s) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4 L8 16 C8 18 10 20 13 20 C16 20 17 18 17 17 C17 15 15 14 12 15"/><line x1="5" y1="4" x2="11" y2="4"/></svg>`,
+        'learn-pirouette': (s) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/><circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="14"/></svg>`,
+    },
+
     get(key, size = 24) {
+        if (ICONS._svg[key]) return ICONS._svg[key](size);
         const name = ICONS._map[key];
         if (!name) return '';
-        return `<ph-icon name="${name}" size="${size}" weight="light" style="display:inline-flex;align-items:center;line-height:1;"></ph-icon>`;
+        return `<ph-${name} size="${size}" weight="light" style="display:inline-flex;align-items:center;line-height:1;"></ph-${name}>`;
     },
- 
+
     _map: {
  
         // ── Navigation ────────────────────────────────────────
@@ -37,6 +43,10 @@ const ICONS = {
         'cat-allegro':      'arrow-fat-up',             // jump — upward with weight
         'cat-pointe':       'cat-pointe',               // DEFERRED — keep custom SVG for now (see note below)
         'cat-flexibility':  'person-arms-spread',       // confirmed
+        'cat-artistry':     'wave-sine',                // musicality/artistry
+        'cat-body':         'person-arms-spread',       // body/flexibility
+        'cat-movement':     'arrows-out',               // turns + allegro
+        'cat-technique':    'list-checks',              // barre + centre work
  
         // ── Learn section cards ───────────────────────────────
         // Keys match section.icon values in js/data.js
@@ -45,11 +55,11 @@ const ICONS = {
         'learn-glossary':   'book-bookmark',            // language reference
         'learn-musicality': 'wave-sine',                // musical phrasing — wave
         'learn-conditioning':'barbell',                 // strength & drills
+        'learn-pointers':   'crosshair-simple',        // diagnostic pointers
         'learn-quiz':       'question',                 // fallback if used elsewhere
         'learn-footwork':   'sneaker-move',
         'learn-splits':     'person-arms-spread',
         'learn-core':       'barbell',
-        'learn-pirouette':  'learn-pirouette',          // DEFERRED — keep custom SVG for now
  
         // ── Actions / utility ─────────────────────────────────
         'flag':             'flag-pennant-fill',        // filled — skill in focus
@@ -102,7 +112,7 @@ const ICONS = {
    'cat-pointe': (s) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4 L8 16 C8 18 10 20 13 20 C16 20 17 18 17 17 C17 15 15 14 12 15"/><line x1="5" y1="4" x2="11" y2="4"/></svg>`,
  
    'learn-pirouette': (s) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/><circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="14"/></svg>`,
-
+*/
 
 /* ═══════════════════════════════════════════════════════════════
    2. UTILITIES
@@ -1504,7 +1514,7 @@ const FOCUS_AREAS = [
     {
         id: 'pointe',
         name: 'Pointe',
-        icon: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 11.5L3.5 6Q7 1.5 10.5 6Z" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg>`,
+        icon: ICONS.get('cat-pointe', 14),
         optIn: true,  // hidden if hidePointe is true
         getDims: () => ({ pointe: appState.dimensions?.pointe ?? null }),
         getStats: () => {
@@ -1520,7 +1530,7 @@ const FOCUS_AREAS = [
     {
         id: 'artistry',
         name: 'Artistry',
-        icon: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 10C3.5 5.5 6.5 7.5 9 3.5 10 6 12.5 7.5 12.5 10" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>`,
+        icon: ICONS.get('cat-artistry', 14),
         getDims: () => ({ musicality: appState.dimensions?.musicality ?? null }),
         getStats: () => {
             const corrs = (appState.corrections || []).filter(c => {
@@ -1535,7 +1545,7 @@ const FOCUS_AREAS = [
     {
         id: 'body',
         name: 'The Body',
-        icon: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><ellipse cx="7" cy="3.2" rx="2" ry="2" stroke="currentColor" stroke-width="1.2"/><path d="M2.5 13C2.5 9.5 11.5 9.5 11.5 13" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>`,
+        icon: ICONS.get('cat-body', 14),
         subdims: [
             { key: 'flexibility', label: 'Flexibility' },
         ],
@@ -1556,7 +1566,7 @@ const FOCUS_AREAS = [
     {
         id: 'movement',
         name: 'Movement',
-        icon: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5L11.5 7 7 12.5 2.5 7Z" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg>`,
+        icon: ICONS.get('cat-movement', 14),
         subdims: [
             { key: 'turns',   label: 'Turns'   },
             { key: 'allegro', label: 'Allegro'  },
@@ -1579,7 +1589,7 @@ const FOCUS_AREAS = [
     {
         id: 'technique',
         name: 'Technique',
-        icon: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="1.4" rx=".7" fill="currentColor"/><rect x="1" y="5.8" width="8" height="1.4" rx=".7" fill="currentColor"/><rect x="1" y="9.6" width="10" height="1.4" rx=".7" fill="currentColor"/></svg>`,
+        icon: ICONS.get('cat-technique', 14),
         getDims: () => ({
             barre:  appState.dimensions?.barre  ?? null,
             centre: appState.dimensions?.centre ?? null,
