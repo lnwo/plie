@@ -2396,6 +2396,39 @@ h1, h2, .screen-heading {
     overscroll-behavior: contain;
 }
 
+/* ── Note editor ── */
+.note-editor {
+    width: 100%;
+    min-height: 220px;
+    background: var(--surface-warm);
+    border: 1.5px solid var(--gold-soft);
+    border-radius: var(--r-md);
+    padding: var(--sp-lg);
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-body);
+    color: var(--ink-2);
+    line-height: 1.6;
+    outline: none;
+    cursor: text;
+    box-sizing: border-box;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.note-editor:focus {
+    border-color: var(--gold);
+}
+
+.note-editor::first-line {
+    font-weight: 600;
+}
+
+.note-editor-hint {
+    font-size: var(--fs-caption);
+    color: var(--ink-4);
+    margin-top: var(--sp-sm);
+}
+
 /* ── Session combobox ── */
 .session-combobox {
     position: relative;
@@ -3731,6 +3764,32 @@ h1, h2, .screen-heading {
     color: var(--ink-3);
     font-style: italic;
     padding: var(--sp-lg) 0;
+}
+
+/* Note detail body text */
+.note-detail-body {
+    padding: var(--sp-xl) var(--sp-lg);
+    margin-bottom: var(--sp-xl);
+}
+
+.note-detail-line-title {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--ink-2);
+    line-height: 1.6;
+    display: block;
+}
+
+.note-detail-line-body {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-body);
+    font-weight: 400;
+    color: var(--ink-2);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    display: block;
+    margin-top: var(--sp-sm);
 }
 
 /* Detail blocks */
