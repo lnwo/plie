@@ -239,6 +239,8 @@ Order back→front: pointe · artistry · body · movement · technique
 6. Notification strategy — types and triggers need full spec
 7. Teacher sharing — format and content TBD
 8. Monetisation model — affects IA if paywall exists
+9. **Learn library entry counts** — remove the count of entries from all Learn section cards (e.g. "27 entries", "4 pointers", "50 skills"). Discuss whether counts add value or create noise. Code: `renderLearnSectionCards()` in js/ui.js, the `count` variable and `.skill-category-count` element.
+10. **Skill level labels** (beginner/improver/etc) — currently hidden with TODO comments in skill library cards, knowledge page hero, and skill detail hero. Decide whether to reinstate permanently or remove entirely.
 
 ---
 
