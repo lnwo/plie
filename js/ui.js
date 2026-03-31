@@ -4593,7 +4593,7 @@ function showLearnDetail(sectionId, itemName) {
 
     screen.innerHTML = `
         <div class="skill-detail-header">
-            <button class="session-detail-back" onclick="showLearnSection('${sectionId}')">
+            <button class="session-detail-back" onclick="goBack()">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="13 4 7 10 13 16"/>
                 </svg>
