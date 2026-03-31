@@ -2726,7 +2726,7 @@ function renderGoalsScreen() {
         <div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
             ${goalsHtml}
             <button class="add-goal-btn" onclick="openGoalCreator()">+ set a goal</button>
-            ${goals.length > 0 ? `<div style="text-align:center; margin-top: var(--sp-xl);"><button class="text-link-btn" onclick="showAllGoalsScreen()">view past goals →</button></div>` : ''}
+            ${(appState.goals || []).length > 0 ? `<div style="text-align:center; margin-top: var(--sp-xl);"><button class="text-link-btn" onclick="showAllGoalsScreen()">view past goals →</button></div>` : ''}
         </div>
     `;
 

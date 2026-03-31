@@ -4160,6 +4160,8 @@ h1, h2, .screen-heading {
     transition: color 0.2s ease;
     margin-top: var(--sp-md);
     display: block;
+    width: 100%;
+    text-align: center;
 }
 
 .add-goal-btn:hover { color: var(--ink-2); }
