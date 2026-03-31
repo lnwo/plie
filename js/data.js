@@ -961,6 +961,64 @@ const DATA = {
                 ]
             }
         ]
+    },
+    {
+        id: 'pointers',
+        name: 'Pointers',
+        desc: 'Short diagnostics to help identify what\'s actually holding you back, with targeted things to try.',
+        icon: 'learn-pointers',
+        chips: ['All'],
+        action: null,
+        items: [
+            {
+                name: 'Épaulement',
+                type: 'pointer',
+                question: 'Why does my upper body feel disconnected from my movement?',
+                insight: 'Épaulement is not a position — it\'s a relationship. The rotation of the shoulders and head is a response to the direction of movement, not a fixed angle applied on top of it. Most dancers who struggle with épaulement are thinking about where to put their shoulders rather than what their body is travelling toward.',
+                whatToTry: [
+                    'Ask your teacher to show you épaulement in a simple tendu combination before applying it to bigger movements.',
+                    'Look at the linked skill entry for Épaulement in the skill library.',
+                    'Try walking across the room and letting your shoulders respond naturally to the direction change — you already have the instinct.'
+                ],
+                inspiration: 'Watch Natalia Osipova in any Ashton work — the way the head and shoulders lead into each phrase is as clear a demonstration of épaulement as exists on film.'
+            },
+            {
+                name: 'Pirouettes',
+                type: 'pointer',
+                question: 'Why do I keep falling out of my turns?',
+                insight: 'Most pirouette problems are preparation problems, not turning problems. By the time you\'re spinning, the outcome is largely determined. The two most common root causes are: weight not fully committed to the supporting leg in the preparation, and the push coming from the wrong place (arms rather than the floor).',
+                whatToTry: [
+                    'Ask your teacher to watch your preparation specifically — not the turn.',
+                    'Practise relevé in fifth with no turn, focusing on finding the balance before anything rotates.',
+                    'See the Pirouette entry in the skill library.'
+                ],
+                inspiration: 'Watch Marianela Nuñez\'s pirouettes in any Don Quixote footage — specifically the stillness of her head and the length of her spine through the turn.'
+            },
+            {
+                name: 'Extension and leg height',
+                type: 'pointer',
+                question: 'Why can\'t I get my leg higher even though I stretch every day?',
+                insight: 'Leg height is a three-factor problem: flexibility, strength, and technique — and the limiting factor is rarely flexibility alone. A leg that won\'t go above 90 degrees in adagio is usually being held back by insufficient strength in the hip flexors and core to support the weight of the leg at that height, or by a pelvis that tilts to compensate rather than staying level.',
+                whatToTry: [
+                    'Ask your teacher whether your pelvis is staying level when you lift.',
+                    'Work on standing développé away from the barre to build the strength component.',
+                    'See the Arabesque and Développé entries in the skill library.'
+                ],
+                inspiration: 'Watch Svetlana Zakharova\'s adagio work — the quality of extension comes from the length of the line, not just the height.'
+            },
+            {
+                name: 'Footwork articulation',
+                type: 'pointer',
+                question: 'Why does my footwork look flat even when I\'m trying to point?',
+                insight: 'Articulated footwork is a sequential action — heel, ball, toe on the way down; toe, ball, heel on the way up. Most flatness comes from skipping the middle step. The foot is trying to get to the pointed position rather than travelling through it.',
+                whatToTry: [
+                    'Ask your teacher to watch a slow tendu and tell you specifically where the articulation breaks down.',
+                    'Practise the foot action lying on the floor with no balance demand.',
+                    'See the Tendu entry in the skill library.'
+                ],
+                inspiration: 'Watch any footage of Sylvie Guillem at the barre — the precision of the foot through each position of a tendu is as good a model as exists.'
+            }
+        ]
     }
     ],
 

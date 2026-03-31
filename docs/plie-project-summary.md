@@ -58,8 +58,11 @@ js/ui.js      — All screen builders and render functions:
 ## Design System (March 2026)
 
 ### Typography
-- **Georgia** — all screen headings (h1, overlay titles, skill names on cards)
+- **EB Garamond italic, --ink-2, 36px** — tab screen titles (The Barre, Goals, Learn, Profile)
+- **EB Garamond italic, --ink, 24px/32px** — skill names on cards and detail pages
+- **DM Sans 600** — everything inside sheets and overlays (headings, sheet titles, session logger heading "Log a class", goal creator "What are you working toward?", section headings within sheets); use `--fs-heading` or `--fs-title` as appropriate — never EB Garamond inside a sheet or overlay
 - **DM Sans** — all UI text, labels, body
+- **Georgia**: RETIRED — do not use
 - **Cormorant Garamond**: RETIRED — do not use
 - Font sizes: display 36px / title 24px / heading 20px / body 16px / small 14px / caption 12px
 - Section labels: DM Sans 600, small-caps, --ink-5
@@ -138,7 +141,7 @@ js/ui.js      — All screen builders and render functions:
 - Skill library search
 - All Goals history page (grouped by year, expand on tap)
 - Barre hero card — context-aware "Did you go today?" variants
-- Barre skill cards — Georgia name, italic quoted correction, "view →" link
+- Barre skill cards — EB Garamond italic name, italic quoted correction, "view →" link
 - All 4 tabs navigate correctly
 
 ### BUILT NOT VERIFIED (real device)

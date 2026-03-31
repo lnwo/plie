@@ -4131,30 +4131,115 @@ function showLearnScreen() {
             />
         </div>
         <div id="learn-search-results" class="learn-search-results" style="display:none;"></div>
+        <div class="learn-filter-chips" id="learn-filter-chips">
+            <button class="learn-chip active" data-filter="all" onclick="filterLearnScreen('all', this)">All</button>
+            <button class="learn-chip" data-filter="pointers" onclick="filterLearnScreen('pointers', this)">Pointers</button>
+        </div>
         <div id="learn-sections-list" style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
-            <p class="learn-helper-text">Search across all sections, or tap a card to explore.</p>
-            ${DATA.learnSections.map(section => {
-                let action;
-                if (section.id === 'skills') action = 'showLearnSkillLibrary()';
-                else if (section.id === 'glossary') action = 'showGlossary()';
-                else action = `showLearnSection('${section.id}')`;
-                const count = section.id === 'skills' ? DATA.skills.length + ' skills'
-                            : section.id === 'glossary' ? ''
-                            : section.items.length + ' entries';
-                return `
-                <div class="skill-category-card" style="margin-bottom: var(--sp-sm);" onclick="${action}">
-                    <div class="skill-category-icon">${ICONS.get(section.icon, 24)}</div>
-                    <div class="skill-category-info">
-                        <div class="skill-category-name">${section.name}</div>
-                        ${count ? `<div class="skill-category-count">${count}</div>` : ''}
-                        <div style="font-size: var(--fs-small); color: var(--text-muted); margin-top: 2px; line-height: 1.4;">${section.desc}</div>
-                    </div>
-                    <div class="skill-category-arrow">→</div>
-                </div>`;
-            }).join('')}
+            ${renderLearnSectionCards()}
         </div>
     `;
     showScreen('learn-screen');
+}
+
+function renderLearnSectionCards() {
+    return DATA.learnSections.map(section => {
+        let action;
+        if (section.id === 'skills') action = 'showLearnSkillLibrary()';
+        else if (section.id === 'glossary') action = 'showGlossary()';
+        else if (section.id === 'pointers') action = "filterLearnScreen('pointers')";
+        else action = `showLearnSection('${section.id}')`;
+        const count = section.id === 'skills' ? DATA.skills.length + ' skills'
+                    : section.id === 'glossary' ? ''
+                    : section.id === 'pointers' ? section.items.length + ' pointers'
+                    : section.items.length + ' entries';
+        return `
+        <div class="skill-category-card" style="margin-bottom: var(--sp-sm);" onclick="${action}">
+            <div class="skill-category-icon">${ICONS.get(section.icon, 24)}</div>
+            <div class="skill-category-info">
+                <div class="skill-category-name">${section.name}</div>
+                ${count ? `<div class="skill-category-count">${count}</div>` : ''}
+                <div style="font-size: var(--fs-small); color: var(--text-muted); margin-top: 2px; line-height: 1.4;">${section.desc}</div>
+            </div>
+            <div class="skill-category-arrow">→</div>
+        </div>`;
+    }).join('');
+}
+
+function renderPointerCards() {
+    const section = DATA.learnSections.find(s => s.id === 'pointers');
+    if (!section) return '';
+    return section.items.map((p, i) => `
+        <div class="skill-category-card" style="margin-bottom: var(--sp-sm);" onclick="showPointerDetail(${i})">
+            <div class="skill-category-icon">${ICONS.get('learn-pointers', 24)}</div>
+            <div class="skill-category-info">
+                <div class="pointer-eyebrow">pointer</div>
+                <div class="skill-category-name">${p.name}</div>
+                <div style="font-size: var(--fs-small); color: var(--ink-3); margin-top: 2px; line-height: 1.4;">${p.question}</div>
+            </div>
+            <div class="skill-category-arrow">→</div>
+        </div>`).join('');
+}
+
+function filterLearnScreen(filter, btn) {
+    document.querySelectorAll('#learn-filter-chips .learn-chip').forEach(b => b.classList.remove('active'));
+    const activeChip = btn || document.querySelector('#learn-filter-chips [data-filter="' + filter + '"]');
+    if (activeChip) activeChip.classList.add('active');
+    const list = document.getElementById('learn-sections-list');
+    if (!list) return;
+    const helperText = filter === 'all'
+        ? '<p class="learn-helper-text">Search across all sections, or tap a card to explore.</p>'
+        : '<p class="learn-helper-text">Diagnostic articles to help identify what\'s holding you back.</p>';
+    list.innerHTML = helperText + (filter === 'pointers' ? renderPointerCards() : renderLearnSectionCards());
+}
+
+function showPointerDetail(index) {
+    const section = DATA.learnSections.find(s => s.id === 'pointers');
+    if (!section) return;
+    const pointer = section.items[index];
+    if (!pointer) return;
+
+    const screenId = `pointer-detail-${index}`;
+    let screen = document.getElementById(screenId);
+    if (!screen) {
+        screen = document.createElement('div');
+        screen.id = screenId;
+        screen.className = 'screen';
+        document.querySelector('.app-container').appendChild(screen);
+    }
+
+    screen.innerHTML = `
+        <div class="skill-detail-header">
+            <button class="session-detail-back" onclick="navigateTo('learn')">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="13 4 7 10 13 16"/>
+                </svg>
+                learn
+            </button>
+        </div>
+        <div class="skill-detail-hero">
+            <div class="pointer-eyebrow" style="font-size: var(--fs-small);">pointer</div>
+            <h1 class="skill-detail-title" style="font-size: var(--fs-display);">${pointer.name}</h1>
+            <p style="font-size: var(--fs-body); color: var(--ink-3); margin-top: var(--sp-sm); line-height: 1.5;">${pointer.question}</p>
+        </div>
+        <div class="skill-know-section">
+            <div class="skill-know-section-label" style="color: var(--ink-5);">the insight</div>
+            <p class="skill-know-description">${pointer.insight}</p>
+        </div>
+        <div class="skill-know-section">
+            <div class="skill-know-section-label" style="color: var(--ink-5);">what to try</div>
+            <ul class="skill-know-list">
+                ${pointer.whatToTry.map(t => `<li class="skill-know-list-item">${t}</li>`).join('')}
+            </ul>
+        </div>
+        ${pointer.inspiration ? `
+        <div class="skill-know-section">
+            <div class="skill-know-section-label" style="color: var(--ink-5);">the inspiration</div>
+            <p class="skill-know-description">${pointer.inspiration}</p>
+        </div>` : ''}
+        <div style="height: 120px;"></div>
+    `;
+    showScreen(screenId);
 }
 
 function showLearnSection(sectionId) {
@@ -4213,7 +4298,7 @@ function showLearnSection(sectionId) {
                 </svg>
                 learn
             </button>
-            <span class="skill-lib-count">${items.length} entries</span>
+            ${items.length > 0 ? `<span class="skill-lib-count">${items.length} entries</span>` : ''}
         </div>
         <div class="skill-lib-sticky">
             <div class="skill-lib-search-wrapper">
@@ -4238,7 +4323,7 @@ function showLearnSection(sectionId) {
             </div>
         </div>
         <div class="skill-lib-body" id="learn-items-${sectionId}">
-            ${lettersHtml}
+            ${lettersHtml || `<p style="padding: var(--sp-xl) var(--sp-lg); text-align:center; color:var(--ink-5); font-size:var(--fs-small);">Coming soon</p>`}
         </div>
         ${scrubberHtml}
         <div style="height: 120px;"></div>
@@ -4411,6 +4496,7 @@ function handleLearnSearch(query) {
                     <div class="glossary-term-row glossary-term-skill" onclick="${
                         section.id === 'skills' ? `showSkillKnowledgePage('${item.skillId || ''}', 'learn-screen')` :
                         section.id === 'glossary' ? `showGlossary()` :
+                        section.id === 'pointers' ? `showPointerDetail(${section.items.indexOf(item)})` :
                         `showLearnDetail('${section.id}', '${item.name.replace(/'/g, "\\'")}')`
                     }">
                         <div class="glossary-term-main">
