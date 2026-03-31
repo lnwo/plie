@@ -160,7 +160,7 @@ h1, h2, .screen-heading {
 
 /* ── Logo ── */
 .logo {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'EB Garamond', Georgia, serif;
     font-size: 26px;
     color: var(--ink);
     font-weight: 400;
@@ -234,7 +234,7 @@ h1, h2, .screen-heading {
 }
 
 .onboarding-logo-small {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'EB Garamond', Georgia, serif;
     font-size: 26px;
     color: var(--primary);
     position: absolute;
@@ -245,7 +245,7 @@ h1, h2, .screen-heading {
 
 
 .onboarding-title {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'EB Garamond', Georgia, serif;
     font-size: clamp(2.2rem, 10vw, 3rem);
     font-weight: 400;
     color: var(--primary);
@@ -255,12 +255,12 @@ h1, h2, .screen-heading {
 }
 
 .onboarding-title .brand {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'EB Garamond', Georgia, serif;
     font-weight: 400;
 }
 
 .onboarding-heading {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'EB Garamond', Georgia, serif;
     font-size: clamp(1.6rem, 7vw, 2rem);
     font-weight: 400;
     color: var(--primary);
@@ -419,7 +419,7 @@ h1, h2, .screen-heading {
 }
 
 .welcome-title {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'EB Garamond', Georgia, serif;
     font-size: var(--fs-display);
     color: var(--primary);
     margin-bottom: var(--sp-md);
@@ -441,7 +441,7 @@ h1, h2, .screen-heading {
 }
 
 .welcome-hero h1 {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'EB Garamond', Georgia, serif;
     font-size: clamp(1.75rem, 8vw, 2.25rem);
     font-weight: 400;
     margin-bottom: var(--sp-md);
@@ -546,7 +546,7 @@ h1, h2, .screen-heading {
 }
 
 .assessment-logo {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'EB Garamond', Georgia, serif;
     font-size: 24px;
     color: var(--primary);
     margin-bottom: var(--sp-sm);
@@ -590,7 +590,7 @@ h1, h2, .screen-heading {
 }
 
 .assessment-question {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'EB Garamond', Georgia, serif;
     font-size: var(--fs-h2);
     font-weight: 400;
     color: var(--ink);
@@ -887,7 +887,7 @@ h1, h2, .screen-heading {
 }
 
 .stat-value {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'EB Garamond', Georgia, serif;
     font-size: 2rem;
     color: var(--primary);
     margin-bottom: 2px;
@@ -2324,7 +2324,7 @@ h1, h2, .screen-heading {
 
 .session-logger-title {
     font-family: 'EB Garamond', Georgia, serif;
-    font-size: var(--fs-h1);
+    font-size: var(--fs-title);
     font-weight: 500;
     color: var(--ink);
     line-height: 1.1;
@@ -5337,7 +5337,7 @@ mark.search-highlight {
 }
 
 .skill-progression-value {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'EB Garamond', Georgia, serif;
     font-size: var(--fs-h2);
     font-weight: 400;
     color: var(--primary);
@@ -6978,9 +6978,9 @@ button, a, input, select, textarea,
     flex-shrink: 0;
 }
 .focus-card-name {
-    font-family: 'EB Garamond', Georgia, serif;
-    font-size: 21px;
-    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-h2);
+    font-weight: 600;
     color: var(--ink);
     line-height: 1;
 }
@@ -7725,7 +7725,7 @@ button, a, input, select, textarea,
 
 /* Question — matches .assessment-question */
 .orient-question {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'EB Garamond', Georgia, serif;
     font-size: var(--fs-h2);
     font-weight: 400;
     color: var(--ink);

@@ -344,7 +344,7 @@ function skipOnboarding() {
             date:  new Date().toISOString().split('T')[0],
         });
     }
-    showScreen('profile');
+    navigateTo('barre');
     document.querySelector('.bottom-nav')?.classList.add('visible');
     document.querySelector('.fab')?.classList.add('visible');
 }
@@ -390,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (onboardingDone || hasData) {
         // Never overwrite a real level with not-assessed
         if (!appState.level) appState.level = 'not-assessed';
-        showScreen('profile');
+        navigateTo('barre');
         document.querySelector('.bottom-nav')?.classList.add('visible');
         document.querySelector('.fab')?.classList.add('visible');
     } else {
@@ -907,7 +907,6 @@ function confirmOrientationLevel(personaKey) {
 
     // TODO: account creation — no backend yet, proceed directly
     storage.save('onboardingComplete', true);
-    showScreen('profile');
     document.querySelector('.bottom-nav')?.classList.add('visible');
     document.querySelector('.fab')?.classList.add('visible');
     navigateTo('barre');
@@ -952,7 +951,6 @@ function exitOrientation() {
         if (!appState.timeline?.length) {
             appendTimelineEntry({ type: 'manual', title: 'Joined plié', body: null, date: new Date().toISOString().split('T')[0] });
         }
-        showScreen('profile');
         document.querySelector('.bottom-nav')?.classList.add('visible');
         document.querySelector('.fab')?.classList.add('visible');
         navigateTo('barre');
