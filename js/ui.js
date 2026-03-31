@@ -2624,6 +2624,8 @@ function renderGoalsScreen() {
 }
 
 function showAllGoalsScreen() {
+    pushNavHistory();
+
     let screen = document.getElementById('all-goals-screen');
     if (!screen) {
         screen = document.createElement('div');
@@ -2729,7 +2731,7 @@ function showAllGoalsScreen() {
 
     screen.innerHTML = `
         <div class="profile-header" style="display:flex;align-items:center;gap:var(--sp-md);">
-            <button class="back-btn" onclick="navigateTo('goals')">
+            <button class="back-btn" onclick="goBack()">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="13 4 7 10 13 16"/></svg>
             </button>
             <h1>All goals</h1>
@@ -4064,7 +4066,7 @@ function deleteGoal(goalId) {
     if (appState.currentScreen === 'profile') initProfile();
 }
 
-function deleteSession(sessionId, returnTo) {
+function deleteSession(sessionId) {
     if (!confirm('Delete this session? This cannot be undone.')) return;
 
     // Remove session
@@ -4086,10 +4088,9 @@ function deleteSession(sessionId, returnTo) {
     storage.save('corrections', appState.corrections);
     storage.save('timeline', appState.timeline);
 
-    // Remove detail screen DOM
+    // Remove detail screen DOM, then go back
     document.getElementById(`session-detail-${sessionId}`)?.remove();
-
-    closeSessionDetail(sessionId, returnTo);
+    goBack();
 }
 
 function deleteSkillNote(noteId, skillId) {
@@ -4797,8 +4798,7 @@ function showSessionDetail(sessionId) {
     const session = appState.sessions.find(s => s.id === sessionId);
     if (!session) return;
 
-    const returnTo = appState.currentScreen;
-    if (returnTo === 'profile') appState._returnScrollY = window.scrollY;
+    pushNavHistory();
 
     let screen = document.getElementById(`session-detail-${sessionId}`);
     if (!screen) {
@@ -4842,7 +4842,7 @@ function showSessionDetail(sessionId) {
     screen.innerHTML = `
         <div class="session-detail-view">
             <div class="session-detail-header">
-                <button class="session-detail-back" onclick="closeSessionDetail(${sessionId}, '${returnTo}')">
+                <button class="session-detail-back" onclick="goBack()">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="13 4 7 10 13 16"/>
                     </svg>
@@ -4851,7 +4851,7 @@ function showSessionDetail(sessionId) {
                 <div style="display:flex;gap:var(--sp-sm);">
                     <button class="session-detail-edit" onclick="openSessionEditor(${sessionId})">edit</button>
                     <button class="session-detail-edit" style="color:var(--error);border-color:var(--coral-soft);"
-                            onclick="deleteSession(${sessionId}, '${returnTo}')">delete</button>
+                            onclick="deleteSession(${sessionId})">delete</button>
                 </div>
             </div>
 
@@ -4883,16 +4883,7 @@ function showSessionDetail(sessionId) {
 }
 
 function closeSessionDetail(sessionId, returnTo) {
-    if (returnTo === 'profile') {
-        showScreen('profile');
-        document.querySelector('[data-nav="profile"]')?.classList.add('active');
-        appState.currentNav = 'profile';
-        requestAnimationFrame(() => window.scrollTo(0, appState._returnScrollY || 0));
-    } else if (returnTo) {
-        navigateTo(returnTo.replace('-screen', ''));
-    } else {
-        navigateTo('barre');
-    }
+    goBack();
 }
 
 function renderDetailBlockHtml(sessionSkill) {
@@ -5027,6 +5018,10 @@ function showSkillDetail(skillId, returnTo) {
     if (!refSkill) return;
 
     const screenId = `skill-detail-${skillId}`;
+
+    // Only push history when navigating to a different screen (not when re-rendering in place)
+    if (appState.currentScreen !== screenId) pushNavHistory();
+
     let screen = document.getElementById(screenId);
     if (!screen) {
         screen = document.createElement('div');
@@ -5035,7 +5030,7 @@ function showSkillDetail(skillId, returnTo) {
         document.querySelector('.app-container').appendChild(screen);
     }
 
-    // Store returnTo so saveSkillNote can use it after re-render
+    // Keep _skillDetailReturnTo in sync for any callers that still use it
     appState._skillDetailReturnTo = returnTo;
 
     // ── Highlights ──
@@ -5175,7 +5170,7 @@ function showSkillDetail(skillId, returnTo) {
 
             <!-- Sticky header — shows compressed name once hero scrolls away -->
             <div class="skill-detail-header" id="skill-detail-header-${skillId}">
-                <button class="session-detail-back" onclick="closeSkillDetail('${skillId}', '${returnTo}')">
+                <button class="session-detail-back" onclick="goBack()">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="13 4 7 10 13 16"/>
                     </svg>
@@ -5622,20 +5617,7 @@ function navigateToGoal(goalId) {
 }
 
 function closeSkillDetail(skillId, returnTo) {
-    const screenId = `skill-detail-${skillId}`;
-    if (returnTo && returnTo !== screenId) {
-        if (returnTo === 'profile') {
-            showScreen('profile');
-            document.querySelector('[data-nav="profile"]')?.classList.add('active');
-            appState.currentNav = 'profile';
-        } else if (returnTo.endsWith('-screen') || returnTo.startsWith('session-detail-') || returnTo.startsWith('skill-detail-')) {
-            showScreen(returnTo);
-        } else {
-            navigateTo(returnTo);
-        }
-    } else {
-        navigateTo('barre');
-    }
+    goBack();
 }
 
 // Wire openSkillFromBlock to navigate to skill detail
@@ -5661,16 +5643,17 @@ function showLearnSkillLibrary() {
         screen.id = 'skill-library-screen';
         document.querySelector('.app-container').appendChild(screen);
     }
+    pushNavHistory();
     _skillLibTab = 'all';
     _skillLibDimFilter = null;
     screen.innerHTML = `
         <div class="skill-library-view">
             <div class="skill-detail-header">
-                <button class="session-detail-back" onclick="navigateTo('learn')">
+                <button class="session-detail-back" onclick="goBack()">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="13 4 7 10 13 16"/>
                     </svg>
-                    learn
+                    back
                 </button>
                 <span class="skill-lib-count">${DATA.skills.length} skills</span>
             </div>
@@ -5937,6 +5920,10 @@ function showSkillKnowledgePage(skillId, returnTo) {
     if (!ref) return;
 
     const screenId = `skill-knowledge-${skillId}`;
+
+    // Only push history when navigating to a different screen (not when re-rendering in place)
+    if (appState.currentScreen !== screenId) pushNavHistory();
+
     let screen = document.getElementById(screenId);
     if (!screen) {
         screen = document.createElement('div');
@@ -6000,7 +5987,7 @@ function showSkillKnowledgePage(skillId, returnTo) {
 
             <!-- Header -->
             <div class="skill-detail-header">
-                <button class="session-detail-back" onclick="closeSkillKnowledgePage('${skillId}', '${returnTo}')">
+                <button class="session-detail-back" onclick="goBack()">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="13 4 7 10 13 16"/>
                     </svg>
@@ -6083,11 +6070,7 @@ function toggleMuscleContext(skillId) {
 }
 
 function closeSkillKnowledgePage(skillId, returnTo) {
-    if (returnTo) {
-        showScreen(returnTo);
-    } else {
-        showLearnSkillLibrary();
-    }
+    goBack();
 }
 
 function showKnowledgeItemPopover(element, skillId, text, defaultType) {
