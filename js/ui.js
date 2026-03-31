@@ -984,6 +984,7 @@ function renderBlockHtml(block, index) {
                 remove
             </div>
 
+            <div class="session-block" id="block-${block.id}">
                     <div class="session-block-header">
                         <button class="block-star-btn ${block.isHighlight ? 'active' : ''}"
                                 onmousedown="toggleBlockHighlight(${block.id})"
@@ -1020,11 +1021,12 @@ function renderBlockHtml(block, index) {
                     </div>
                 </div>
             </div>
-        </div>
     `;
 }
 
+
 // ── Skill / dimension detection in free-text ─────────────────────────────
+
 // Scans text for mentions of skills (via french, english, aliases) or
 // dimensions. Returns up to 2 highest-confidence matches.
 
