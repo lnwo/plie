@@ -93,6 +93,10 @@ function _restoreScreenById(screenId, scrollY) {
         'learn-screen':     'learn',
         'profile':          'profile',
     };
+    // Dynamic learn screens map to the learn nav tab
+    if (screenId.startsWith('learn-section-') || screenId.startsWith('learn-detail-')) {
+        navMap[screenId] = 'learn';
+    }
 
     const navSection = navMap[screenId];
 

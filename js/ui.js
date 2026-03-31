@@ -4409,6 +4409,7 @@ function showLearnSection(sectionId) {
     if (!section) return;
 
     const screenId = `learn-section-${sectionId}`;
+    if (appState.currentScreen !== screenId) pushNavHistory();
     let screen = document.getElementById(screenId);
     if (!screen) {
         screen = document.createElement('div');
@@ -4581,6 +4582,7 @@ function showLearnDetail(sectionId, itemName) {
     if (!item) return;
 
     const screenId = `learn-detail-${sectionId}-${itemName.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`;
+    if (appState.currentScreen !== screenId) pushNavHistory();
     let screen = document.getElementById(screenId);
     if (!screen) {
         screen = document.createElement('div');
@@ -5835,21 +5837,21 @@ function renderLearnNotesSectionInPlace(sectionId, itemName, sectionEl) {
                 <div class="skill-note-entry">
                     <div class="skill-note-header">
                         <div class="skill-note-date">${formatTimelineDate(n.date)}</div>
-                        <button class="skill-note-delete" onmousedown="deleteLearnNote(${n.id}, '${sectionId}', '${itemName.replace(/'/g, "\\'")}')">×</button>
+                        <button type="button" class="skill-note-delete" onclick="deleteLearnNote(${n.id}, '${sectionId}', '${itemName.replace(/'/g, "\\'")}')">×</button>
                     </div>
                     <div class="skill-note-text">${renderClampedHtml(nl2br(n.text), 'ln-' + n.id)}</div>
                 </div>
             `).join('')}
             ${notes.length === 0 ? '' : ''}
         </div>
-        ${hasMore ? `<button class="skill-see-more-btn" onmousedown="expandLearnNotes('${sectionId}', '${itemName.replace(/'/g, "\\'")}')">see all ${notes.length} notes</button>` : ''}
+        ${hasMore ? `<button type="button" class="skill-see-more-btn" onclick="expandLearnNotes('${sectionId}', '${itemName.replace(/'/g, "\\'")}')">see all ${notes.length} notes</button>` : ''}
         <div class="skill-add-note-row">
             <textarea class="session-block-textarea" id="${inputId}"
                       placeholder="Note a thought…"
                       rows="2"
                       oninput="autoResizeTextarea(this)"
                       onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter'){saveLearnNote('${sectionId}','${itemName.replace(/'/g, "\\'")}');event.preventDefault();}"></textarea>
-            <button class="skill-add-note-btn" onmousedown="saveLearnNote('${sectionId}', '${itemName.replace(/'/g, "\\'")}')">save</button>
+            <button type="button" class="skill-add-note-btn" onclick="saveLearnNote('${sectionId}', '${itemName.replace(/'/g, "\\'")}')">save</button>
         </div>
     `;
 
