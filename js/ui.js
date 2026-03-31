@@ -2060,6 +2060,21 @@ function renderBarreHeroCard() {
                 <div class="profile-action-arrow">log a session →</div>
             </div>`;
     } else {
+        const todayDow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
+        const predictedTemplate = (appState.sessionTemplates || []).find(t => t.days && t.days.includes(todayDow)) || null;
+        const suppressedUntil = storage.load('predictiveHeroSuppressed');
+        const today = new Date().toISOString().split('T')[0];
+        const isSuppressed = suppressedUntil === today;
+
+        if (predictedTemplate && !isSuppressed) {
+            return `
+                <div class="profile-action-card hero" id="predictive-hero" onclick="openSessionLogger()">
+                    <div class="profile-action-label">${predictedTemplate.name ? escapeHtml(predictedTemplate.name).toUpperCase() : 'TODAY'}</div>
+                    <div class="profile-action-title">Did you go today?</div>
+                    <div class="profile-action-arrow">log a session →</div>
+                </div>`;
+        }
+
         return `
             <div class="profile-action-card hero" onclick="openSessionLogger()">
                 <div class="profile-action-label">AFTER CLASS</div>
@@ -2068,6 +2083,12 @@ function renderBarreHeroCard() {
                 <div class="profile-action-arrow">log a session →</div>
             </div>`;
     }
+}
+
+function dismissPredictiveHero() {
+    const today = new Date().toISOString().split('T')[0];
+    storage.save('predictiveHeroSuppressed', today);
+    showBarreScreen();
 }
 
 function showBarreScreen() {
@@ -2189,6 +2210,19 @@ function showBarreScreen() {
 
     // Attach swipe-to-remove on active skill cards
     attachBarreFocusSwipes();
+
+    // Attach swipe-to-dismiss on predictive hero card
+    const predictiveHero = document.getElementById('predictive-hero');
+    if (predictiveHero) {
+        let startX = null;
+        predictiveHero.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+        predictiveHero.addEventListener('touchend', e => {
+            if (startX === null) return;
+            const dx = e.changedTouches[0].clientX - startX;
+            startX = null;
+            if (Math.abs(dx) > 60) dismissPredictiveHero();
+        }, { passive: true });
+    }
 }
 
 function renderActiveSkillsList(skills) {
