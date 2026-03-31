@@ -4427,6 +4427,13 @@ function showLearnSection(sectionId) {
         groups[letter].push(item);
     });
 
+    const notedItems = new Set(
+        (appState.learnNotes || [])
+            .filter(n => n.sectionId === sectionId)
+            .map(n => n.itemName)
+    );
+    const noteIndicator = ICONS.get('fab-note', 16);
+
     const lettersHtml = Object.keys(groups).sort().map(letter => `
         <div class="glossary-group" id="ls-${sectionId}-${letter}">
             <div class="glossary-group-label">${letter}</div>
@@ -4434,6 +4441,7 @@ function showLearnSection(sectionId) {
                 <div class="glossary-term-row glossary-term-skill" onclick="showLearnDetail('${sectionId}', '${item.name.replace(/'/g, "\\'")}')">
                     <div class="glossary-term-main">
                         <span class="glossary-term-name">${item.name}</span>
+                        ${notedItems.has(item.name) ? `<span class="learn-note-indicator">${noteIndicator}</span>` : ''}
                     </div>
                     <div class="glossary-term-meta">
                         <span class="glossary-term-category">${item.chip || ''}</span>
@@ -4605,8 +4613,15 @@ function showLearnDetail(sectionId, itemName) {
                 ${item.keyPoints.map(p => `<li class="skill-know-list-item">${p}</li>`).join('')}
             </ul>
         </div>` : ''}
+        ${['musicality', 'conditioning', 'repertoire'].includes(sectionId) ? `
+        <div class="skill-know-section skill-detail-section" id="learn-notes-section-${sectionId}-${itemName.replace(/[^a-z0-9]/gi, '-').toLowerCase()}">
+        </div>` : ''}
         <div style="height: 120px;"></div>
     `;
+    if (['musicality', 'conditioning', 'repertoire'].includes(sectionId)) {
+        const notesSectionEl = screen.querySelector(`#learn-notes-section-${sectionId}-${itemName.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`);
+        if (notesSectionEl) renderLearnNotesSectionInPlace(sectionId, itemName, notesSectionEl);
+    }
     showScreen(screenId);
 }
 
@@ -5409,8 +5424,11 @@ function showSkillDetail(skillId, returnTo) {
             <div class="skill-detail-hero" id="skill-hero-${skillId}">
                 <div class="skill-detail-category">${refSkill.category}</div>
                 <h1 class="skill-detail-title">${refSkill.french}</h1>
-                <div class="skill-detail-phonetic">${refSkill.phonetic}</div>
-                <div class="skill-detail-english">${refSkill.english}</div>
+                <div class="skill-know-meta-row">
+                    <span class="skill-detail-phonetic">${refSkill.phonetic}</span>
+                    <span class="skill-know-meta-dot">·</span>
+                    <span class="skill-detail-english">${refSkill.english}</span>
+                </div>
                 <div class="skill-detail-meta-row">
                     ${sessionCount > 0 ? `<span class="skill-detail-session-count">worked on ${sessionCount} time${sessionCount !== 1 ? 's' : ''}</span>` : ''}
                     ${lastSession ? `<span class="skill-detail-last-worked">last: ${formatTimelineDate(lastSession.date)}</span>` : ''}
@@ -5798,6 +5816,126 @@ function renderSkillNotesSectionInPlace(skillId, sectionEl) {
     requestAnimationFrame(() => initClampedTexts(sectionEl));
 }
 
+// ── Learn page notes ──
+
+function renderLearnNotesSectionInPlace(sectionId, itemName, sectionEl) {
+    const notes = (appState.learnNotes || [])
+        .filter(n => n.sectionId === sectionId && n.itemName === itemName)
+        .sort((a, b) => b.createdAt - a.createdAt);
+
+    const PREVIEW = 2;
+    const hasMore = notes.length > PREVIEW;
+    const visible = notes.slice(0, PREVIEW);
+    const slug = itemName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    const inputId = `learn-new-note-${sectionId}-${slug}`;
+
+    const noteListHtml = `
+        <div id="learn-notes-list-${sectionId}-${slug}">
+            ${visible.map(n => `
+                <div class="skill-note-entry">
+                    <div class="skill-note-header">
+                        <div class="skill-note-date">${formatTimelineDate(n.date)}</div>
+                        <button class="skill-note-delete" onmousedown="deleteLearnNote(${n.id}, '${sectionId}', '${itemName.replace(/'/g, "\\'")}')">×</button>
+                    </div>
+                    <div class="skill-note-text">${renderClampedHtml(nl2br(n.text), 'ln-' + n.id)}</div>
+                </div>
+            `).join('')}
+            ${notes.length === 0 ? '' : ''}
+        </div>
+        ${hasMore ? `<button class="skill-see-more-btn" onmousedown="expandLearnNotes('${sectionId}', '${itemName.replace(/'/g, "\\'")}')">see all ${notes.length} notes</button>` : ''}
+        <div class="skill-add-note-row">
+            <textarea class="session-block-textarea" id="${inputId}"
+                      placeholder="Note a thought…"
+                      rows="2"
+                      oninput="autoResizeTextarea(this)"
+                      onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter'){saveLearnNote('${sectionId}','${itemName.replace(/'/g, "\\'")}');event.preventDefault();}"></textarea>
+            <button class="skill-add-note-btn" onmousedown="saveLearnNote('${sectionId}', '${itemName.replace(/'/g, "\\'")}')">save</button>
+        </div>
+    `;
+
+    sectionEl.innerHTML = `
+        <div class="skill-detail-section-header">
+            <div class="skill-detail-section-label">My notes</div>
+        </div>
+        ${noteListHtml}
+    `;
+    requestAnimationFrame(() => initClampedTexts(sectionEl));
+}
+
+function saveLearnNote(sectionId, itemName) {
+    const slug = itemName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    const textarea = document.getElementById(`learn-new-note-${sectionId}-${slug}`);
+    const text = textarea?.value?.trim();
+    if (!text) { textarea?.focus(); return; }
+
+    appState.learnNotes = appState.learnNotes || [];
+    appState.learnNotes.push({
+        id:        Date.now(),
+        sectionId,
+        itemName,
+        text,
+        date:      new Date().toISOString().split('T')[0],
+        createdAt: Date.now(),
+    });
+    storage.save('learnNotes', appState.learnNotes);
+
+    const notesSectionEl = document.getElementById(`learn-notes-section-${sectionId}-${slug}`);
+    if (notesSectionEl) renderLearnNotesSectionInPlace(sectionId, itemName, notesSectionEl);
+
+    // Update note indicator on the section list row without navigating
+    const sectionScreen = document.getElementById(`learn-section-${sectionId}`);
+    if (sectionScreen) {
+        const rows = sectionScreen.querySelectorAll('.glossary-term-main');
+        rows.forEach(main => {
+            const nameEl = main.querySelector('.glossary-term-name');
+            if (nameEl && nameEl.textContent === itemName) {
+                if (!main.querySelector('.learn-note-indicator')) {
+                    const indicator = document.createElement('span');
+                    indicator.className = 'learn-note-indicator';
+                    indicator.innerHTML = ICONS.get('fab-note', 16);
+                    nameEl.after(indicator);
+                }
+            }
+        });
+    }
+}
+
+function deleteLearnNote(noteId, sectionId, itemName) {
+    appState.learnNotes = (appState.learnNotes || []).filter(n => n.id !== noteId);
+    storage.save('learnNotes', appState.learnNotes);
+
+    const slug = itemName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    const notesSectionEl = document.getElementById(`learn-notes-section-${sectionId}-${slug}`);
+    if (notesSectionEl) renderLearnNotesSectionInPlace(sectionId, itemName, notesSectionEl);
+
+    const sectionScreen = document.getElementById(`learn-section-${sectionId}`);
+    if (sectionScreen) showLearnSection(sectionId);
+}
+
+function expandLearnNotes(sectionId, itemName) {
+    const slug = itemName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    const list = document.getElementById(`learn-notes-list-${sectionId}-${slug}`);
+    if (!list) return;
+    const allNotes = (appState.learnNotes || [])
+        .filter(n => n.sectionId === sectionId && n.itemName === itemName)
+        .sort((a, b) => b.createdAt - a.createdAt);
+    list.innerHTML = allNotes.map(n => `
+        <div class="skill-note-entry">
+            <div class="skill-note-header">
+                <div class="skill-note-date">${formatTimelineDate(n.date)}</div>
+                <button class="skill-note-delete" onmousedown="deleteLearnNote(${n.id}, '${sectionId}', '${itemName.replace(/'/g, "\\'")}')">×</button>
+            </div>
+            <div class="skill-note-text">${renderClampedHtml(nl2br(n.text), 'ln-' + n.id)}</div>
+        </div>
+    `).join('');
+    const seeMoreBtn = list.nextElementSibling;
+    if (seeMoreBtn && seeMoreBtn.classList.contains('skill-see-more-btn')) {
+        seeMoreBtn.textContent = 'hide';
+        seeMoreBtn.onmousedown = () => renderLearnNotesSectionInPlace(sectionId, itemName, list.closest('.skill-detail-section'));
+    }
+    requestAnimationFrame(() => initClampedTexts(list));
+}
+
 function toggleSkillFocus(skillId) {
     const skill = appState.skills.find(s => s.id === skillId);
     if (!skill) return;
@@ -6061,7 +6199,7 @@ function renderSkillLibCard(ref, query) {
                 ${query && displayEnglish !== ref.english ? `<div class="skill-lib-card-english">${displayEnglish}</div>` : ''}
             </div>
             <div class="skill-lib-card-meta">
-                <span class="difficulty-badge difficulty-${ref.difficulty}">${ref.difficulty}</span>
+                <!-- TODO: decide whether to reinstate skill level badge (difficulty-badge) permanently -->
                 <div class="skill-lib-card-indicators">
                     ${isFlagged ? `<span class="skill-lib-indicator" title="In focus">${ICONS.get('flag', 10)}</span>` : ''}
                     ${hasNotes ? `<span class="skill-lib-indicator" title="Has notes">${ICONS.get('edit', 10)}</span>` : ''}
@@ -6217,9 +6355,6 @@ function showSkillKnowledgePage(skillId, returnTo) {
                     </svg>
                     back
                 </button>
-                <button class="skill-know-personal-btn" onclick="showSkillDetail('${skillId}', '${screenId}')">
-                    my ${ref.french} →
-                </button>
             </div>
 
             <!-- Hero -->
@@ -6230,9 +6365,12 @@ function showSkillKnowledgePage(skillId, returnTo) {
                     <span class="skill-detail-phonetic">${ref.phonetic}</span>
                     <span class="skill-know-meta-dot">·</span>
                     <span class="skill-detail-english">${ref.english}</span>
-                    <span class="skill-know-meta-dot">·</span>
-                    <span class="skill-know-difficulty">${ref.difficulty}</span>
+                    <!-- TODO: decide whether to reinstate skill level (beginner/improver/etc) permanently -->
                 </div>
+                <button class="skill-know-personal-btn" style="margin-top: var(--sp-sm);"
+                        onclick="showSkillDetail('${skillId}', '${screenId}')">
+                    my ${ref.french} →
+                </button>
             </div>
 
             <!-- Description -->
