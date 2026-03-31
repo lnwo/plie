@@ -1027,6 +1027,8 @@ function renderBlockHtml(block, index) {
                         <div class="block-bullet-entry"
                              contenteditable="true"
                              data-block-id="${block.id}"
+                             onfocus="normalizeBulletEntryOnFocus(this)"
+                             onblur="normalizeBulletEntry(this)"
                              oninput="updateBlockBullets(${block.id}, this)"
                              >${bulletDivsHtml}</div>
 
@@ -1118,6 +1120,42 @@ function acceptSkillSuggestion(blockId, topicId, label) {
 function checkBlockTitleForSkills(blockId, text) {
     const matches = detectSkillsInText(text);
     renderSkillSuggestionChips(blockId, matches);
+}
+
+function normalizeBulletEntry(el) {
+    // Wrap any bare text nodes in <div> so CSS ::before dashes apply to all lines.
+    // Safe to call on blur (cursor is gone) or on focus before typing starts.
+    Array.from(el.childNodes).forEach(node => {
+        if (node.nodeType === Node.TEXT_NODE && node.textContent) {
+            const div = document.createElement('div');
+            el.insertBefore(div, node);
+            div.appendChild(node);
+        }
+    });
+    if (!el.querySelector(':scope > div')) {
+        el.appendChild(document.createElement('div'));
+    }
+}
+
+function normalizeBulletEntryOnFocus(el) {
+    // Only normalize if there are bare text nodes — preserves cursor position
+    // if the structure is already clean (user clicking into a filled block).
+    const hasBareText = Array.from(el.childNodes).some(
+        n => n.nodeType === Node.TEXT_NODE && n.textContent
+    );
+    if (!hasBareText && el.querySelector(':scope > div')) return;
+    normalizeBulletEntry(el);
+    // Place cursor at end of first div after wrapping
+    const firstDiv = el.querySelector(':scope > div');
+    if (firstDiv) {
+        try {
+            const range = document.createRange();
+            range.selectNodeContents(firstDiv);
+            range.collapse(false);
+            window.getSelection()?.removeAllRanges();
+            window.getSelection()?.addRange(range);
+        } catch (_) {}
+    }
 }
 
 function updateBlockBullets(blockId, el) {
