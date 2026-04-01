@@ -14,6 +14,8 @@ const STORAGE_KEYS = {
     preferences:        'plie:preferences',
     gettingStarted:     'plie:gettingStarted',
     currentScreen:      'plie:currentScreen',
+    learnBookmarks:     'plie:learnBookmarks',
+    learnLineSaves:     'plie:learnLineSaves',
 };
 
 const storage = {
@@ -117,6 +119,8 @@ let appState = {
     timeline:         [],
     skillNotes:       [],
     learnNotes:       [],
+    learnBookmarks:   [],
+    learnLineSaves:   [],
 
     // Misc
     notes:      [],
