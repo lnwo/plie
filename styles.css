@@ -3670,21 +3670,20 @@ h1, h2, .screen-heading {
 .timeline-milestone-edit {
     all: unset;
     font-family: var(--font-ui);
-    font-size: var(--fs-caption);
-    color: var(--ink-5);
+    font-size: var(--fs-small);
+    font-weight: 500;
+    color: var(--gold);
     cursor: pointer;
-    transition: color 0.15s ease;
 }
-
-.timeline-milestone-edit:hover { color: var(--ink); }
 
 .timeline-milestone-reflection {
     font-size: var(--fs-small);
     color: var(--ink-4);
     margin-top: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
 }
 
 /* Goal reflection sheet */

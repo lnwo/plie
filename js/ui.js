@@ -4187,7 +4187,7 @@ function toggleMilestone(goalId, milestoneIndex) {
 
 function markGoalComplete(goalId) {
     const goal = appState.goals.find(g => g.id === Number(goalId));
-    if (!goal) return;
+    if (!goal || goal.status === 'completed') return;
     goal.status = 'completed';
     goal.completedAt = Date.now();
     storage.save('goals', appState.goals);
@@ -5047,11 +5047,11 @@ function renderTimelineEntry(entry) {
             const actionLabel = hasReflection ? 'edit' : 'add note';
             const actionFn = `openGoalReflectionSheet(${goal.id}${hasReflection ? ', true' : ''})`;
             return `
-            <div class="timeline-item timeline-item-milestone">
+            <div class="timeline-item timeline-item-milestone timeline-item-tappable" onclick="${actionFn}">
                 <div class="timeline-content">
                     <div class="timeline-milestone-header">
                         <span class="timeline-type-label">Goal completed</span>
-                        <button class="timeline-milestone-edit" onmousedown="${actionFn}">${actionLabel}</button>
+                        <span class="timeline-milestone-edit">${actionLabel} →</span>
                     </div>
                     <div class="timeline-title">${escapeHtml(goal.title)}</div>
                     ${reflectionHtml}
