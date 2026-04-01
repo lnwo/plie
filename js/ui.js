@@ -4707,6 +4707,7 @@ function showLearnDetail(sectionId, itemName) {
                 </svg>
                 back
             </button>
+            ${renderBookmarkBtn(sectionId, itemName)}
         </div>
         <div class="skill-detail-hero">
             <div class="skill-detail-category">${item.chip ? item.chip.toUpperCase() : ''}</div>
@@ -5560,7 +5561,7 @@ function showSkillDetail(skillId, returnTo) {
             <div class="skill-detail-section">
                 <div class="skill-detail-section-header">
                     <div class="skill-detail-section-label">Corrections</div>
-                    <span class="skill-detail-section-count">${allCorrections.length}</span>
+                    <span class="skill-detail-section-count">${allCorrections.length} correction${allCorrections.length !== 1 ? 's' : ''}</span>
                 </div>
                 ${corrFilterHtml}
                 <div id="skill-corrections-display">
@@ -6634,12 +6635,20 @@ function showSkillKnowledgePage(skillId, returnTo) {
         : '<li class="skill-know-list-item skill-know-stub">Content coming soon</li>';
 
     const correctionsHtml = knowledge.commonCorrections.length > 0
-        ? knowledge.commonCorrections.map((c, i) => `
-            <li class="skill-know-list-item skill-know-correction skill-know-tappable"
-                onclick="showKnowledgeItemPopover(this, '${skillId}', ${JSON.stringify(c).replace(/'/g, "&#39;")}, 'correction')">
+        ? knowledge.commonCorrections.map((c) => {
+            const escaped = c.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            return `<li class="skill-know-list-item learn-line-tappable"
+                data-line-text="${escaped}"
+                data-save-type="correction"
+                data-page-type="skill"
+                data-item-id="${skillId}"
+                onclick="openLearnLineSave(this)">
                 ${c}
-                <span class="skill-know-save-hint">tap to save</span>
-            </li>`).join('')
+                <div class="learn-line-save-expand">
+                    ${_renderLineSavePrompt(c, 'correction', 'skill', skillId)}
+                </div>
+            </li>`;
+        }).join('')
         : '<li class="skill-know-list-item skill-know-stub">Content coming soon</li>';
 
     const musclesHtml = knowledge.muscles.length > 0
