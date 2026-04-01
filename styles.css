@@ -2219,8 +2219,8 @@ h1, h2, .screen-heading {
 }
 
 .learn-chip.active {
-    background: var(--ink);
-    border-color: var(--ink);
+    background: var(--primary);
+    border-color: var(--primary);
     color: #fff;
 }
 
@@ -4659,8 +4659,11 @@ h1, h2, .screen-heading {
 }
 
 .skill-detail-section-count {
-    font-size: var(--fs-small);
-    color: var(--ink-5);
+    font-size: var(--fs-caption);
+    color: var(--ink-3);
+    background: var(--border-light);
+    padding: 2px 8px;
+    border-radius: var(--r-full);
 }
 
 .skill-detail-add-goal-btn {
@@ -4716,13 +4719,9 @@ h1, h2, .screen-heading {
 }
 
 .skill-correction-recurring {
-    display: block;
-    font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-caption);
     font-weight: 600;
-    font-variant: small-caps;
-    letter-spacing: 0.05em;
-    color: var(--gold);
+    color: var(--coral);
     margin-top: 4px;
 }
 
@@ -5428,6 +5427,9 @@ mark.search-highlight {
     cursor: pointer;
     border-radius: var(--r-sm);
     transition: background 0.15s ease;
+}
+.learn-line-tappable:hover {
+    background: var(--surface-warm);
 }
 .learn-line-tappable.save-open {
     background: var(--surface-warm);
