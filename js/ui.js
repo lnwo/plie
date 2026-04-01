@@ -2920,11 +2920,12 @@ function showAllGoalsScreen() {
 
     screen.innerHTML = `
         <div class="profile-header" style="display:flex;align-items:center;justify-content:space-between;">
-            <button class="back-btn" onclick="goBack()">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="13 4 7 10 13 16"/></svg>
+            <button class="session-detail-back" onclick="goBack()">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 4 7 10 13 16"/></svg>
+                goals
             </button>
             <h1 style="flex:1;text-align:center;">All goals</h1>
-            <div style="width:36px;"></div>
+            <div style="width:60px;"></div>
         </div>
         <div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
             ${allGoals.length === 0
@@ -4429,7 +4430,7 @@ function showLearnScreen() {
         <div id="learn-search-results" class="learn-search-results" style="display:none;"></div>
         <div class="learn-filter-chips" id="learn-filter-chips">
             <button class="learn-chip active" data-filter="all" onclick="filterLearnScreen('all', this)">All</button>
-            <button class="learn-chip" data-filter="pointers" onclick="filterLearnScreen('pointers', this)">Pointers</button>
+            <button class="learn-chip" data-filter="pointers" onclick="showLearnSection('pointers')">Pointers</button>
         </div>
         <div id="learn-sections-list" style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
             ${renderLearnSectionCards()}
@@ -4443,7 +4444,7 @@ function renderLearnSectionCards() {
         let action;
         if (section.id === 'skills') action = 'showLearnSkillLibrary()';
         else if (section.id === 'glossary') action = 'showGlossary()';
-        else if (section.id === 'pointers') action = "filterLearnScreen('pointers')";
+        else if (section.id === 'pointers') action = "showLearnSection('pointers')";
         else action = `showLearnSection('${section.id}')`;
         const count = section.id === 'skills' ? DATA.skills.length + ' skills'
                     : section.id === 'glossary' ? ''
@@ -4602,6 +4603,26 @@ function showLearnSection(sectionId) {
         screen.id = screenId;
         screen.className = 'screen';
         document.querySelector('.app-container').appendChild(screen);
+    }
+
+    // Pointers have their own card layout — render and return early
+    if (sectionId === 'pointers') {
+        screen.innerHTML = `
+            <div class="skill-detail-header">
+                <button class="session-detail-back" onclick="goBack()">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="13 4 7 10 13 16"/>
+                    </svg>
+                    learn
+                </button>
+                <span class="skill-lib-count">${section.items.length} pointers</span>
+            </div>
+            <div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
+                ${renderPointerCards()}
+            </div>
+        `;
+        showScreen(screenId);
+        return;
     }
 
     const items = section.items || [];
