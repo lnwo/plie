@@ -2290,7 +2290,7 @@ function showBarreScreen() {
         { key: 'saveNote',     title: 'Save a note',           body: 'Something your teacher said is worth keeping.',       onclick: 'openSessionLogger()' },
         { key: 'setGoal',      title: 'Set a goal',            body: 'Give your training a direction.',                     onclick: 'openGoalCreator()' },
         { key: 'tryPointer',   title: 'Try a pointer',         body: 'Find out what\'s actually holding you back.',         onclick: 'openLearnPointers()' },
-        { key: 'exploreLearn', title: 'Explore Learn',         body: 'The skill library, glossary, and repertoire.',        onclick: 'navigateTo(\'learn\')' },
+        { key: 'exploreLearn', title: 'Explore Learn',         body: 'Skills, musicality, pointers, and more.',             onclick: 'navigateTo(\'learn\')' },
     ];
 
     const gettingStartedHtml = showGettingStarted ? `
@@ -4440,22 +4440,21 @@ function renderLearnSectionCards() {
     return DATA.learnSections.map(section => {
         let action;
         if (section.id === 'skills') action = 'showLearnSkillLibrary()';
-        else if (section.id === 'glossary') action = 'showGlossary()';
-        else if (section.id === 'pointers') action = "filterLearnScreen('pointers')";
+        else if (section.id === 'pointers') action = "showLearnSection('pointers')";
         else action = `showLearnSection('${section.id}')`;
         const count = section.id === 'skills' ? DATA.skills.length + ' skills'
-                    : section.id === 'glossary' ? ''
                     : section.id === 'pointers' ? section.items.length + ' pointers'
                     : section.items.length + ' entries';
         return `
         <div class="skill-category-card" style="margin-bottom: var(--sp-sm);" onclick="${action}">
             <div class="skill-category-icon">${ICONS.get(section.icon, 24)}</div>
             <div class="skill-category-info">
-                <div class="skill-category-name">${section.name}</div>
-                ${count ? `<div class="skill-category-count">${count}</div>` : ''}
-                <div style="font-size: var(--fs-small); color: var(--text-muted); margin-top: 2px; line-height: 1.4;">${section.desc}</div>
+                <div class="skill-category-name-row">
+                    <span class="skill-category-name">${section.name}</span>
+                    ${count ? `<span class="skill-category-count-inline">${count}</span>` : ''}
+                </div>
+                <div class="skill-category-desc">${section.desc}</div>
             </div>
-            <div class="skill-category-arrow">→</div>
         </div>`;
     }).join('');
 }
@@ -4797,7 +4796,19 @@ function showLearnDetail(sectionId, itemName) {
         <div class="skill-know-section">
             <div class="skill-know-section-label">Key points</div>
             <ul class="skill-know-list">
-                ${item.keyPoints.map(p => `<li class="skill-know-list-item">${p}</li>`).join('')}
+                ${item.keyPoints.map(p => {
+                    const saveType = sectionId === 'conditioning' ? 'correction' : 'goal';
+                    const escaped = escapeHtml(p);
+                    return `<li class="skill-know-list-item learn-line-tappable"
+                        data-line-text="${escaped}"
+                        data-save-type="${saveType}"
+                        data-page-type="${sectionId}"
+                        data-item-id="${itemName}"
+                        onclick="openLearnLineSave(this)">
+                        ${p}
+                        <div class="learn-line-save-expand">${_renderLineSavePrompt(p, saveType, sectionId, itemName)}</div>
+                    </li>`;
+                }).join('')}
             </ul>
         </div>` : ''}
         ${['musicality', 'conditioning', 'repertoire'].includes(sectionId) ? `
@@ -4810,6 +4821,56 @@ function showLearnDetail(sectionId, itemName) {
         if (notesSectionEl) renderLearnNotesSectionInPlace(sectionId, itemName, notesSectionEl);
     }
     showScreen(screenId);
+}
+
+/* ── Learn line tap-to-save ────────────────────────────────────
+   Tappable list items on knowledge pages. Tapping expands an
+   inline save prompt; a second tap collapses it.
+   ─────────────────────────────────────────────────────────── */
+
+function _renderLineSavePrompt(text, saveType, pageType, itemId) {
+    const label = saveType === 'goal' ? 'save as goal' : 'save as correction';
+    return `<button class="learn-line-save-btn" onclick="saveLearnLine(this)">${label}</button>`;
+}
+
+function openLearnLineSave(el) {
+    const isOpen = el.classList.contains('open');
+    document.querySelectorAll('.learn-line-tappable.open').forEach(other => {
+        other.classList.remove('open');
+    });
+    if (!isOpen) el.classList.add('open');
+}
+
+function saveLearnLine(btn) {
+    const li = btn.closest('.learn-line-tappable');
+    if (!li) return;
+    const text    = li.dataset.lineText;
+    const saveType = li.dataset.saveType;
+    const pageType = li.dataset.pageType;
+    const itemId  = li.dataset.itemId;
+    const skillId = pageType === 'skill' ? itemId : null;
+
+    if (saveType === 'goal') {
+        li.classList.remove('open');
+        openGoalCreatorWithSuggestion(text, null, skillId, '');
+    } else {
+        // save as correction
+        const correction = {
+            id:          Date.now(),
+            skillId:     skillId || null,
+            text:        text,
+            createdAt:   Date.now(),
+            sessionId:   null,
+            isHighlight: false,
+        };
+        appState.corrections.push(correction);
+        storage.save('corrections', appState.corrections);
+        li.classList.remove('open');
+        li.classList.add('learn-line-saved');
+        const expand = li.querySelector('.learn-line-save-expand');
+        if (expand) expand.innerHTML = '<span class="learn-line-saved-msg">saved</span>';
+        setTimeout(() => li.classList.remove('learn-line-saved'), 1500);
+    }
 }
 
 function handleLearnSearch(query) {
@@ -6696,6 +6757,376 @@ const SKILL_KNOWLEDGE = {
         buildsOn: ['tendu', 'developpe'],
         leadsTo: ['attitude', 'grand-jete'],
     },
+    'degage': {
+        description: 'Battement dégagé (also called battement jeté) — a brushing movement where the working foot leaves the floor to a low open position, typically 25–45°. Built directly on the tendu, dégagé develops the speed, precision of attack, and sharpness needed for allegro.',
+        keyCues: ['Brush through the floor as in tendu before the foot leaves it', 'The foot must be fully pointed in the air — not half-pointed', 'Keep the standing leg strong and completely still', 'Return through the floor with control — don\'t drop the foot back'],
+        musicality: 'Typically faster than tendu — one beat per dégagé is common. The sharpness of the brush determines musical clarity. In allegro sequences, dégagés set the rhythm of the phrase.',
+        commonCorrections: ['Don\'t release the foot before it brushes back to the floor', 'Don\'t let the working hip lift', 'Keep the height low — this is a small, precise movement, not a kick'],
+        muscles: ['Foot intrinsics and calf (articulation and pointing)', 'Hip flexors and extensors (fast extension)', 'Core and standing glute (stability)'],
+        muscleContext: 'The foot action is identical to tendu but at greater speed. Any core instability shows immediately as a hip hike or weight shift on the standing side.',
+        buildsOn: ['plie', 'tendu'],
+        leadsTo: ['frappe', 'grand-battement', 'pirouette'],
+    },
+    'rond-de-jambe': {
+        description: 'Battement rond de jambe — a circular movement of the leg tracing a semicircle on the floor (à terre) or in the air (en l\'air). Develops hip mobility, coordination, and the ability to maintain turnout through a full range of motion.',
+        keyCues: ['The circle passes through first position at the front (en dehors) or back (en dedans)', 'Keep the working foot pointed throughout the arc', 'The standing hip must not move — only the working leg circles', 'In the air: maintain the same height throughout the full arc'],
+        musicality: 'Often performed in 3/4, one full circle per bar. The movement should flow continuously — no hesitation at the front or back. In adagio the arc is slow and sustained; in faster tempi it becomes a sweeping brush.',
+        commonCorrections: ['Don\'t let the working hip swivel — keep it square', 'Keep the foot close to the floor in à terre', 'Don\'t rush through the back — it is as important as the front'],
+        muscles: ['Hip flexors (forward)', 'Hip extensors and glutes (backward)', 'Hip rotators (maintaining turnout throughout)', 'Core (stabilising the pelvis)'],
+        muscleContext: 'Rond de jambe challenges the hip rotators more than almost any other barre exercise — they must hold turnout while the leg moves through every angle. This is why it appears early in barre: it warms the hip joint and builds the control needed for centre work.',
+        buildsOn: ['plie', 'tendu', 'degage'],
+        leadsTo: ['developpe', 'arabesque', 'attitude'],
+    },
+    'frappe': {
+        description: 'Battement frappé — a striking movement in which the foot wraps to the ankle before extending sharply to a low position. Develops the quick, strong foot action required for allegro and pointe work.',
+        keyCues: ['The foot wraps to the ankle (cou-de-pied) before striking out', 'The extension is fast and sharp — initiated from the ankle, not the hip', 'The working foot is flexed on the way in, pointed on the way out', 'Keep the standing leg absolutely still'],
+        musicality: 'Frappé is inherently percussive — the accent is on the outward extension. Typically 2/4 or 4/4. The sharpness of each beat should match the musical accent.',
+        commonCorrections: ['Don\'t lead with the knee — the ankle and foot initiate the movement', 'Don\'t let the foot relax when it returns to cou-de-pied', 'Keep the height low and consistent'],
+        muscles: ['Tibialis anterior (flexion before strike)', 'Foot intrinsics and calf (sharp point on extension)', 'Hip flexors and extensors (direction of strike)', 'Standing stabilisers (keeping still)'],
+        muscleContext: 'Frappé trains the neuromuscular speed of the foot — the quickness of alternating between flex and point. This translates directly to allegro: every small jump requires a similar fast foot action from the floor.',
+        buildsOn: ['tendu', 'degage'],
+        leadsTo: ['grand-battement', 'entrechat', 'brise'],
+    },
+    'fondu': {
+        description: 'Battement fondu — a melting movement in which both legs bend simultaneously and then unfold to full extension. The standing leg plié and the working leg draw-in happen at the same time; the extension unfolds from there. The most lyrical barre exercise — fondu develops the smooth quality essential for adagio.',
+        keyCues: ['Both legs move at the same time — the bend and the draw-in are simultaneous', 'The extension unfolds from cou-de-pied — it should grow, not arrive', 'The standing leg returns to full extension as the working leg reaches full length', 'No stopping at the bottom or at the extension — the movement is continuous'],
+        musicality: 'Typically slow and legato, each full fondu taking two beats. The quality should feel like water flowing — continuous and uninterrupted. The music leads the melting quality throughout the whole body.',
+        commonCorrections: ['Don\'t straighten the standing leg before the working leg extends — they move together', 'Don\'t rush the extension — allow the leg to unfold from the ankle, through the knee', 'Keep the working foot pointed throughout'],
+        muscles: ['Quadriceps and glutes (controlled descent)', 'Hip flexors (drawing the working leg in)', 'Hip extensors and flexors (unfolding the extension)', 'Core (upright posture through the bend)'],
+        muscleContext: 'Fondu demands coordination between both legs simultaneously — neither can rush the other. The simultaneous unfold requires both legs to straighten together, which is harder than it appears at slow tempo.',
+        buildsOn: ['plie', 'tendu', 'retire'],
+        leadsTo: ['developpe', 'arabesque', 'grand-jete'],
+    },
+    'developpe': {
+        description: 'Développé — an unfolding of the working leg from retiré to a high extension. The leg draws up through retiré, opens through attitude, and extends fully in the air. The foundation of adagio and the primary vehicle for showing line and height.',
+        keyCues: ['Draw the foot up the leg to retiré first — don\'t lift the knee directly', 'The knee opens before the leg extends — the unfolding is sequential', 'Keep the working hip from hiking — height comes from strength, not tilting', 'Hold the fully extended position with control before lowering'],
+        musicality: 'The slowest exercise in class, often in slow 4/4 or 6/8. Each développé takes at least four counts. The sustained quality should be audible in the movement — a développé that arrives rather than unfolds is missing the musicality.',
+        commonCorrections: ['Don\'t let the working hip hike for height — level hips, even if the leg is lower', 'Don\'t rush the retiré stage — it determines the quality of the extension', 'Keep the standing leg fully extended throughout'],
+        muscles: ['Hip flexors (drawing up and extending forward)', 'Glutes and hamstrings (extending behind)', 'Hip rotators (maintaining turnout throughout)', 'Core (keeping the pelvis stable at height)'],
+        muscleContext: 'Développé tests hip flexor strength at end range — the psoas must support the full weight of the leg extended in the air. This is different from the passive flexibility needed for the splits. The core prevents the pelvis from tilting as the leg rises.',
+        buildsOn: ['plie', 'retire', 'fondu'],
+        leadsTo: ['arabesque', 'grand-battement', 'grand-jete'],
+    },
+    'grand-battement': {
+        description: 'Grand battement — a large beating movement in which the working leg is thrown to full height and returns with control. The most dynamic barre exercise — it builds strength, range, and the explosive quality needed for grand allegro.',
+        keyCues: ['Brush through the floor to full point before the leg leaves — it is a large dégagé', 'The throw comes from the hip, not the knee', 'Control the descent — the leg returns as slowly as the music allows', 'Keep the standing leg straight and the hip over the foot'],
+        musicality: 'The leg throws on the musical accent — in 4/4, typically beat 1 or 3. The return should be controlled and musical, not dropped. In faster tempi, grand battements become preparation for grand jeté.',
+        commonCorrections: ['Don\'t let the standing hip move — if it shifts, the leg is beyond what the body can currently support', 'Don\'t lead with the knee on the way up', 'Don\'t drop the foot back — brush it through with control'],
+        muscles: ['Hip flexors, glutes and hamstrings (the throw)', 'Core and standing glute (resisting the force)', 'Quadriceps (controlling the descent)'],
+        muscleContext: 'Grand battement produces significant torque at the standing hip — the core and glute must resist to keep the pelvis level. The working leg\'s hip flexors initiate; the extensors control the return eccentrically.',
+        buildsOn: ['tendu', 'degage', 'developpe'],
+        leadsTo: ['arabesque', 'grand-jete', 'manege'],
+    },
+    'attitude': {
+        description: 'A position on one leg with the working leg lifted behind (or devant) with the knee bent to approximately 90°. Related to arabesque but with the characteristic bent-knee silhouette. Associated with the statue of Mercury — elongated, suspended, and elegant.',
+        keyCues: ['The knee of the working leg is bent but the thigh is lifted — not dropped', 'Keep the knee at or above hip height when working behind', 'The working hip stays open — it must not close forward', 'Arm and épaulement frame the position; the body curves toward the working side'],
+        musicality: 'Often used as a sustained position in adagio or as a pass-through shape in allegro. When held, it requires the same active, intentional quality as arabesque. In jumps, the shape must form quickly and clearly.',
+        commonCorrections: ['Don\'t let the working knee drop below hip level', 'Keep the working hip open — attitude is not passé at hip height', 'Don\'t round the back — lift through the spine'],
+        muscles: ['Glutes and hip extensors (lifting behind)', 'Hip rotators (keeping the working hip open)', 'Spinal extensors (the back line)', 'Core (balance)'],
+        muscleContext: 'Attitude requires the same glute and hip extensor strength as arabesque, plus the knee flexors (hamstrings) to hold the bent shape. The hip rotators work harder because the shorter lever arm makes it easier for the hip to close.',
+        buildsOn: ['arabesque', 'developpe'],
+        leadsTo: ['arabesque', 'grand-jete'],
+    },
+    'releve': {
+        description: 'Relevé — a rise to the balls of the feet (demi-pointe) from flat. One of the most fundamental actions in ballet — it appears in turns, allegro landings, and as a standalone exercise for building foot and calf strength.',
+        keyCues: ['Rise through the whole foot — don\'t skip from flat to high demi-pointe', 'Weight over the big-toe joint, not rolling to the outside', 'The standing leg stays fully extended — don\'t let the knee soften at the top', 'Lower with the same control as you rise'],
+        musicality: 'In barre, relevé often marks the musical accent. In centre and allegro, it is continuous and barely perceptible as a separate action. The height of relevé should be consistent regardless of tempo.',
+        commonCorrections: ['Don\'t roll to the outside of the foot', 'Don\'t sickle at the top', 'Don\'t drop the heels quickly — lower with control'],
+        muscles: ['Gastrocnemius and soleus (the rise)', 'Tibialis posterior and peroneals (alignment)', 'Foot intrinsics (supporting the arch at height)', 'Core (maintaining upright alignment)'],
+        muscleContext: 'The gastrocnemius and soleus are the primary movers, but the intrinsic foot muscles and peroneals determine whether the relevé is stable. Rolling out usually indicates weakness in tibialis posterior and the toe flexors.',
+        buildsOn: ['plie'],
+        leadsTo: ['pirouette', 'retire', 'releve-pointe'],
+    },
+    'eleve': {
+        description: 'Élevé — a rise to demi-pointe from a straight leg, without the preceding plié that defines relevé. Élevé demands that the calves lift the body from straight, with no momentum from a plié. Often used at the opening of barre.',
+        keyCues: ['No plié before — lift directly from straight legs', 'Weight travels upward, not forward', 'Keep both heels equally weighted in two-legged élevé', 'Lower as slowly as you rose'],
+        musicality: 'In exercises, élevé often occurs on the upbeat or as a preparation. The steadiness of the rise should reflect the steadiness of the musical pulse.',
+        commonCorrections: ['Don\'t bend the knees before rising — that becomes relevé', 'Keep the torso absolutely still — only the feet and legs move', 'Don\'t let the heels drift unevenly'],
+        muscles: ['Gastrocnemius and soleus (pure concentric lift without elastic energy)', 'Foot intrinsics (arch support)', 'Core and back (stillness)'],
+        muscleContext: 'Without a plié, the calves cannot use the elastic energy stored in the Achilles tendon. This makes élevé a true strength exercise — the gastrocnemius and soleus must generate force concentrically from a stretched position.',
+        buildsOn: ['plie'],
+        leadsTo: ['releve', 'releve-pointe'],
+    },
+    'retire': {
+        description: 'Retiré — the position in which the working foot is lifted to the knee of the standing leg. It is the held shape used in pirouettes and as a transition between extensions. When the foot passes through this position rather than stopping, it is called passé.',
+        keyCues: ['Working foot touches at the knee — not the calf, not above the knee', 'Turnout maintained in the working hip — don\'t let the knee drop forward', 'Standing leg fully extended and strong', 'Working hip must not be higher than the standing hip'],
+        musicality: 'Retiré is a position that can be held for any duration. In pirouettes it is sustained through the turn; in fondu and développé it is a transitional moment. Time spent in retiré is musical time — active and intentional, not waiting.',
+        commonCorrections: ['Don\'t let the working hip hike', 'Don\'t let the working knee drop forward — keep it open', 'Keep the standing knee straight'],
+        muscles: ['Hip flexors (lifting the working leg)', 'External hip rotators (keeping the working knee open)', 'Calves and foot (supporting relevé when combined)', 'Core (balance)'],
+        muscleContext: 'The hip flexors must lift the working leg while the external rotators hold it open — both must work simultaneously. This combination of hip flexion and external rotation under load is a significant strength demand, especially in pirouettes where it must be held through rotation.',
+        buildsOn: ['plie', 'releve'],
+        leadsTo: ['pirouette', 'developpe', 'fondu'],
+    },
+    'passe': {
+        description: 'Passé — the action of passing the working foot through retiré position as the leg moves from one extended position to another. The foot passes by the knee rather than stopping there. Passé is the action; retiré is the position it passes through.',
+        keyCues: ['The foot passes close to the standing leg — don\'t let it swing wide', 'Maintain turnout throughout the pass', 'The foot should be pointed as it passes the ankle and knee', 'The transition should be controlled, not rushed'],
+        musicality: 'In class, passé often happens between counts — it is the connective tissue of the phrase. The smoother the passé, the more musical the overall movement.',
+        commonCorrections: ['Don\'t let the foot sickle as it passes the ankle', 'Don\'t rush through passé — the transition is part of the exercise', 'Keep the standing hip stable'],
+        muscles: ['Hip flexors (initiating the lift)', 'Adductors (drawing the leg in close)', 'Hip rotators (maintaining turnout)'],
+        muscleContext: 'Passé requires coordinated hip flexion and adduction — the leg must come in close to the standing leg rather than staying wide. This is often where turnout is lost: the adductors pull the leg in but the rotators must work simultaneously to keep the knee open.',
+        buildsOn: ['retire', 'releve'],
+        leadsTo: ['pirouette', 'developpe'],
+    },
+    'coupe': {
+        description: 'Coupé — a cutting movement in which one foot replaces the other at the ankle. A small, precise transitional step that appears constantly in allegro sequences and as a preparation for jumps and turns.',
+        keyCues: ['The replacing foot arrives at the ankle — not above or below', 'The cut is quick and decisive, not gradual', 'The body remains upright through the transition', 'Maintain turnout in both legs throughout'],
+        musicality: 'Coupé is inherently rhythmic — it often falls on an off-beat or acts as an upbeat preparation. In allegro, coupés create the rhythmic energy of a phrase. The precision of the cut determines the clarity of the overall sequence.',
+        commonCorrections: ['Don\'t let coupé become a small plié instead of a cut', 'Keep the foot pointed and close — don\'t let it swing wide', 'Don\'t collapse the standing side as the cut happens'],
+        muscles: ['Foot intrinsics (precise placement)', 'Hip flexors (quick lift)', 'Calves (pushing through the floor)'],
+        muscleContext: 'Though small, coupé requires precise timing and coordination between both legs. In allegro it is often done at speed, so the neuromuscular control of the foot placement must be automatic.',
+        buildsOn: ['plie', 'tendu', 'releve'],
+        leadsTo: ['pas-de-bourree', 'pirouette', 'grand-jete'],
+    },
+    'balance': {
+        description: 'Balancé — a rocking, waltz-like step that shifts weight from foot to foot in a three-count pattern. One of the most musical steps in ballet — its quality comes almost entirely from how it responds to the music rather than from technical precision.',
+        keyCues: ['Let the body rock naturally — the weight shift is real, not pretended', 'The first count (the accent) is slightly longer or softer than counts two and three', 'Arms and head move with the body, not independently', 'Keep the feet close together on the half-beats'],
+        musicality: 'Balancé maps directly to a waltz: STEP-two-three, STEP-two-three. The accent lands on count 1. The quality of the balancé comes from listening to the musical phrase and letting the body respond — not from counting mechanically.',
+        commonCorrections: ['Don\'t make all three steps the same size and weight — the rhythm is uneven', 'Don\'t stop between repetitions — balancé flows continuously', 'Keep the knees soft — this is a rocking movement, not a sharp step'],
+        muscles: ['Hip flexors and extensors (the step)', 'Calves and foot (the rise on counts 2 and 3)', 'Core (balance while shifting weight)'],
+        muscleContext: 'The weight shift in balancé requires real commitment of the body\'s mass — this is not a sway. The rise on counts 2 and 3 demands ankle stability on a single leg, briefly but repeatedly.',
+        buildsOn: ['plie', 'releve', 'tendu'],
+        leadsTo: ['pas-de-bourree', 'grand-jete'],
+    },
+    'port-de-bras': {
+        description: 'Port de bras — the carriage of the arms. In class it refers to sequences of arm movements that develop upper body coordination, épaulement, and musical sensitivity. Port de bras is one of the most revealing exercises in ballet: technical errors that hide in fast steps are visible in slow, open arm movements.',
+        keyCues: ['Arms move from the shoulder, not the wrist or elbow', 'The wrist and fingers lead the shape — they give the arms their visual quality', 'Eyes and head are part of the movement — never separated from the arms', 'In cambré (a bend of the torso), the spine moves continuously, not in sections'],
+        musicality: 'Typically slow and legato. The arms follow the musical phrase rather than mark individual counts. The quality — soft, expansive, or precise — should match the character of the music.',
+        commonCorrections: ['Don\'t let the elbows drop below the wrist — the arm loses its line', 'Don\'t tense the shoulders — the arms are heavy, not held', 'Don\'t move the head late — it should initiate with or before the arms, not follow as an afterthought'],
+        muscles: ['Deltoids and rotator cuff (shaping and lifting)', 'Serratus anterior (keeping shoulder blades on the back)', 'Neck and upper spine (head and épaulement)', 'Core (supporting a cambré without collapsing)'],
+        muscleContext: 'Good port de bras requires serratus anterior strength to keep the shoulder blade on the ribcage — without it, the shoulder wings and the arm loses its line. In cambré, the spinal extensors and abdominals must work together to create a smooth arc without hinging at one point.',
+        buildsOn: [],
+        leadsTo: ['arabesque', 'attitude', 'pirouette'],
+    },
+    'pas-de-bourree': {
+        description: 'Pas de bourrée — a quick sequence of three weight-transferring steps that changes feet and direction. It appears in nearly every ballet combination: as a transition, a preparation, and sometimes a featured step in its own right.',
+        keyCues: ['Each of the three steps is light and distinct — not blurred together', 'Travel in the intended direction — the steps are not just weight shifts in place', 'Maintain turnout throughout all three steps', 'Keep the steps small and under the body'],
+        musicality: 'Pas de bourrée typically occupies two counts or one bar of 3/4. In 4/4 it often falls on an off-beat, acting as a preparation. The lightness and speed of the three steps should match the lightness of the music.',
+        commonCorrections: ['Don\'t let the steps get too wide — they should stay close to the midline', 'Don\'t lose direction — the bourrée should travel, not mark time', 'Keep the feet articulate — even small steps should show footwork'],
+        muscles: ['Calves and foot (three small rises)', 'Hip flexors (quick transfers)', 'Core (controlling the path of travel)'],
+        muscleContext: 'The rapid weight transfers demand coordination between both calves and both hip flexors in quick succession. Ankle stability for three small relevés in a row is significant and often a limiting factor in allegro readiness.',
+        buildsOn: ['plie', 'releve', 'coupe'],
+        leadsTo: ['pirouette', 'grand-jete', 'manege'],
+    },
+    'fouette': {
+        description: 'Fouetté en tournant — a turning step in which the working leg whips outward and returns to retiré to drive each rotation. Most associated with the 32 consecutive fouettés of the Black Swan variation — one of ballet\'s most recognised technical displays.',
+        keyCues: ['The whip of the working leg drives the turn — it must reach full extension and close sharply', 'The supporting relevé must be high and stable throughout each turn', 'The arms hold their position — they must not open or collapse between turns', 'Spot on the same point for every turn'],
+        musicality: 'In combination, fouettés occupy one count each. The whip of the working leg matches the musical accent. In 32 consecutive fouettés, the evenness of the timing becomes a musical feature.',
+        commonCorrections: ['Don\'t let the working leg swing wide without control — the whip must be sharp', 'Don\'t let the supporting relevé lower between turns', 'Keep the arms from opening on each turn — it dissipates momentum'],
+        muscles: ['Hip flexors and extensors (the whipping action)', 'Calf and foot (sustained relevé)', 'Core (maintaining the axis)', 'Arms and shoulders (holding position)'],
+        muscleContext: 'The calf must sustain a high demi-pointe across many consecutive turns — this is endurance, not just strength. Each additional turn demands the calf hold longer and the core maintain a tighter axis.',
+        buildsOn: ['pirouette', 'grand-battement', 'degage'],
+        leadsTo: ['manege'],
+    },
+    'grand-jete': {
+        description: 'Grand jeté — a large jump from one leg to the other with the legs split in the air. One of the most visually spectacular movements in ballet — the combination of elevation, split position, and controlled landing demands power, flexibility, and timing.',
+        keyCues: ['The front leg kicks forward and up first — the back leg extends behind to match', 'The split should happen at the peak of the jump, not during the ascent', 'The arms and upper body actively lift to help the body rise', 'Land on the front leg in a controlled plié — toe, ball, heel'],
+        musicality: 'Grand jeté is almost always on the musical accent — the exclamation point of a phrase. The preparation (chassé or couru) happens before the beat; the jump is on it. The suspension at the peak is the image the audience sees.',
+        commonCorrections: ['Don\'t look down or let the head drop during the jump', 'Don\'t let the back leg lag — both legs must reach their positions simultaneously at the peak', 'Land through the foot — not flat'],
+        muscles: ['Quadriceps and glutes (the push-off)', 'Hip flexors (lifting the front leg)', 'Hamstrings and glutes (extending the back leg)', 'Core (holding the split shape in the air)'],
+        muscleContext: 'The push-off requires explosive force from the standing leg — power, not just strength. The hip flexors must lift the front leg rapidly while the hamstrings and glutes extend the back leg simultaneously. The core connects both halves of the split without allowing the pelvis to tilt.',
+        buildsOn: ['grand-battement', 'developpe', 'fondu'],
+        leadsTo: ['manege'],
+    },
+    'manege': {
+        description: 'Manège — a sequence of travelling steps or turns performed in a circle around the stage. Rather than a single step, manège refers to the pattern of travel. It is one of the most dramatic features of grand allegro and showcases stamina, size, and spatial command.',
+        keyCues: ['Track the circle accurately — don\'t cut corners or drift inward', 'Maintain consistent height and quality through every repetition', 'The body stays upright — don\'t lean into the circle', 'Spot into the direction of travel, not ahead of it'],
+        musicality: 'Manège typically travels through a full musical phrase — eight, sixteen, or more counts. Size and energy should match the music\'s arc: building toward the climax and landing with it.',
+        commonCorrections: ['Don\'t lose size as fatigue sets in — the last step should match the first', 'Keep tracking the circle — uneven spacing is immediately visible', 'Don\'t rush — speed without shape loses everything'],
+        muscles: ['All major leg muscles (sustaining power over distance)', 'Core (axis through rotation)', 'Cardiovascular (endurance across the full phrase)'],
+        muscleContext: 'Manège is as much about stamina as technique — the demands of each individual step compound across the full circle. Fatigue is the technical enemy: it flattens the shape, blurs footwork, and slows the musicality.',
+        buildsOn: ['pirouette', 'grand-jete', 'grand-battement'],
+        leadsTo: [],
+    },
+    'chaine': {
+        description: 'Chaînés (chaînés déboulés) — a series of rapid half-turns in a straight line or circle, feet closing to first position on each half-turn. One of the first multi-turn sequences a dancer learns — chaînés develop spotting, axis control, and the ability to sustain quality across many rotations.',
+        keyCues: ['Step to first position on each half-turn — not second, not wider', 'Spot consistently on a fixed point', 'Keep the body upright — don\'t lean forward or tilt sideways', 'Arms held firmly — they must not swing'],
+        musicality: 'Typically fast — one half-turn per count or two per count. The rhythm must be absolutely even; uneven steps create stumbles. Arms help regulate speed: wider arms slow the turns, tighter arms accelerate them.',
+        commonCorrections: ['Don\'t let the feet open wider than first — it creates wobble', 'Don\'t let the head lag in spotting — dizziness and drift follow', 'Keep the spine vertical — avoid tilting toward the direction of travel'],
+        muscles: ['Calves (rapid relevé on every step)', 'Core (maintaining vertical axis)', 'Neck and eyes (rapid spotting)', 'Hip rotators (closing to first on each half)'],
+        muscleContext: 'The speed of chaînés demands that spotting and axis be reflexive. The vestibular system is heavily engaged — experienced dancers develop significant neural adaptation that reduces dizziness across consecutive turns.',
+        buildsOn: ['releve', 'pirouette', 'plie'],
+        leadsTo: ['manege', 'pirouette'],
+    },
+    'soutenu': {
+        description: 'Soutenu en tournant — a turn in which the feet draw together to fifth on pointe or demi-pointe and the body rotates as a unit. A smooth, sustained turn used at barre and in centre, often as a transition or to finish a phrase.',
+        keyCues: ['Draw the feet together to a tight fifth before rotating', 'The turn is a single sustained rotation, not a step-and-spin', 'Both feet remain together throughout the turn', 'Land in fifth with control — don\'t allow the feet to drift apart'],
+        musicality: 'Soutenu means "sustained" — the turn should feel slower than it takes. It typically occupies one count and is used on a held note or at the end of a phrase.',
+        commonCorrections: ['Don\'t step onto one foot then add the other — both must arrive simultaneously', 'Don\'t rush the rotation — the sustained quality is the point', 'Keep the height of the relevé consistent throughout'],
+        muscles: ['Calves (sustained relevé)', 'Core (rotating as a unit)', 'Hip adductors (closing fifth tightly)', 'Hip rotators (maintaining turnout at height)'],
+        muscleContext: 'Soutenu demands hip adductor strength to close the feet tightly in relevé. The rotation must come from the core and hips, not from the feet driving — if the feet push, the shape is lost.',
+        buildsOn: ['releve', 'plie'],
+        leadsTo: ['pirouette', 'chaine'],
+    },
+    'pique-turn': {
+        description: 'Piqué turn (piqué en tournant) — a turn in which the dancer steps directly onto a straight leg in relevé and completes one or more rotations in retiré. The step itself drives the turn — unlike pirouette, there is no preparatory plié.',
+        keyCues: ['Step onto a fully extended leg — no bending on arrival', 'The working leg closes immediately to retiré', 'Spot firmly — piqué turns travel, so the spot must also travel with you', 'Keep the turn level — don\'t tilt toward the direction of travel'],
+        musicality: 'Piqué turns are often performed in sequences, one per beat. Each landing is on the musical accent. In long sequences, the evenness of the steps creates the musical pattern.',
+        commonCorrections: ['Don\'t plié onto the supporting leg — it must be straight on arrival', 'Don\'t let the working leg drop before closing to retiré', 'Don\'t drift off the line of travel'],
+        muscles: ['Calf of the supporting leg (direct step onto relevé)', 'Hip flexors (closing quickly to retiré)', 'Core (axis and upright posture)', 'Eyes and neck (spotting while travelling)'],
+        muscleContext: 'Stepping directly onto relevé without a preparatory plié demands immediate concentric calf force on contact. Unlike pirouette, there is no stored elastic energy from a plié to assist the rise.',
+        buildsOn: ['pirouette', 'releve', 'retire'],
+        leadsTo: ['manege', 'pirouette'],
+    },
+    'detourne': {
+        description: 'Détourné — a pivot turn on pointe or demi-pointe to face the opposite direction, feet remaining in fifth. A small, neat turning movement used as a transition or musical accent.',
+        keyCues: ['The heels lift together — both legs work simultaneously', 'The body pivots as one unit', 'Keep fifth tightly closed throughout', 'The turn is exactly a half revolution — stop precisely facing the new direction'],
+        musicality: 'Détourné typically takes one count and lands on the following beat. Often used to change direction smoothly within a phrase.',
+        commonCorrections: ['Don\'t open fifth before pivoting — the turn happens in fifth', 'Keep the back heel lifted equally — don\'t let one drop before the other', 'Land with both heels down simultaneously'],
+        muscles: ['Calves (sustained relevé)', 'Hip adductors (closing fifth)', 'Core (rotating as a unit)'],
+        muscleContext: 'Détourné requires both calves to rise simultaneously and maintain equal height through the pivot — any imbalance between feet creates a stumble rather than a smooth turn.',
+        buildsOn: ['releve', 'plie'],
+        leadsTo: ['pirouette', 'soutenu'],
+    },
+    'renverse': {
+        description: 'Renversé — a complex linking step combining a rond de jambe movement with a cambré and a turn. The body appears to "overturn" — hence the name. An advanced transitional step seen in classical variations and grand allegro.',
+        keyCues: ['The rond de jambe of the working leg initiates the movement', 'The cambré happens into the direction of the turn', 'The body recovers through the turn and arrives upright', 'Maintain contact with the floor through the supporting foot\'s relevé'],
+        musicality: 'Typically performed across two counts: one for the rond de jambe and cambré, one for the turn and recovery. The overturn quality should feel smooth and expansive, not rushed.',
+        commonCorrections: ['Don\'t lean away from the direction of turn in the cambré', 'Don\'t lose the relevé during the turn', 'Recover upright before landing — don\'t arrive in a bent position'],
+        muscles: ['Spinal extensors and abdominals (cambré and recovery)', 'Hip flexors and rotators (rond de jambe into the turn)', 'Calves (sustained relevé through the sequence)'],
+        muscleContext: 'Renversé demands rapid coordination between the spinal extensors (cambré) and hip rotators (turn). Core strength is essential to recover upright from the cambré without lurching.',
+        buildsOn: ['pirouette', 'arabesque', 'rond-de-jambe'],
+        leadsTo: [],
+    },
+    'tour-en-lair': {
+        description: 'Tour en l\'air — a jump from two feet in which the body completes one or more full rotations before landing. Single, double, and triple tours are progressively more demanding in terms of power, axis control, and timing.',
+        keyCues: ['Jump straight up — height determines the time available for rotation', 'The arms pull in tight to the body to increase rotational speed', 'Spot for single and double tours', 'Land in fifth position plié with control — not open'],
+        musicality: 'The jump is prepared on the upbeat; the landing is on the beat. A tour that lands late is unsatisfying musically regardless of technical quality.',
+        commonCorrections: ['Don\'t pull the arms in before the feet push off — the jump comes first', 'Land in fifth, not open second', 'Keep the core tight throughout — any collapse stops the rotation'],
+        muscles: ['Quadriceps and calves (the jump)', 'Core (rotation and axis)', 'Arms and shoulders (pulling in to accelerate rotation)', 'Hip adductors (closing fifth in the air)'],
+        muscleContext: 'Pulling the arms in close to the body reduces the moment of inertia and increases rotational speed — the same principle as a spinning figure skater drawing their arms in. The height of the jump determines whether a double or triple tour is achievable.',
+        buildsOn: ['saute', 'pirouette', 'changement'],
+        leadsTo: [],
+    },
+    'saute': {
+        description: 'Sauté — a jump from two feet, landing on two feet in the same position. The most basic jump in ballet and the foundation of all allegro work. The jump itself is simple; the quality of the push-off and landing is what matters.',
+        keyCues: ['Push through the floor — energy goes downward before it goes up', 'In the air: feet fully pointed and together', 'Land from toe to heel — the foot rolls through the landing', 'The plié on landing absorbs the impact; knees track over the toes'],
+        musicality: 'Sauté is typically performed in 4/4, jumping on the beat. The plié happens slightly before the beat, the push-off on it. In combinations, sautés create a rhythmic pattern that should match the musical one.',
+        commonCorrections: ['Don\'t jump from flat feet — push through demi-pointe', 'Don\'t land flat — always land through the foot', 'Don\'t let the knees collapse inward on landing'],
+        muscles: ['Quadriceps (push-off and landing control)', 'Calves and foot (push-through-foot action)', 'Glutes (maintaining turnout in the air and on landing)', 'Core (body shape in the air)'],
+        muscleContext: 'Landing from any jump creates forces several times body weight at the knee. Proper landing mechanics — toe, ball, heel through a controlled plié — distribute force through the eccentric quad contraction rather than concentrating it at the joint.',
+        buildsOn: ['plie', 'releve'],
+        leadsTo: ['changement', 'echappe', 'entrechat'],
+    },
+    'changement': {
+        description: 'Changement de pieds — a jump from fifth position, changing feet in the air to land with the opposite foot in front. A foundational allegro step and the building block for entrechat and other beaten jumps.',
+        keyCues: ['Push through the whole foot, not just the toes', 'Both feet reach a fully pointed position in the air before the change', 'The change of feet is small and quick — not a wide-legged jump', 'Land through the foot in demi-plié with both heels down'],
+        musicality: 'Typically one jump per beat. The change of feet must happen clearly in the air — if the feet are slow to change, the jump reads as a sauté. The accent is on the landing.',
+        commonCorrections: ['Don\'t open the legs wide in the air — keep them close for the change', 'Both feet must be fully pointed in the air', 'Don\'t rush the landing — control the plié'],
+        muscles: ['Quadriceps and calves (jump and landing)', 'Hip adductors (keeping legs close in the air)', 'Foot intrinsics (maintaining point through the change)', 'Core (stable body position)'],
+        muscleContext: 'The hip adductors are critical — they keep the legs close enough for a neat change. Weakness shows as a wide, loose jump. The foot intrinsics must maintain the point while the hip muscles are simultaneously working.',
+        buildsOn: ['saute', 'plie'],
+        leadsTo: ['entrechat', 'echappe', 'grand-jete'],
+    },
+    'echappe': {
+        description: 'Échappé — an escaped movement in which the feet spring from a closed position to an open one (second or fourth) and return. Done as a jump (sauté) or as a relevé to pointe. Develops the ability to open and close the feet quickly and precisely.',
+        keyCues: ['The spring out and in are equal — don\'t rush one direction', 'Land in second with feet equally placed and hip-width apart', 'Both feet must leave the floor simultaneously', 'On the return, close equally — don\'t let one foot be lazy'],
+        musicality: 'Échappé occupies two counts: one to open, one to close. The movement is symmetrical and should feel balanced. In exercises, échappés often mark every other beat.',
+        commonCorrections: ['Don\'t open wider than second', 'Don\'t let the feet land unevenly', 'Keep both feet pointed in the air during the jump'],
+        muscles: ['Calves and foot (the jump and relevé action)', 'Hip abductors (opening to second)', 'Hip adductors (closing back to fifth)', 'Quadriceps (landing control)'],
+        muscleContext: 'Échappé trains coordinated action of hip abductors and adductors in quick succession — the abductors open as the feet leave; the adductors close precisely on the return. This coordination directly applies to batterie (beaten jumps).',
+        buildsOn: ['saute', 'plie', 'releve'],
+        leadsTo: ['entrechat', 'brise', 'echappe-pointe'],
+    },
+    'entrechat': {
+        description: 'Entrechat — a beaten jump in which the legs cross and open in the air before landing. Entrechat-quatre beats twice; entrechat-six three times. Named for the number of positions the legs pass through. Develops the fast, precise footwork of batterie.',
+        keyCues: ['The legs must be close together in the air — no wide scissoring', 'Both feet must be fully pointed throughout the beats', 'The beats happen in front of the body, not behind or to the side', 'Land through the foot in a controlled plié'],
+        musicality: 'Entrechat-quatre is typically one beat per jump. The speed of the beats must be absolutely even — no rushing the first and lagging on the second.',
+        commonCorrections: ['Don\'t let the legs open wide between beats', 'Don\'t look down to check the feet — learn by feel', 'Keep the upper body completely still — only the legs work'],
+        muscles: ['Hip adductors (closing between beats)', 'Hip abductors and flexors (opening for the beat)', 'Calves and foot (maintaining the jump and point)', 'Core (keeping the upper body still)'],
+        muscleContext: 'The speed of entrechat depends entirely on how quickly the hip adductors can close the legs between beats. Faster beats come from maximising the closing speed, not from jumping higher.',
+        buildsOn: ['saute', 'changement', 'echappe'],
+        leadsTo: ['brise', 'cabriole'],
+    },
+    'grand-sissonne': {
+        description: 'Grand sissonne — a large jump from two feet to one foot, travelling in the direction of the working leg extension. The body opens dramatically in the air (arabesque, attitude, etc.) and lands on one foot in demi-plié.',
+        keyCues: ['The jump travels — it is a leap in a direction, not a sauté that opens in the air', 'The position must be established before landing', 'Land on one foot in a deep, controlled plié', 'The free leg should be at its full position at the peak of the jump'],
+        musicality: 'Grand sissonne lands on the musical accent. The size and direction of travel should match the size of the musical phrase — a big sissonne on a small moment looks wrong.',
+        commonCorrections: ['Don\'t land flat — the foot must roll through the landing', 'Don\'t lose the position shape during the descent — maintain it to the landing', 'Don\'t let the standing leg collapse on landing'],
+        muscles: ['Quadriceps and glutes (the jump)', 'Hip flexors or extensors (holding the shape)', 'Core (maintaining the airborne position)', 'Standing leg calves and quadriceps (controlled landing)'],
+        muscleContext: 'Grand sissonne requires explosive push-off from two legs and significant landing control on one. The force of a large jump absorbed on a single leg is substantial — the quad must take it eccentrically through a deep plié without the knee collapsing inward.',
+        buildsOn: ['saute', 'grand-battement', 'arabesque'],
+        leadsTo: ['grand-jete', 'manege'],
+    },
+    'temps-leve': {
+        description: 'Temps levé — a hop on one foot while the working leg maintains its position. Deceptively demanding — the standing leg must push off and land without the assistance of the working leg, while the working leg holds its shape through the disturbance of the jump.',
+        keyCues: ['Push off the standing leg cleanly — don\'t rock before jumping', 'Keep the working leg absolutely still — it must not change position during the hop', 'Land on the same foot, through the same foot', 'Keep the upper body upright — don\'t lean to compensate'],
+        musicality: 'Typically sharp and accented — it lands on or just after the beat. In allegro combinations, a series of temps levés creates a rhythmic pattern that must be crisp.',
+        commonCorrections: ['Don\'t let the working leg drop or change position on the jump', 'Don\'t sway to generate height — the push is straight from the standing foot', 'Keep the knee of the standing leg over the toe on landing'],
+        muscles: ['Calf and quadriceps of the standing leg (the jump)', 'Hip flexors and rotators of the working leg (maintaining position)', 'Core (stability throughout)'],
+        muscleContext: 'Temps levé is a single-leg jump — the standing leg provides all the power and absorbs all the landing force. This creates significant demand on the calf and quadriceps, while the working leg\'s position must be held by its own muscles through the disturbance.',
+        buildsOn: ['saute', 'releve', 'retire'],
+        leadsTo: ['grand-sissonne', 'grand-jete'],
+    },
+    'brise': {
+        description: 'Brisé — a small beaten jump that travels diagonally. The working leg brushes out, the legs beat together in the air, and the dancer lands on two feet. Combines beaten technique with direction and travel.',
+        keyCues: ['The brush initiates the direction — don\'t jump first and brush second', 'The beat happens in the air, not on the floor', 'Both feet close to fifth on the beat', 'Land in a controlled demi-plié, feet close'],
+        musicality: 'Typically fast — one or two per beat in allegro. The brush and beat must be distinct even at speed. In sequences, the direction of travel creates a spatial pattern that maps to the musical phrase.',
+        commonCorrections: ['Don\'t let the brush become a kick — controlled and close to the floor', 'Don\'t beat behind the body — the beat is in front', 'Don\'t land with open feet — fifth must be closed'],
+        muscles: ['Hip flexors (the brush)', 'Hip adductors (the beat and closing)', 'Calves and foot (the jump and landing)', 'Core (upright posture during travel)'],
+        muscleContext: 'Brisé challenges coordination: the brush must generate direction, the jump must provide air time, and the beat must happen in sequence within a very short time frame. Weak hip adductors produce a slow or absent beat.',
+        buildsOn: ['echappe', 'degage', 'entrechat'],
+        leadsTo: ['cabriole'],
+    },
+    'cabriole': {
+        description: 'Cabriole — a jump in which one leg is thrown into the air and the other beats against it from below before landing. One of the most demanding allegro steps — it requires the height of grand battement combined with the precision of batterie.',
+        keyCues: ['The working leg goes up first — the supporting leg beats against it, not the other way around', 'The beat must be sharp and below the extended leg', 'Achieve maximum height with the working leg before the supporting leg lifts', 'Land on the supporting leg in a controlled plié'],
+        musicality: 'Typically on a strong beat, used as a climactic moment. The height and sharpness of the movement should match the weight of the musical accent.',
+        commonCorrections: ['Don\'t let both legs leave the floor at the same time — the working leg must be up first', 'Keep the working leg at height — don\'t let it drop before the beat', 'Land through the foot — not flat'],
+        muscles: ['Hip flexors (lifting the working leg)', 'Quadriceps and calves (the jump and beat)', 'Hip adductors (the beat)', 'Core (upright posture through the jump)'],
+        muscleContext: 'Cabriole requires sequential activation: hip flexors to send the working leg up, then quad and calf to jump and deliver the supporting leg for the beat. This sequence must happen quickly and at height.',
+        buildsOn: ['grand-battement', 'entrechat', 'temps-leve'],
+        leadsTo: [],
+    },
+    'releve-pointe': {
+        description: 'Relevé en pointe — a rise from flat or demi-plié to the tips of the toes. The most fundamental pointe action: weight transfers completely to the tips of the toes, requiring a strong pass through demi-pointe and precise alignment over the foot.',
+        keyCues: ['Roll through demi-pointe on the way up — don\'t spring directly to full pointe', 'Weight over the first two toes — do not sickle or wing', 'Ankle fully extended, the foot forming a continuous line with the leg', 'Lower with control — don\'t crash down from pointe'],
+        musicality: 'Relevé en pointe marks musical accents or is held through a note. A quick relevé to pointe has a sharp, precise quality; a slow one is lyrical. The quality should match the musical character.',
+        commonCorrections: ['Don\'t sickle — the ankle must be directly over the big-toe joint', 'Don\'t go from flat to pointe without rolling through', 'Don\'t grip the toes — the foot should be long and strong, not scrunched'],
+        muscles: ['Gastrocnemius and soleus (the rise)', 'Foot intrinsics (supporting the arch at full pointe)', 'Tibialis posterior and peroneals (alignment)', 'Core (vertical alignment)'],
+        muscleContext: 'Full pointe places the entire body weight on the tips of the toes — a very small surface. The intrinsic foot muscles, plantar fascia, and peroneals must work intensively to maintain alignment and prevent rolling. This is why pointe readiness is assessed over years, not weeks.',
+        buildsOn: ['releve', 'eleve'],
+        leadsTo: ['echappe-pointe', 'pique-pointe', 'bourree-pointe'],
+    },
+    'echappe-pointe': {
+        description: 'Échappé en pointe — springing from fifth on pointe to second (or fourth) on pointe and returning. Develops the quick, light footwork and bilateral ankle strength needed for pointe work.',
+        keyCues: ['Both feet must arrive in second simultaneously', 'Stay at full pointe throughout — no rolling down between positions', 'Keep second position even — feet equally spaced', 'Return to fifth cleanly, closing on pointe before lowering'],
+        musicality: 'Typically quick and light — one count to open, one to close. The quality should be airy. Heavy échappés suggest insufficient core and ankle strength.',
+        commonCorrections: ['Don\'t let one foot arrive before the other', 'Keep weight equally divided in second', 'Don\'t let the second position be too wide'],
+        muscles: ['Foot intrinsics and calves (sustained full pointe)', 'Hip abductors and adductors (opening and closing)', 'Core (upright posture at height)'],
+        muscleContext: 'Échappé en pointe requires sustained full pointe on both feet while opening and closing from fifth to second. Any asymmetry in foot or ankle strength creates an uneven échappé.',
+        buildsOn: ['releve-pointe', 'echappe'],
+        leadsTo: ['pique-pointe', 'bourree-pointe'],
+    },
+    'bourree-pointe': {
+        description: 'Bourrée en pointe — tiny, rapid steps on pointe that create the illusion of gliding. One of ballet\'s most iconic images: the dancer appears to float. Bourrée requires exceptional strength and stability in both ankles and perfect placement over each foot.',
+        keyCues: ['Steps are tiny — barely wider than fifth position', 'Both feet should be at the same height at all times', 'The upper body is completely still — arms and head do not bob with the steps', 'Travel in the intended direction without drifting'],
+        musicality: 'Performed to soft, sustained music, bourrée creates a legato, continuous visual effect. The upper body\'s stillness is what produces the floating quality — any movement there breaks the illusion.',
+        commonCorrections: ['Don\'t let the steps get too wide — they become walks', 'Don\'t let the relevé height drop as the step progresses', 'Keep the knees together and the steps close to the midline'],
+        muscles: ['Foot intrinsics (rapid sustained pointe on each step)', 'Calf (continuous elevated relevé)', 'Hip adductors (keeping the legs close)', 'Core (stillness of the upper body)'],
+        muscleContext: 'Bourrée places the greatest endurance demand on the calves and intrinsic foot muscles of any ballet step — the relevé is never released and the steps are continuous. Ankle stability must be maintained even as the muscles fatigue.',
+        buildsOn: ['releve-pointe', 'echappe-pointe'],
+        leadsTo: ['pique-pointe'],
+    },
+    'pique-pointe': {
+        description: 'Piqué en pointe — stepping directly onto a straight leg at full pointe, transferring weight completely in one movement. Sharper and more percussive than relevé — the foot lands already at full pointe, not rolling up to it.',
+        keyCues: ['Step onto a fully extended leg — the knee is straight the instant the foot lands', 'The foot must be placed precisely, not thrown', 'Maintain full height throughout', 'The working leg closes quickly after the piqué'],
+        musicality: 'Characteristically sharp and accented. In sequences, each piqué marks a beat. The precision of each landing gives the sequence its rhythmic clarity.',
+        commonCorrections: ['Don\'t allow the knee to bend on landing — the leg must be straight', 'Don\'t sickle on arrival — alignment over the first two toes must be immediate', 'Keep the upper body upright — don\'t lean forward into the piqué'],
+        muscles: ['Calf (immediate relevé on contact)', 'Foot intrinsics (instant alignment at full pointe)', 'Hip flexors (bringing the step forward)', 'Core (upright alignment)'],
+        muscleContext: 'Piqué en pointe is the most demanding single action in pointe work for ankle stability. The foot must arrive at full height, correctly aligned, on a straight leg — with no rolling-up phase to absorb the transition.',
+        buildsOn: ['releve-pointe', 'bourree-pointe'],
+        leadsTo: ['pique-turn'],
+    },
+    'italian-fouette': {
+        description: 'Fouetté à l\'italienne — a variation of fouetté in which the working leg extends to arabesque height (to the side and back) rather than forward before closing to retiré. Associated with the Italian school and characterised by a more open, expansive working leg path.',
+        keyCues: ['The working leg opens to arabesque rather than devant', 'The relevé and turn mechanics are identical to standard fouetté', 'The opening must be controlled — not thrown', 'Arms remain stable throughout'],
+        musicality: 'Shares the same structure as standard fouetté — one turn per beat — but the more expansive path of the working leg may require a slightly steadier tempo.',
+        commonCorrections: ['Don\'t confuse the path of the working leg — it goes to arabesque, not forward', 'Maintain the supporting relevé throughout', 'Don\'t lean away from the working leg as it opens'],
+        muscles: ['Hip extensors and glutes (working leg to arabesque)', 'Hip flexors (closing to retiré)', 'Calf (sustained relevé)', 'Core (axis)'],
+        muscleContext: 'The arabesque path of the working leg engages the hip extensors through a greater range of motion than standard fouetté. The transition from arabesque back to retiré requires strong hip flexors working against a longer lever.',
+        buildsOn: ['fouette', 'arabesque', 'pirouette'],
+        leadsTo: [],
+    },
 };
 
 // Default stub for skills without full knowledge content yet
@@ -6730,11 +7161,17 @@ function showSkillKnowledgePage(skillId, returnTo) {
     const isStub = !SKILL_KNOWLEDGE[skillId];
 
     const keyCuesHtml = knowledge.keyCues.length > 0
-        ? knowledge.keyCues.map((cue, i) => `
-            <li class="skill-know-list-item skill-know-tappable"
-                onclick="showKnowledgeItemPopover(this, '${skillId}', ${JSON.stringify(cue).replace(/'/g, "&#39;")}, 'note')">
+        ? knowledge.keyCues.map((cue) => `
+            <li class="skill-know-list-item learn-line-tappable"
+                data-line-text="${escapeHtml(cue)}"
+                data-save-type="correction"
+                data-page-type="skill"
+                data-item-id="${skillId}"
+                onclick="openLearnLineSave(this)">
                 ${cue}
-                <span class="skill-know-save-hint">tap to save</span>
+                <div class="learn-line-save-expand">
+                    ${_renderLineSavePrompt(cue, 'correction', 'skill', skillId)}
+                </div>
             </li>`).join('')
         : '<li class="skill-know-list-item skill-know-stub">Content coming soon</li>';
 
@@ -6828,7 +7265,19 @@ function showSkillKnowledgePage(skillId, returnTo) {
             ${knowledge.musicality ? `
             <div class="skill-know-section">
                 <div class="skill-know-section-label">Musicality</div>
-                <p class="skill-know-text">${knowledge.musicality}</p>
+                <ul class="skill-know-list">
+                    <li class="skill-know-list-item learn-line-tappable"
+                        data-line-text="${escapeHtml(knowledge.musicality)}"
+                        data-save-type="goal"
+                        data-page-type="skill"
+                        data-item-id="${skillId}"
+                        onclick="openLearnLineSave(this)">
+                        ${knowledge.musicality}
+                        <div class="learn-line-save-expand">
+                            ${_renderLineSavePrompt(knowledge.musicality, 'goal', 'skill', skillId)}
+                        </div>
+                    </li>
+                </ul>
             </div>` : ''}
 
             <!-- Common corrections -->
