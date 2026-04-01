@@ -2776,9 +2776,9 @@ function renderGoalsScreen() {
         });
     }
 
+    let completedHtml = '';
     if (completedGoals.length) {
-        const startCollapsed = completedGoals.length >= 2;
-        goalsHtml += `
+        completedHtml = `
             <button class="goals-completed-header" onmousedown="
                 const body = this.nextElementSibling;
                 body.classList.toggle('collapsed');
@@ -2786,7 +2786,7 @@ function renderGoalsScreen() {
                 <span>completed</span>
                 <span class="goals-completed-count">${completedGoals.length}</span>
             </button>
-            <div class="goals-completed-body ${startCollapsed ? 'collapsed' : ''}">
+            <div class="goals-completed-body collapsed">
                 ${completedGoals.map(g => renderGoalCard(g, true)).join('')}
             </div>
         `;
@@ -2801,6 +2801,7 @@ function renderGoalsScreen() {
             ${goalsHtml}
             <button class="add-goal-btn" onclick="openGoalCreator()">+ set a goal</button>
             ${(appState.goals || []).length > 0 ? `<div style="text-align:center; margin-top: var(--sp-xl);"><button class="text-link-btn" onclick="showAllGoalsScreen()">view all goals →</button></div>` : ''}
+            ${completedHtml}
         </div>
     `;
 
@@ -2918,11 +2919,12 @@ function showAllGoalsScreen() {
     `).join('');
 
     screen.innerHTML = `
-        <div class="profile-header" style="display:flex;align-items:center;gap:var(--sp-md);">
+        <div class="profile-header" style="display:flex;align-items:center;justify-content:space-between;">
             <button class="back-btn" onclick="goBack()">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="13 4 7 10 13 16"/></svg>
             </button>
-            <h1>All goals</h1>
+            <h1 style="flex:1;text-align:center;">All goals</h1>
+            <div style="width:36px;"></div>
         </div>
         <div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
             ${allGoals.length === 0
@@ -5064,15 +5066,19 @@ function renderTimelineEntry(entry) {
                 : `openGoalReflectionSheet(${goal.id})`;
             const editFn = `openGoalReflectionSheet(${goal.id})`;
             const actionLabel = hasReflection ? 'edit' : 'add note';
+            const tapHint = hasReflection
+                ? `<div class="timeline-tap-hint">tap to review \u2192</div>`
+                : '';
             return `
             <div class="timeline-item timeline-item-milestone timeline-item-tappable" onclick="${cardTapFn}">
                 <div class="timeline-content">
                     <div class="timeline-milestone-header">
                         <span class="timeline-type-label">Goal completed</span>
-                        <span class="timeline-milestone-edit" onclick="event.stopPropagation(); ${editFn}">${actionLabel} →</span>
+                        <span class="timeline-milestone-edit" onclick="event.stopPropagation(); ${editFn}">${actionLabel}</span>
                     </div>
                     <div class="timeline-title">${escapeHtml(goal.title)}</div>
                     ${reflectionHtml}
+                    ${tapHint}
                 </div>
             </div>`;
         }
