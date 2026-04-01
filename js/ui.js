@@ -1606,7 +1606,6 @@ function saveSession() {
         classType:       s.classType       || null,
         notes:           s.generalNotes    || null,
         isNote:          isNoteMode || null,
-        goalId:          s._reflectionGoalId || null,
     };
 
     if (s._isEdit) {
@@ -1739,19 +1738,8 @@ function saveSession() {
     storage.save('skillNotes',    appState.skillNotes);
     persistSkillState();
 
-    // 3. If this is a goal reflection, update the goal and skip the timeline entry
-    if (s._reflectionGoalId) {
-        const reflectionGoal = (appState.goals || []).find(g => g.id === s._reflectionGoalId);
-        if (reflectionGoal) {
-            reflectionGoal.reflection          = session.notes || null;
-            reflectionGoal.reflectionSessionId = session.id;
-            storage.save('goals', appState.goals);
-        }
-    }
-
-    // 4. Write timeline entry (new sessions only — edits don't create duplicate entries;
-    //    goal reflections never get a timeline entry)
-    if (!s._isEdit && !s._reflectionGoalId) {
+    // 3. Write timeline entry (new sessions only — edits don't create duplicate entries)
+    if (!s._isEdit) {
         const template = appState.sessionTemplates.find(t => t.id === s.templateId);
         if (isNoteMode) {
             const firstLine = (session.notes || '').split('\n')[0].trim() || 'Note';
@@ -3004,7 +2992,8 @@ function renderGoalCard(goal, completed) {
         <div class="goal-milestones ${markers.length > MARKER_CAP ? 'goal-milestones-scrollable' : ''}">
             ${markers.map((m, i) => `
                 <div class="goal-milestone ${m.done ? 'done' : ''}"
-                     ${!completed ? `onmousedown="toggleMilestone('${goal.id}', ${i})" ontouchend="event.preventDefault(); toggleMilestone('${goal.id}', ${i})"` : ''}>
+                     onmousedown="toggleMilestone('${goal.id}', ${i})"
+                     ontouchend="event.preventDefault(); toggleMilestone('${goal.id}', ${i})">
                     <div class="goal-milestone-check">
                         ${m.done ? `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="1.5 5 4 7.5 8.5 2.5"/></svg>` : ''}
                     </div>
@@ -3038,8 +3027,7 @@ function renderGoalCard(goal, completed) {
                 reopen
             </div>`}
             <div class="swipe-content">
-                <div class="goal-card ${completed ? 'goal-card-completed' : ''}"
-                     ${completed ? `onclick="showGoalReflectionDetail(${goal.id})"` : ''}>
+                <div class="goal-card ${completed ? 'goal-card-completed' : ''}">
                     ${tagsHtml ? `<div class="goal-tags">${tagsHtml}</div>` : ''}
                     <div class="goal-card-title">${completed ? '<span class="goal-complete-tick"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="11" fill="var(--sage)"/><polyline points="5.5,11 9,14.5 16.5,7.5" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : ''}${goal.title}</div>
                     ${goal.body ? `<div class="goal-card-body">${renderClampedHtml(nl2br(goal.body), 'gb-' + goal.id)}</div>` : ''}
@@ -3056,10 +3044,7 @@ function renderGoalCard(goal, completed) {
                                 return ` <span class="goal-card-expiry${nearClass}">· Expires ${expStr}</span>`;
                             })()}
                         </div>
-                        ${!completed
-                            ? `<button class="goal-edit-btn" onmousedown="openGoalEditor(${goal.id})">edit</button>`
-                            : `<button class="goal-note-btn" onclick="event.stopPropagation(); openGoalReflectionSheet(${goal.id})" onmousedown="event.stopPropagation()">${goal.reflectionSessionId ? 'edit note' : 'add note'}</button>`
-                        }
+                        ${!completed ? `<button class="goal-edit-btn" onmousedown="openGoalEditor(${goal.id})">edit</button>` : ''}
                     </div>
                 </div>
             </div>
@@ -4144,7 +4129,6 @@ function toggleMilestone(goalId, milestoneIndex) {
 function markGoalComplete(goalId) {
     const goal = appState.goals.find(g => g.id === Number(goalId));
     if (!goal) return;
-    if (goal.status === 'completed') return;
     goal.status = 'completed';
     goal.completedAt = Date.now();
     storage.save('goals', appState.goals);
@@ -4158,46 +4142,6 @@ function markGoalComplete(goalId) {
     showGoalCompleteMessage(goal.title);
     if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
     if (appState.currentScreen === 'profile') initProfile();
-}
-
-function showGoalReflectionDetail(goalId) {
-    const goal = (appState.goals || []).find(g => g.id === Number(goalId));
-    if (!goal) return;
-    if (goal.reflectionSessionId) {
-        showNoteDetail(goal.reflectionSessionId);
-    } else {
-        openGoalReflectionSheet(goalId);
-    }
-}
-
-function openGoalReflectionSheet(goalId) {
-    const goal = (appState.goals || []).find(g => g.id === Number(goalId));
-    if (!goal) return;
-    if (goal.reflectionSessionId) {
-        openNoteEditor(goal.reflectionSessionId, goal.id);
-        return;
-    }
-    // No reflection yet — open note logger as new note
-    appState.currentSession = {
-        id:                Date.now(),
-        date:              new Date().toISOString().split('T')[0],
-        generalNotes:      '',
-        blocks:            [],
-        _mode:             'note',
-        _reflectionGoalId: goal.id,
-    };
-    let overlay = document.getElementById('session-logger-overlay');
-    if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.id = 'session-logger-overlay';
-        overlay.className = 'session-overlay';
-        document.body.appendChild(overlay);
-    }
-    renderSessionLogger();
-    document.querySelector('.fab')?.classList.remove('visible');
-    document.querySelector('.bottom-nav')?.classList.remove('visible');
-    requestAnimationFrame(() => overlay.classList.add('open'));
-    attachSheetSwipe();
 }
 
 function showGoalCompleteMessage(title) {
@@ -5068,9 +5012,7 @@ function showSessionDetail(sessionId) {
                 <div class="session-detail-meta">${datePart}</div>
             </div>`;
         bodyHtml = `<div class="note-detail-body">${noteContentHtml}</div>`;
-        editAction = session.goalId
-            ? `openNoteEditor(${sessionId}, ${session.goalId})`
-            : `openNoteEditor(${sessionId})`;
+        editAction = `openNoteEditor(${sessionId})`;
     } else {
         const classTypeLabel = session.classType
             ? ALL_CLASS_TYPES.find(ct => ct.id === session.classType)?.label || session.classType
@@ -5151,17 +5093,16 @@ function showNoteDetail(sessionId) {
     showSessionDetail(sessionId);
 }
 
-function openNoteEditor(sessionId, reflectionGoalId) {
+function openNoteEditor(sessionId) {
     const session = appState.sessions.find(s => s.id === sessionId);
     if (!session) return;
     appState.currentSession = {
-        id:                  session.id,
-        date:                session.date,
-        generalNotes:        session.notes || '',
-        blocks:              [],
-        _mode:               'note',
-        _isEdit:             true,
-        _reflectionGoalId:   reflectionGoalId || session.goalId || null,
+        id:           session.id,
+        date:         session.date,
+        generalNotes: session.notes || '',
+        blocks:       [],
+        _mode:        'note',
+        _isEdit:      true,
     };
     let overlay = document.getElementById('session-logger-overlay');
     if (!overlay) {

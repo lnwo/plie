@@ -4199,9 +4199,6 @@ h1, h2, .screen-heading {
     line-height: 1.55;
     margin-bottom: var(--sp-sm);
 }
-.goal-card-body .text-clamped {
-    -webkit-line-clamp: 1;
-}
 
 .goal-tags {
     display: flex;
@@ -5615,9 +5612,6 @@ mark.search-highlight {
    GOAL CARD — updated styles
    ═══════════════════════════════════════ */
 
-.goal-card-completed {
-    cursor: pointer;
-}
 .goal-card-completed .goal-card-title {
     text-decoration: line-through;
     color: var(--ink-3);
@@ -6086,19 +6080,6 @@ button, a, input, select, textarea,
 }
 
 .goal-edit-btn:hover { color: var(--primary); }
-
-.goal-note-btn {
-    background: none;
-    border: none;
-    font-family: 'DM Sans', sans-serif;
-    font-weight: 500;
-    font-size: var(--fs-small);
-    color: var(--gold);
-    cursor: pointer;
-    padding: 12px 8px;
-    margin: -12px -8px;
-    white-space: nowrap;
-}
 
 /* ═══════════════════════════════════════
    GOAL MILESTONE SCROLL CAP
