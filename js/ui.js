@@ -1606,6 +1606,7 @@ function saveSession() {
         classType:       s.classType       || null,
         notes:           s.generalNotes    || null,
         isNote:          isNoteMode || null,
+        ...(s._reflectionGoalId ? { _goalId: s._reflectionGoalId } : {}),
     };
 
     if (s._isEdit) {
@@ -1737,6 +1738,20 @@ function saveSession() {
     storage.save('sessionSkills', appState.sessionSkills);
     storage.save('skillNotes',    appState.skillNotes);
     persistSkillState();
+
+    // 3a. If this is a goal reflection, update the goal and skip the timeline entry
+    if (s._reflectionGoalId) {
+        const reflGoal = appState.goals.find(g => g.id === s._reflectionGoalId);
+        if (reflGoal) {
+            reflGoal.reflection = session.notes || '';
+            reflGoal.reflectionSessionId = session.id;
+            storage.save('goals', appState.goals);
+        }
+        appState.currentSession = null;
+        closeSessionLogger();
+        if (appState.currentScreen === 'profile') initProfile();
+        return;
+    }
 
     // 3. Write timeline entry (new sessions only — edits don't create duplicate entries)
     if (!s._isEdit) {
@@ -4230,56 +4245,56 @@ function showGoalCompleteMessage(title) {
     }, 2500);
 }
 
-function openGoalReflectionSheet(goalId, isEdit) {
-    if (document.getElementById('goal-reflection-sheet')) return;
+// Open the goal reflection in view mode (Image 4) — full-screen note detail
+function showGoalReflectionDetail(goalId) {
     const goal = appState.goals.find(g => g.id === Number(goalId));
     if (!goal) return;
+    if (goal.reflectionSessionId) {
+        showNoteDetail(goal.reflectionSessionId);
+    } else {
+        // No reflection yet — open editor to create one
+        openGoalReflectionSheet(goalId);
+    }
+}
+
+// Open the goal reflection editor (Image 5) — session logger note mode
+function openGoalReflectionSheet(goalId) {
+    const goal = appState.goals.find(g => g.id === Number(goalId));
+    if (!goal) return;
+
+    // If an existing reflection session exists, edit it via the standard note editor
+    if (goal.reflectionSessionId) {
+        openNoteEditor(goal.reflectionSessionId);
+        return;
+    }
 
     const placeholders = ["what shifted?", "what's still there?", "what would you do differently?"];
     const placeholder = placeholders[Number(goalId) % 3];
-    const existing = isEdit && goal.reflection ? escapeHtml(goal.reflection) : '';
 
-    const sheet = document.createElement('div');
-    sheet.id = 'goal-reflection-sheet';
-    sheet.className = 'goal-reflection-sheet';
-    sheet.innerHTML = `
-        <div class="goal-reflection-backdrop" onmousedown="document.getElementById('goal-reflection-sheet').remove()"></div>
-        <div class="goal-reflection-inner">
-            <textarea class="goal-reflection-textarea" id="goal-reflection-textarea"
-                      placeholder="${placeholder}" rows="5">${existing}</textarea>
-            <div class="goal-reflection-actions">
-                <button class="post-save-btn" onmousedown="saveGoalReflection(${goalId})">save note</button>
-                <button class="post-save-btn-muted" onmousedown="document.getElementById('goal-reflection-sheet').remove()">cancel</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(sheet);
-    requestAnimationFrame(() => {
-        sheet.classList.add('open');
-        document.getElementById('goal-reflection-textarea')?.focus();
-    });
-}
-
-function saveGoalReflection(goalId) {
-    const text = document.getElementById('goal-reflection-textarea')?.value?.trim();
-    document.getElementById('goal-reflection-sheet')?.remove();
-    if (!text) return;
-
-    const goal = appState.goals.find(g => g.id === Number(goalId));
-    if (!goal) return;
-    goal.reflection = text;
-    storage.save('goals', appState.goals);
-
-    // Refresh timeline if visible
-    const timelineEl = document.getElementById('barre-timeline-inline');
-    if (timelineEl) {
-        const recentEntries = buildTimelineEntries().slice(0, 3);
-        timelineEl.innerHTML = recentEntries.length > 0
-            ? recentEntries.map(renderTimelineEntry).join('')
-            : '';
+    // Open session logger in note mode, with reflection linkage
+    let overlay = document.getElementById('session-logger-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'session-logger-overlay';
+        overlay.className = 'session-overlay';
+        document.body.appendChild(overlay);
+        overlay.addEventListener('mousedown', e => { if (e.target === overlay) closeSessionLogger(); });
     }
-    const timelineSheet = document.getElementById('barre-timeline-sheet-list');
-    if (timelineSheet) timelineSheet.innerHTML = buildTimelineEntries().map(renderTimelineEntry).join('');
+    appState.currentSession = {
+        id:                Date.now(),
+        date:              new Date().toISOString().split('T')[0],
+        generalNotes:      '',
+        blocks:            [],
+        _mode:             'note',
+        _isEdit:           false,
+        _reflectionGoalId: Number(goalId),
+        _placeholder:      placeholder,
+    };
+    renderSessionLogger();
+    document.querySelector('.fab')?.classList.remove('visible');
+    document.querySelector('.bottom-nav')?.classList.remove('visible');
+    requestAnimationFrame(() => overlay.classList.add('open'));
+    attachSheetSwipe();
 }
 
 function reopenGoal(goalId) {
@@ -5044,14 +5059,17 @@ function renderTimelineEntry(entry) {
             const reflectionHtml = hasReflection
                 ? `<div class="timeline-milestone-reflection">${escapeHtml(goal.reflection)}</div>`
                 : '';
+            const cardTapFn = hasReflection
+                ? `showGoalReflectionDetail(${goal.id})`
+                : `openGoalReflectionSheet(${goal.id})`;
+            const editFn = `openGoalReflectionSheet(${goal.id})`;
             const actionLabel = hasReflection ? 'edit' : 'add note';
-            const actionFn = `openGoalReflectionSheet(${goal.id}${hasReflection ? ', true' : ''})`;
             return `
-            <div class="timeline-item timeline-item-milestone timeline-item-tappable" onclick="${actionFn}">
+            <div class="timeline-item timeline-item-milestone timeline-item-tappable" onclick="${cardTapFn}">
                 <div class="timeline-content">
                     <div class="timeline-milestone-header">
                         <span class="timeline-type-label">Goal completed</span>
-                        <span class="timeline-milestone-edit">${actionLabel} →</span>
+                        <span class="timeline-milestone-edit" onclick="event.stopPropagation(); ${editFn}">${actionLabel} →</span>
                     </div>
                     <div class="timeline-title">${escapeHtml(goal.title)}</div>
                     ${reflectionHtml}
@@ -5291,12 +5309,13 @@ function openNoteEditor(sessionId) {
     const session = appState.sessions.find(s => s.id === sessionId);
     if (!session) return;
     appState.currentSession = {
-        id:           session.id,
-        date:         session.date,
-        generalNotes: session.notes || '',
-        blocks:       [],
-        _mode:        'note',
-        _isEdit:      true,
+        id:                  session.id,
+        date:                session.date,
+        generalNotes:        session.notes || '',
+        blocks:              [],
+        _mode:               'note',
+        _isEdit:             true,
+        _reflectionGoalId:   session._goalId || null,
     };
     let overlay = document.getElementById('session-logger-overlay');
     if (!overlay) {

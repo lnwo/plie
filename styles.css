@@ -3686,55 +3686,6 @@ h1, h2, .screen-heading {
     overflow: hidden;
 }
 
-/* Goal reflection sheet */
-.goal-reflection-sheet {
-    position: fixed;
-    inset: 0;
-    z-index: 1100;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-}
-
-.goal-reflection-backdrop {
-    flex: 1;
-    background: rgba(26,23,20,0.25);
-}
-
-.goal-reflection-inner {
-    background: var(--surface-warm);
-    padding: var(--sp-lg);
-    border-radius: var(--r-lg) var(--r-lg) 0 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--sp-sm);
-}
-
-.goal-reflection-textarea {
-    width: 100%;
-    min-height: 100px;
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid var(--border);
-    border-radius: 0;
-    font-family: var(--font-ui);
-    font-size: var(--fs-body);
-    color: var(--ink);
-    line-height: 1.55;
-    resize: none;
-    outline: none;
-    box-sizing: border-box;
-    padding: var(--sp-xs) 0;
-}
-
-.goal-reflection-textarea::placeholder { color: var(--ink-5); }
-
-.goal-reflection-actions {
-    display: flex;
-    gap: var(--sp-sm);
-    align-items: center;
-    padding-top: var(--sp-xs);
-}
 
 /* ═══════════════════════════════════════
    SESSION DETAIL VIEW
