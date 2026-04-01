@@ -3654,6 +3654,89 @@ h1, h2, .screen-heading {
     font-size: var(--fs-caption);
 }
 
+/* Goal completion milestone — inline header + reflection */
+.timeline-milestone-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 3px;
+}
+
+.timeline-milestone-header .timeline-type-label {
+    display: inline;
+    margin-bottom: 0;
+}
+
+.timeline-milestone-edit {
+    all: unset;
+    font-family: var(--font-ui);
+    font-size: var(--fs-caption);
+    color: var(--ink-5);
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.timeline-milestone-edit:hover { color: var(--ink); }
+
+.timeline-milestone-reflection {
+    font-size: var(--fs-small);
+    color: var(--ink-4);
+    margin-top: 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* Goal reflection sheet */
+.goal-reflection-sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.goal-reflection-backdrop {
+    flex: 1;
+    background: rgba(26,23,20,0.25);
+}
+
+.goal-reflection-inner {
+    background: var(--surface-warm);
+    padding: var(--sp-lg);
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-sm);
+}
+
+.goal-reflection-textarea {
+    width: 100%;
+    min-height: 100px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    font-family: var(--font-ui);
+    font-size: var(--fs-body);
+    color: var(--ink);
+    line-height: 1.55;
+    resize: none;
+    outline: none;
+    box-sizing: border-box;
+    padding: var(--sp-xs) 0;
+}
+
+.goal-reflection-textarea::placeholder { color: var(--ink-5); }
+
+.goal-reflection-actions {
+    display: flex;
+    gap: var(--sp-sm);
+    align-items: center;
+    padding-top: var(--sp-xs);
+}
+
 /* ═══════════════════════════════════════
    SESSION DETAIL VIEW
    ═══════════════════════════════════════ */
@@ -4689,7 +4772,7 @@ h1, h2, .screen-heading {
     font-weight: 600;
     font-variant: small-caps;
     letter-spacing: 0.05em;
-    color: var(--ink-5);
+    color: var(--gold);
     margin-top: 4px;
 }
 
@@ -4735,12 +4818,12 @@ h1, h2, .screen-heading {
 }
 
 .skill-corr-item {
-    border-left: 2.5px solid var(--coral);
+    border-left: 2.5px solid var(--gold);
     padding: 1px 0 1px var(--sp-sm);
 }
 
 .skill-corr-item.is-recurring {
-    border-left-color: var(--coral-soft);
+    border-left-color: var(--gold);
 }
 
 .skill-corr-text {
@@ -5367,6 +5450,68 @@ mark.search-highlight {
     font-weight: 600;
     color: var(--success);
     padding: var(--sp-xs) 0;
+}
+
+/* ═══════════════════════════════════════
+   LEARN BOOKMARKS & LINE SAVES
+   ═══════════════════════════════════════ */
+
+.learn-bookmark-btn {
+    background: none;
+    border: none;
+    padding: var(--sp-xs);
+    color: var(--ink-5);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    line-height: 1;
+    border-radius: var(--r-sm);
+    transition: color 0.15s ease;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+.learn-bookmark-btn.bookmarked {
+    color: var(--gold);
+}
+
+.learn-line-tappable {
+    cursor: pointer;
+    border-radius: var(--r-sm);
+    transition: background 0.15s ease;
+}
+.learn-line-tappable.save-open {
+    background: var(--surface-warm);
+}
+
+.learn-line-save-expand {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.2s ease-out, padding 0.2s ease-out;
+    padding: 0 0 0 var(--sp-md);
+}
+.learn-line-save-expand.open {
+    max-height: 52px;
+    padding-bottom: var(--sp-xs);
+}
+
+.learn-line-save-action {
+    display: inline-block;
+    padding-top: var(--sp-xs);
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 400;
+    line-height: 1.4;
+}
+.learn-line-save-action.goal-action  { color: var(--gold);  cursor: pointer; }
+.learn-line-save-action.corr-action  { color: var(--coral); cursor: pointer; }
+.learn-line-save-action.saved-label  { color: var(--ink-5); cursor: default; }
+.learn-line-save-action.saved-link   { color: var(--ink-5); cursor: pointer; }
+
+.skill-lib-bookmark-indicator {
+    display: inline-flex;
+    align-items: center;
+    color: var(--ink-5);
+    flex-shrink: 0;
 }
 
 /* ═══════════════════════════════════════

@@ -1879,7 +1879,7 @@ function evaluatePostSavePrompt(skillsWithCorrections) {
 
     // P3: Completed goal with no reflection note
     if (!isPromptSuppressed('completed-goal')) {
-        const g = (appState.goals || []).find(goal => goal.completed && !goal.reflection);
+        const g = (appState.goals || []).find(goal => goal.status === 'completed' && !goal.reflection);
         if (g) {
             const skill = g.skillId ? DATA.skills.find(s => s.id === g.skillId) : null;
             showContextualPrompt({
@@ -4201,6 +4201,15 @@ function markGoalComplete(goalId) {
     showGoalCompleteMessage(goal.title);
     if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
     if (appState.currentScreen === 'profile') initProfile();
+    // Nudge for optional reflection note — fires after toast clears
+    setTimeout(() => {
+        showContextualPrompt({
+            body: 'goal completed. anything to note?',
+            primaryLabel: 'add a note',
+            primaryFn: `openGoalReflectionSheet(${goal.id})`,
+            suppressKey: `goal-reflection-${goal.id}`,
+        });
+    }, 2800);
 }
 
 function showGoalCompleteMessage(title) {
@@ -4219,6 +4228,58 @@ function showGoalCompleteMessage(title) {
         toast.classList.remove('visible');
         setTimeout(() => toast.remove(), 300);
     }, 2500);
+}
+
+function openGoalReflectionSheet(goalId, isEdit) {
+    if (document.getElementById('goal-reflection-sheet')) return;
+    const goal = appState.goals.find(g => g.id === Number(goalId));
+    if (!goal) return;
+
+    const placeholders = ["what shifted?", "what's still there?", "what would you do differently?"];
+    const placeholder = placeholders[Number(goalId) % 3];
+    const existing = isEdit && goal.reflection ? escapeHtml(goal.reflection) : '';
+
+    const sheet = document.createElement('div');
+    sheet.id = 'goal-reflection-sheet';
+    sheet.className = 'goal-reflection-sheet';
+    sheet.innerHTML = `
+        <div class="goal-reflection-backdrop" onmousedown="document.getElementById('goal-reflection-sheet').remove()"></div>
+        <div class="goal-reflection-inner">
+            <textarea class="goal-reflection-textarea" id="goal-reflection-textarea"
+                      placeholder="${placeholder}" rows="5">${existing}</textarea>
+            <div class="goal-reflection-actions">
+                <button class="post-save-btn" onmousedown="saveGoalReflection(${goalId})">save note</button>
+                <button class="post-save-btn-muted" onmousedown="document.getElementById('goal-reflection-sheet').remove()">cancel</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(sheet);
+    requestAnimationFrame(() => {
+        sheet.classList.add('open');
+        document.getElementById('goal-reflection-textarea')?.focus();
+    });
+}
+
+function saveGoalReflection(goalId) {
+    const text = document.getElementById('goal-reflection-textarea')?.value?.trim();
+    document.getElementById('goal-reflection-sheet')?.remove();
+    if (!text) return;
+
+    const goal = appState.goals.find(g => g.id === Number(goalId));
+    if (!goal) return;
+    goal.reflection = text;
+    storage.save('goals', appState.goals);
+
+    // Refresh timeline if visible
+    const timelineEl = document.getElementById('barre-timeline-inline');
+    if (timelineEl) {
+        const recentEntries = buildTimelineEntries().slice(0, 3);
+        timelineEl.innerHTML = recentEntries.length > 0
+            ? recentEntries.map(renderTimelineEntry).join('')
+            : '';
+    }
+    const timelineSheet = document.getElementById('barre-timeline-sheet-list');
+    if (timelineSheet) timelineSheet.innerHTML = buildTimelineEntries().map(renderTimelineEntry).join('');
 }
 
 function reopenGoal(goalId) {
@@ -4975,6 +5036,30 @@ function renderTimelineEntry(entry) {
             </div>
         </div>`;
     }
+    // Special rendering for goal completion milestones
+    if (entry.type === 'milestone' && entry.objectId) {
+        const goal = (appState.goals || []).find(g => g.id === entry.objectId);
+        if (goal) {
+            const hasReflection = !!goal.reflection;
+            const reflectionHtml = hasReflection
+                ? `<div class="timeline-milestone-reflection">${escapeHtml(goal.reflection)}</div>`
+                : '';
+            const actionLabel = hasReflection ? 'edit' : 'add note';
+            const actionFn = `openGoalReflectionSheet(${goal.id}${hasReflection ? ', true' : ''})`;
+            return `
+            <div class="timeline-item timeline-item-milestone">
+                <div class="timeline-content">
+                    <div class="timeline-milestone-header">
+                        <span class="timeline-type-label">Goal completed</span>
+                        <button class="timeline-milestone-edit" onmousedown="${actionFn}">${actionLabel}</button>
+                    </div>
+                    <div class="timeline-title">${escapeHtml(goal.title)}</div>
+                    ${reflectionHtml}
+                </div>
+            </div>`;
+        }
+    }
+
     const isPraise   = entry.isPraise;
     const isNote     = entry.type === 'note';
     const isTappable = (entry.type === 'session' || isNote) && entry.objectId;
