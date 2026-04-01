@@ -2219,8 +2219,8 @@ h1, h2, .screen-heading {
 }
 
 .learn-chip.active {
-    background: var(--primary);
-    border-color: var(--primary);
+    background: var(--ink);
+    border-color: var(--ink);
     color: #fff;
 }
 
@@ -3654,6 +3654,39 @@ h1, h2, .screen-heading {
     font-size: var(--fs-caption);
 }
 
+/* Goal completion milestone — inline header + reflection */
+.timeline-milestone-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 3px;
+}
+
+.timeline-milestone-header .timeline-type-label {
+    display: inline;
+    margin-bottom: 0;
+}
+
+.timeline-milestone-edit {
+    all: unset;
+    font-family: var(--font-ui);
+    font-size: var(--fs-small);
+    font-weight: 500;
+    color: var(--gold);
+    cursor: pointer;
+}
+
+.timeline-milestone-reflection {
+    font-size: var(--fs-small);
+    color: var(--ink-4);
+    margin-top: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+
 /* ═══════════════════════════════════════
    SESSION DETAIL VIEW
    ═══════════════════════════════════════ */
@@ -4626,11 +4659,8 @@ h1, h2, .screen-heading {
 }
 
 .skill-detail-section-count {
-    font-size: var(--fs-caption);
-    color: var(--ink-3);
-    background: var(--border-light);
-    padding: 2px 8px;
-    border-radius: var(--r-full);
+    font-size: var(--fs-small);
+    color: var(--ink-5);
 }
 
 .skill-detail-add-goal-btn {
@@ -4686,13 +4716,14 @@ h1, h2, .screen-heading {
 }
 
 .skill-correction-recurring {
+    display: block;
+    font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-caption);
-    color: var(--coral);
     font-weight: 600;
-    background: var(--coral-soft);
-    padding: 1px 6px;
-    border-radius: var(--r-full);
-    opacity: 0.8;
+    font-variant: small-caps;
+    letter-spacing: 0.05em;
+    color: var(--gold);
+    margin-top: 4px;
 }
 
 .skill-correction-text {
@@ -4737,12 +4768,12 @@ h1, h2, .screen-heading {
 }
 
 .skill-corr-item {
-    border-left: 2.5px solid var(--coral);
+    border-left: 2.5px solid var(--gold);
     padding: 1px 0 1px var(--sp-sm);
 }
 
 .skill-corr-item.is-recurring {
-    border-left-color: var(--coral-soft);
+    border-left-color: var(--gold);
 }
 
 .skill-corr-text {
@@ -5372,6 +5403,68 @@ mark.search-highlight {
 }
 
 /* ═══════════════════════════════════════
+   LEARN BOOKMARKS & LINE SAVES
+   ═══════════════════════════════════════ */
+
+.learn-bookmark-btn {
+    background: none;
+    border: none;
+    padding: var(--sp-xs);
+    color: var(--ink-5);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    line-height: 1;
+    border-radius: var(--r-sm);
+    transition: color 0.15s ease;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+.learn-bookmark-btn.bookmarked {
+    color: var(--gold);
+}
+
+.learn-line-tappable {
+    cursor: pointer;
+    border-radius: var(--r-sm);
+    transition: background 0.15s ease;
+}
+.learn-line-tappable.save-open {
+    background: var(--surface-warm);
+}
+
+.learn-line-save-expand {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.2s ease-out, padding 0.2s ease-out;
+    padding: 0 0 0 var(--sp-md);
+}
+.learn-line-save-expand.open {
+    max-height: 52px;
+    padding-bottom: var(--sp-xs);
+}
+
+.learn-line-save-action {
+    display: inline-block;
+    padding-top: var(--sp-xs);
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 400;
+    line-height: 1.4;
+}
+.learn-line-save-action.goal-action  { color: var(--gold);  cursor: pointer; }
+.learn-line-save-action.corr-action  { color: var(--coral); cursor: pointer; }
+.learn-line-save-action.saved-label  { color: var(--ink-5); cursor: default; }
+.learn-line-save-action.saved-link   { color: var(--ink-5); cursor: pointer; }
+
+.skill-lib-bookmark-indicator {
+    display: inline-flex;
+    align-items: center;
+    color: var(--ink-5);
+    flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════
    SKILL PROGRESSION SUMMARY
    ═══════════════════════════════════════ */
 
@@ -5445,8 +5538,8 @@ mark.search-highlight {
 }
 
 .skill-corr-filter.active {
-    background: var(--primary);
-    border-color: var(--primary);
+    background: var(--ink);
+    border-color: var(--ink);
     color: #fff;
 }
 
@@ -6354,7 +6447,7 @@ button, a, input, select, textarea,
 }
 
 .post-save-prompt-inner {
-    background: var(--surface);
+    background: var(--surface-warm);
     border: 1px solid var(--border-mid);
     border-radius: var(--r-md);
     box-shadow: var(--shadow-2);
@@ -6368,7 +6461,7 @@ button, a, input, select, textarea,
     right: var(--sp-sm);
     background: none;
     border: none;
-    color: var(--ink-3);
+    color: var(--ink-6);
     cursor: pointer;
     font-size: 16px;
     line-height: 1;
@@ -6396,9 +6489,10 @@ button, a, input, select, textarea,
 }
 
 .post-save-btn {
-    background: var(--brown-btn);
+    background: var(--ink);
     color: #fff;
-    border: 1px solid var(--brown-btn);
+    border: 1px solid var(--ink);
+    box-shadow: inset 0 0 0 1px var(--ink-3);
     border-radius: var(--r-md);
     padding: 7px 14px;
     font-family: 'DM Sans', sans-serif;
@@ -6413,7 +6507,7 @@ button, a, input, select, textarea,
 
 .post-save-btn-muted {
     background: transparent;
-    color: var(--ink-3);
+    color: var(--ink-5);
     border: none;
     padding: 7px 10px;
     font-family: 'DM Sans', sans-serif;

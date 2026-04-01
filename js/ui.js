@@ -1606,6 +1606,7 @@ function saveSession() {
         classType:       s.classType       || null,
         notes:           s.generalNotes    || null,
         isNote:          isNoteMode || null,
+        ...(s._reflectionGoalId ? { _goalId: s._reflectionGoalId } : {}),
     };
 
     if (s._isEdit) {
@@ -1738,6 +1739,20 @@ function saveSession() {
     storage.save('skillNotes',    appState.skillNotes);
     persistSkillState();
 
+    // 3a. If this is a goal reflection, update the goal and skip the timeline entry
+    if (s._reflectionGoalId) {
+        const reflGoal = appState.goals.find(g => g.id === s._reflectionGoalId);
+        if (reflGoal) {
+            reflGoal.reflection = session.notes || '';
+            reflGoal.reflectionSessionId = session.id;
+            storage.save('goals', appState.goals);
+        }
+        appState.currentSession = null;
+        closeSessionLogger();
+        if (appState.currentScreen === 'profile') initProfile();
+        return;
+    }
+
     // 3. Write timeline entry (new sessions only — edits don't create duplicate entries)
     if (!s._isEdit) {
         const template = appState.sessionTemplates.find(t => t.id === s.templateId);
@@ -1786,73 +1801,132 @@ function saveSession() {
         showSessionDetail(session.id);
     }
 
-    // Post-save prompts — non-blocking, shown after logger closes
-    const uniqueSkillsWithCorrections = [...new Set(skillsWithCorrections)];
+    // Post-save contextual prompt — non-blocking, shown after logger closes
     if (!s._isEdit) {
-        if (uniqueSkillsWithCorrections.length > 0) {
-            // Correction promotion prompt takes priority
-            const frequentSkills = uniqueSkillsWithCorrections.filter(skillId => {
-                const count = appState.corrections.filter(c => c.skillId === skillId).length;
-                return count >= 3;
-            });
-            const promptSkills = frequentSkills.length > 0 ? frequentSkills : uniqueSkillsWithCorrections;
-            setTimeout(() => showPostSavePrompt(session.id, promptSkills, frequentSkills.length > 0), 400);
-        } else {
-            // No corrections — check if this is a ~5-session milestone for reflection prompt
-            const sessionCount = appState.sessions.length;
-            if (sessionCount > 1 && sessionCount % 5 === 0) {
-                setTimeout(() => showReflectionPrompt(), 400);
-            }
-        }
+        const uniqueSkills = [...new Set(skillsWithCorrections)];
+        setTimeout(() => evaluatePostSavePrompt(uniqueSkills), 400);
     }
 }
 
-function showPostSavePrompt(sessionId, skillIds, isRecurring) {
-    if (!skillIds.length) return;
+/* ── Contextual prompt helpers ────────────────────────────────── */
 
-    // Store skillIds globally so the button onclick can access without JSON encoding issues
-    window._pendingGoalSkills = skillIds;
+function isPromptSuppressed(type) {
+    try {
+        const dismissed = JSON.parse(localStorage.getItem('plie:prompts-dismissed') || '{}');
+        const ts = dismissed[type];
+        return ts && Date.now() - ts < 7 * 24 * 60 * 60 * 1000;
+    } catch { return false; }
+}
 
-    const skillNames = skillIds
-        .map(id => DATA.skills.find(s => s.id === id)?.french)
-        .filter(Boolean);
+function suppressPrompt(type) {
+    try {
+        const dismissed = JSON.parse(localStorage.getItem('plie:prompts-dismissed') || '{}');
+        dismissed[type] = Date.now();
+        localStorage.setItem('plie:prompts-dismissed', JSON.stringify(dismissed));
+    } catch {}
+}
 
-    const existingPrompt = document.getElementById('post-save-prompt');
-    if (existingPrompt) existingPrompt.remove();
+// config: { body, primaryLabel, primaryFn (JS string), suppressKey }
+function showContextualPrompt({ body, primaryLabel, primaryFn, suppressKey }) {
+    if (document.getElementById('post-save-prompt')) return;
 
     const prompt = document.createElement('div');
     prompt.id = 'post-save-prompt';
     prompt.className = 'post-save-prompt';
 
-    const bodyText = isRecurring
-        ? `You've logged corrections for <strong>${skillNames[0]}</strong> several times. Want to set a goal?`
-        : `You logged corrections for:<br>${skillNames.map(n => `<strong>${n}</strong>`).join(', ')}`;
-
     prompt.innerHTML = `
         <div class="post-save-prompt-inner">
-            <button class="post-save-dismiss" onclick="document.getElementById('post-save-prompt').remove()">${ICONS.get('x', 14)}</button>
-            <div class="post-save-body">Session saved. ${bodyText}</div>
+            <button class="post-save-dismiss" onclick="suppressPrompt('${suppressKey}'); this.closest('#post-save-prompt').remove()">${ICONS.get('x', 14)}</button>
+            <div class="post-save-body">${body}</div>
             <div class="post-save-actions">
-                <button class="post-save-btn" onmousedown="openGoalFromPrompt(_pendingGoalSkills); document.getElementById('post-save-prompt')?.remove();">
-                    add to goals
-                </button>
-                <button class="post-save-btn post-save-btn-muted" onclick="document.getElementById('post-save-prompt').remove()">
-                    not now
-                </button>
+                ${primaryLabel ? `<button class="post-save-btn" onclick="suppressPrompt('${suppressKey}'); document.getElementById('post-save-prompt')?.remove(); ${primaryFn}">${primaryLabel}</button>` : ''}
+                <button class="post-save-btn-muted" onclick="suppressPrompt('${suppressKey}'); this.closest('#post-save-prompt').remove()">not now</button>
             </div>
         </div>
     `;
 
     document.body.appendChild(prompt);
-
-    // Auto-dismiss after 8 seconds
-    setTimeout(() => prompt.remove(), 8000);
+    setTimeout(() => prompt?.remove(), 8000);
 }
 
-function openGoalFromPrompt(skillIds) {
-    const skillId = skillIds[0];
-    openGoalCreatorForSkill(skillId);
+// Evaluates all 5 priority conditions and fires the highest-qualifying prompt.
+function evaluatePostSavePrompt(skillsWithCorrections) {
+    const today = new Date();
+
+    // P1: Active goal expiring within 3 days
+    if (!isPromptSuppressed('expiring-goal')) {
+        const cutoff = new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000);
+        const g = (appState.goals || []).find(goal => {
+            if (goal.completed) return false;
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(goal.commitmentPeriod)) return false;
+            const d = new Date(goal.commitmentPeriod + 'T00:00:00');
+            return d >= today && d <= cutoff;
+        });
+        if (g) {
+            const skill = g.skillId ? DATA.skills.find(s => s.id === g.skillId) : null;
+            showContextualPrompt({
+                body: `your ${skill?.french || g.title} goal expires soon. still working on it?`,
+                primaryLabel: 'view goal',
+                primaryFn: `openGoalEditor(${g.id})`,
+                suppressKey: 'expiring-goal'
+            });
+            return;
+        }
+    }
+
+    // P2: Recurring correction (3+) for a skill with no active goal
+    if (!isPromptSuppressed('correction-goal') && skillsWithCorrections.length > 0) {
+        const skillId = skillsWithCorrections.find(id => {
+            if (appState.corrections.filter(c => c.skillId === id).length < 3) return false;
+            return !(appState.goals || []).some(g => !g.completed && g.skillId === id);
+        });
+        if (skillId) {
+            const skill = DATA.skills.find(s => s.id === skillId);
+            showContextualPrompt({
+                body: `session saved. you noted ${skill?.french || skillId}, set a goal around it?`,
+                primaryLabel: 'set a goal',
+                primaryFn: `openGoalCreatorForSkill('${skillId}')`,
+                suppressKey: 'correction-goal'
+            });
+            return;
+        }
+    }
+
+    // P3: Completed goal with no reflection note
+    if (!isPromptSuppressed('completed-goal')) {
+        const g = (appState.goals || []).find(goal => goal.status === 'completed' && !goal.reflection);
+        if (g) {
+            const skill = g.skillId ? DATA.skills.find(s => s.id === g.skillId) : null;
+            showContextualPrompt({
+                body: `you completed your ${skill?.french || g.title} goal. anything to note?`,
+                primaryLabel: 'add a note',
+                primaryFn: `openGoalEditor(${g.id})`,
+                suppressKey: 'completed-goal'
+            });
+            return;
+        }
+    }
+
+    // P4: Bookmarked pointer not revisited — skip (learnBookmarks not yet implemented)
+
+    // P5: No session in 14+ days (active training state only)
+    if (!isPromptSuppressed('no-recent-session') && appState.trainingState === 'active') {
+        const sorted = [...(appState.sessions || [])].sort((a, b) => b.id - a.id);
+        if (sorted.length >= 2) {
+            const daysSince = Math.round((today - new Date(sorted[1].date + 'T00:00:00')) / 86400000);
+            if (daysSince >= 14) {
+                showContextualPrompt({
+                    body: "it's been a while. anything to log?",
+                    primaryLabel: 'log a session',
+                    primaryFn: 'openSessionLogger()',
+                    suppressKey: 'no-recent-session'
+                });
+            }
+        }
+    }
 }
+
+
 
 function openFabActionSheet() {
     const sheet = document.getElementById('fab-action-sheet');
@@ -4128,7 +4202,7 @@ function toggleMilestone(goalId, milestoneIndex) {
 
 function markGoalComplete(goalId) {
     const goal = appState.goals.find(g => g.id === Number(goalId));
-    if (!goal) return;
+    if (!goal || goal.status === 'completed') return;
     goal.status = 'completed';
     goal.completedAt = Date.now();
     storage.save('goals', appState.goals);
@@ -4142,6 +4216,15 @@ function markGoalComplete(goalId) {
     showGoalCompleteMessage(goal.title);
     if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
     if (appState.currentScreen === 'profile') initProfile();
+    // Nudge for optional reflection note — fires after toast clears
+    setTimeout(() => {
+        showContextualPrompt({
+            body: 'goal completed. anything to note?',
+            primaryLabel: 'add a note',
+            primaryFn: `openGoalReflectionSheet(${goal.id})`,
+            suppressKey: `goal-reflection-${goal.id}`,
+        });
+    }, 2800);
 }
 
 function showGoalCompleteMessage(title) {
@@ -4160,6 +4243,58 @@ function showGoalCompleteMessage(title) {
         toast.classList.remove('visible');
         setTimeout(() => toast.remove(), 300);
     }, 2500);
+}
+
+// Open the goal reflection in view mode (Image 4) — full-screen note detail
+function showGoalReflectionDetail(goalId) {
+    const goal = appState.goals.find(g => g.id === Number(goalId));
+    if (!goal) return;
+    if (goal.reflectionSessionId) {
+        showNoteDetail(goal.reflectionSessionId);
+    } else {
+        // No reflection yet — open editor to create one
+        openGoalReflectionSheet(goalId);
+    }
+}
+
+// Open the goal reflection editor (Image 5) — session logger note mode
+function openGoalReflectionSheet(goalId) {
+    const goal = appState.goals.find(g => g.id === Number(goalId));
+    if (!goal) return;
+
+    // If an existing reflection session exists, edit it via the standard note editor
+    if (goal.reflectionSessionId) {
+        openNoteEditor(goal.reflectionSessionId);
+        return;
+    }
+
+    const placeholders = ["what shifted?", "what's still there?", "what would you do differently?"];
+    const placeholder = placeholders[Number(goalId) % 3];
+
+    // Open session logger in note mode, with reflection linkage
+    let overlay = document.getElementById('session-logger-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'session-logger-overlay';
+        overlay.className = 'session-overlay';
+        document.body.appendChild(overlay);
+        overlay.addEventListener('mousedown', e => { if (e.target === overlay) closeSessionLogger(); });
+    }
+    appState.currentSession = {
+        id:                Date.now(),
+        date:              new Date().toISOString().split('T')[0],
+        generalNotes:      '',
+        blocks:            [],
+        _mode:             'note',
+        _isEdit:           false,
+        _reflectionGoalId: Number(goalId),
+        _placeholder:      placeholder,
+    };
+    renderSessionLogger();
+    document.querySelector('.fab')?.classList.remove('visible');
+    document.querySelector('.bottom-nav')?.classList.remove('visible');
+    requestAnimationFrame(() => overlay.classList.add('open'));
+    attachSheetSwipe();
 }
 
 function reopenGoal(goalId) {
@@ -4346,6 +4481,10 @@ function filterLearnScreen(filter, btn) {
     if (activeChip) activeChip.classList.add('active');
     const list = document.getElementById('learn-sections-list');
     if (!list) return;
+    if (filter === 'bookmarked') {
+        list.innerHTML = renderBookmarkedLearnItems();
+        return;
+    }
     const helperText = filter === 'all'
         ? '<p class="learn-helper-text">Search across all sections, or tap a card to explore.</p>'
         : '<p class="learn-helper-text">Diagnostic articles to help identify what\'s holding you back.</p>';
@@ -4370,6 +4509,56 @@ function showPointerDetail(index) {
         document.querySelector('.app-container').appendChild(screen);
     }
 
+    const pointerName = pointer.name;
+
+    const insightSave = getLearnLineSave(pointer.insight, 'goal');
+    const insightItem = `
+        <div class="learn-line-tappable${insightSave ? ' save-open' : ''}"
+             data-line-text="${escapeHtml(pointer.insight)}"
+             data-save-type="goal"
+             data-page-type="pointer"
+             data-item-id="${escapeHtml(pointerName)}"
+             onclick="openLearnLineSave(this)">
+            <p class="skill-know-description" style="margin:0;">${pointer.insight}</p>
+            <div class="learn-line-save-expand${insightSave ? ' open' : ''}">
+                ${_renderLineSavePrompt(pointer.insight, 'goal', 'pointer', pointerName)}
+            </div>
+        </div>`;
+
+    const whatToTryItems = pointer.whatToTry.map(t => {
+        const save = getLearnLineSave(t, 'goal');
+        return `<li class="skill-know-list-item learn-line-tappable${save ? ' save-open' : ''}"
+                    data-line-text="${escapeHtml(t)}"
+                    data-save-type="goal"
+                    data-page-type="pointer"
+                    data-item-id="${escapeHtml(pointerName)}"
+                    onclick="openLearnLineSave(this)">
+                    ${t}
+                    <div class="learn-line-save-expand${save ? ' open' : ''}">
+                        ${_renderLineSavePrompt(t, 'goal', 'pointer', pointerName)}
+                    </div>
+                </li>`;
+    }).join('');
+
+    const inspirationHtml = pointer.inspiration ? (() => {
+        const save = getLearnLineSave(pointer.inspiration, 'goal');
+        return `
+        <div class="skill-know-section">
+            <div class="skill-know-section-label" style="color: var(--ink-5);">the inspiration</div>
+            <div class="learn-line-tappable${save ? ' save-open' : ''}"
+                 data-line-text="${escapeHtml(pointer.inspiration)}"
+                 data-save-type="goal"
+                 data-page-type="pointer"
+                 data-item-id="${escapeHtml(pointerName)}"
+                 onclick="openLearnLineSave(this)">
+                <p class="skill-know-description" style="margin:0;">${pointer.inspiration}</p>
+                <div class="learn-line-save-expand${save ? ' open' : ''}">
+                    ${_renderLineSavePrompt(pointer.inspiration, 'goal', 'pointer', pointerName)}
+                </div>
+            </div>
+        </div>`;
+    })() : '';
+
     screen.innerHTML = `
         <div class="skill-detail-header">
             <button class="session-detail-back" onclick="goBack()">
@@ -4378,6 +4567,7 @@ function showPointerDetail(index) {
                 </svg>
                 learn
             </button>
+            ${renderBookmarkBtn('pointer', pointerName)}
         </div>
         <div class="skill-detail-hero">
             <div class="pointer-eyebrow" style="font-size: var(--fs-small);">pointer</div>
@@ -4386,19 +4576,13 @@ function showPointerDetail(index) {
         </div>
         <div class="skill-know-section">
             <div class="skill-know-section-label" style="color: var(--ink-5);">the insight</div>
-            <p class="skill-know-description">${pointer.insight}</p>
+            ${insightItem}
         </div>
         <div class="skill-know-section">
             <div class="skill-know-section-label" style="color: var(--ink-5);">what to try</div>
-            <ul class="skill-know-list">
-                ${pointer.whatToTry.map(t => `<li class="skill-know-list-item">${t}</li>`).join('')}
-            </ul>
+            <ul class="skill-know-list">${whatToTryItems}</ul>
         </div>
-        ${pointer.inspiration ? `
-        <div class="skill-know-section">
-            <div class="skill-know-section-label" style="color: var(--ink-5);">the inspiration</div>
-            <p class="skill-know-description">${pointer.inspiration}</p>
-        </div>` : ''}
+        ${inspirationHtml}
         <div style="height: 120px;"></div>
     `;
     showScreen(screenId);
@@ -4599,6 +4783,7 @@ function showLearnDetail(sectionId, itemName) {
                 </svg>
                 back
             </button>
+            ${renderBookmarkBtn(sectionId, itemName)}
         </div>
         <div class="skill-detail-hero">
             <div class="skill-detail-category">${item.chip ? item.chip.toUpperCase() : ''}</div>
@@ -4866,6 +5051,33 @@ function renderTimelineEntry(entry) {
             </div>
         </div>`;
     }
+    // Special rendering for goal completion milestones
+    if (entry.type === 'milestone' && entry.objectId) {
+        const goal = (appState.goals || []).find(g => g.id === entry.objectId);
+        if (goal) {
+            const hasReflection = !!goal.reflection;
+            const reflectionHtml = hasReflection
+                ? `<div class="timeline-milestone-reflection">${escapeHtml(goal.reflection)}</div>`
+                : '';
+            const cardTapFn = hasReflection
+                ? `showGoalReflectionDetail(${goal.id})`
+                : `openGoalReflectionSheet(${goal.id})`;
+            const editFn = `openGoalReflectionSheet(${goal.id})`;
+            const actionLabel = hasReflection ? 'edit' : 'add note';
+            return `
+            <div class="timeline-item timeline-item-milestone timeline-item-tappable" onclick="${cardTapFn}">
+                <div class="timeline-content">
+                    <div class="timeline-milestone-header">
+                        <span class="timeline-type-label">Goal completed</span>
+                        <span class="timeline-milestone-edit" onclick="event.stopPropagation(); ${editFn}">${actionLabel} →</span>
+                    </div>
+                    <div class="timeline-title">${escapeHtml(goal.title)}</div>
+                    ${reflectionHtml}
+                </div>
+            </div>`;
+        }
+    }
+
     const isPraise   = entry.isPraise;
     const isNote     = entry.type === 'note';
     const isTappable = (entry.type === 'session' || isNote) && entry.objectId;
@@ -5097,12 +5309,13 @@ function openNoteEditor(sessionId) {
     const session = appState.sessions.find(s => s.id === sessionId);
     if (!session) return;
     appState.currentSession = {
-        id:           session.id,
-        date:         session.date,
-        generalNotes: session.notes || '',
-        blocks:       [],
-        _mode:        'note',
-        _isEdit:      true,
+        id:                  session.id,
+        date:                session.date,
+        generalNotes:        session.notes || '',
+        blocks:              [],
+        _mode:               'note',
+        _isEdit:             true,
+        _reflectionGoalId:   session._goalId || null,
     };
     let overlay = document.getElementById('session-logger-overlay');
     if (!overlay) {
@@ -5452,7 +5665,7 @@ function showSkillDetail(skillId, returnTo) {
             <div class="skill-detail-section">
                 <div class="skill-detail-section-header">
                     <div class="skill-detail-section-label">Corrections</div>
-                    <span class="skill-detail-section-count">${allCorrections.length}</span>
+                    <span class="skill-detail-section-count">${allCorrections.length} correction${allCorrections.length !== 1 ? 's' : ''}</span>
                 </div>
                 ${corrFilterHtml}
                 <div id="skill-corrections-display">
@@ -5938,6 +6151,226 @@ function expandLearnNotes(sectionId, itemName) {
     requestAnimationFrame(() => initClampedTexts(list));
 }
 
+// ── Learn bookmarks ──────────────────────────────────────────────────────────
+
+function isLearnBookmarked(pageType, itemId) {
+    return (appState.learnBookmarks || []).some(
+        b => b.pageType === pageType && b.itemId === String(itemId)
+    );
+}
+
+function toggleLearnBookmark(pageType, itemId, btnEl) {
+    const id = String(itemId);
+    appState.learnBookmarks = appState.learnBookmarks || [];
+    const idx = appState.learnBookmarks.findIndex(b => b.pageType === pageType && b.itemId === id);
+    if (idx > -1) {
+        appState.learnBookmarks.splice(idx, 1);
+    } else {
+        appState.learnBookmarks.push({ pageType, itemId: id, createdAt: Date.now() });
+    }
+    storage.save('learnBookmarks', appState.learnBookmarks);
+    const isNow = isLearnBookmarked(pageType, id);
+    if (btnEl) {
+        btnEl.classList.toggle('bookmarked', isNow);
+        btnEl.innerHTML = ICONS.get(isNow ? 'bookmark-fill' : 'bookmark', 20);
+        btnEl.setAttribute('aria-label', isNow ? 'remove bookmark' : 'bookmark');
+    }
+    _refreshLearnBookmarkedPill();
+    if (pageType === 'skill' && document.getElementById('skill-lib-body')) {
+        updateSkillLibResults();
+    }
+}
+
+function renderBookmarkBtn(pageType, itemId) {
+    const booked = isLearnBookmarked(pageType, String(itemId));
+    return `<button type="button" class="learn-bookmark-btn${booked ? ' bookmarked' : ''}"
+                    aria-label="${booked ? 'remove bookmark' : 'bookmark'}"
+                    onclick="toggleLearnBookmark('${pageType}', '${String(itemId).replace(/'/g, "\\'")}', this)">
+                ${ICONS.get(booked ? 'bookmark-fill' : 'bookmark', 20)}
+            </button>`;
+}
+
+function _refreshLearnBookmarkedPill() {
+    const container = document.getElementById('learn-filter-chips');
+    if (!container) return;
+    const hasBookmarks = (appState.learnBookmarks || []).length > 0;
+    const existing = container.querySelector('[data-filter="bookmarked"]');
+    if (hasBookmarks && !existing) {
+        const pill = document.createElement('button');
+        pill.className = 'learn-chip';
+        pill.dataset.filter = 'bookmarked';
+        pill.textContent = 'Bookmarked';
+        pill.onclick = function() { filterLearnScreen('bookmarked', this); };
+        container.appendChild(pill);
+    } else if (!hasBookmarks && existing) {
+        if (existing.classList.contains('active')) {
+            container.querySelector('[data-filter="all"]')?.classList.add('active');
+            filterLearnScreen('all');
+        }
+        existing.remove();
+    }
+}
+
+function renderBookmarkedLearnItems() {
+    const bookmarks = appState.learnBookmarks || [];
+    if (!bookmarks.length) return '<p class="learn-helper-text">No bookmarks yet.</p>';
+    const pointerSection = DATA.learnSections.find(s => s.id === 'pointers');
+    return bookmarks.map(b => {
+        let name = b.itemId, action = '', eyebrow = b.pageType;
+        if (b.pageType === 'skill') {
+            const skill = DATA.skills.find(s => s.id === b.itemId);
+            name = skill?.french || b.itemId; eyebrow = 'skill';
+            action = `showSkillKnowledgePage('${b.itemId}')`;
+        } else if (b.pageType === 'pointer') {
+            const pointer = pointerSection?.items.find(p => p.name === b.itemId);
+            name = pointer?.name || b.itemId; eyebrow = 'pointer';
+            const idx = pointer ? pointerSection.items.indexOf(pointer) : -1;
+            if (idx > -1) action = `showPointerDetail(${idx})`;
+        } else {
+            eyebrow = b.pageType;
+            action = `showLearnDetail('${b.pageType}', '${b.itemId.replace(/'/g, "\\'")}')`;
+        }
+        return `<div class="skill-category-card" style="margin-bottom: var(--sp-sm);" ${action ? `onclick="${action}"` : ''}>
+            <div class="skill-category-icon">${ICONS.get('bookmark-fill', 24)}</div>
+            <div class="skill-category-info">
+                <div class="pointer-eyebrow">${eyebrow}</div>
+                <div class="skill-category-name">${name}</div>
+            </div>
+            <div class="skill-category-arrow">→</div>
+        </div>`;
+    }).join('');
+}
+
+// ── Learn line saves ──────────────────────────────────────────────────────────
+
+function getLearnLineSave(lineText, saveType) {
+    const save = (appState.learnLineSaves || []).find(s => s.lineText === lineText && s.saveType === saveType);
+    if (!save) return null;
+    if (saveType === 'goal') {
+        const goal = (appState.goals || []).find(g => g.id === save.objectId);
+        return (goal && !goal.completedAt) ? save : null;
+    }
+    if (saveType === 'correction') {
+        const corr = (appState.corrections || []).find(c => c.id === save.objectId);
+        return corr ? save : null;
+    }
+    return null;
+}
+
+function _renderLineSavePrompt(lineText, saveType, pageType, itemId) {
+    const save = getLearnLineSave(lineText, saveType);
+    const ep = escapeHtml(pageType);
+    const ei = escapeHtml(String(itemId));
+    if (save) {
+        if (saveType === 'goal') {
+            return `<span class="learn-line-save-action saved-link" onclick="navigateToGoal(${save.objectId}); event.stopPropagation();">saved as goal</span>`;
+        }
+        return `<span class="learn-line-save-action saved-label">saved as correction</span>`;
+    }
+    if (saveType === 'goal') {
+        return `<span class="learn-line-save-action goal-action" onclick="saveLineAsGoal(this, '${ep}', '${ei}'); event.stopPropagation();">save as goal →</span>`;
+    }
+    return `<span class="learn-line-save-action corr-action" onclick="saveLineAsCorrection(this, '${ei}'); event.stopPropagation();">save as correction →</span>`;
+}
+
+function openLearnLineSave(el) {
+    const lineText = el.dataset.lineText;
+    const saveType = el.dataset.saveType;
+    const existing = getLearnLineSave(lineText, saveType);
+    if (existing && saveType === 'goal') { navigateToGoal(existing.objectId); return; }
+    const expand = el.querySelector('.learn-line-save-expand');
+    if (!expand) return;
+    document.querySelectorAll('.learn-line-tappable.save-open').forEach(row => {
+        if (row !== el) { row.classList.remove('save-open'); row.querySelector('.learn-line-save-expand')?.classList.remove('open'); }
+    });
+    const isOpen = el.classList.contains('save-open');
+    el.classList.toggle('save-open', !isOpen);
+    expand.classList.toggle('open', !isOpen);
+}
+
+function saveLineAsGoal(promptEl, pageType, itemId) {
+    const lineEl = promptEl.closest('.learn-line-tappable');
+    const lineText = lineEl?.dataset.lineText || '';
+    appState._pendingLineSave = { pageType, itemId: String(itemId), lineText, saveType: 'goal' };
+    openGoalCreatorWithSuggestion(lineText, null, null, '', []);
+}
+
+function saveLineAsCorrection(promptEl, skillId) {
+    const lineEl = promptEl.closest('.learn-line-tappable');
+    const lineText = lineEl?.dataset.lineText || '';
+    appState._pendingCorrectionLineSave = { lineText, skillId };
+    _openCorrectionCreator(lineText, skillId);
+}
+
+function _openCorrectionCreator(text, skillId) {
+    let overlay = document.getElementById('correction-creator-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'correction-creator-overlay';
+        overlay.className = 'session-overlay';
+        document.body.appendChild(overlay);
+        overlay.addEventListener('mousedown', e => { if (e.target === overlay) _closeCorrectionCreator(); });
+    }
+    overlay.innerHTML = `
+        <div class="session-sheet">
+            <div class="session-sheet-handle"></div>
+            <div class="session-logger-header">
+                <span class="session-logger-title">save as correction</span>
+                <button class="session-discard-btn" type="button" onclick="_closeCorrectionCreator()">cancel</button>
+            </div>
+            <div style="padding: var(--sp-lg);">
+                <textarea id="correction-creator-text" class="session-block-textarea" rows="3"
+                          style="min-height: 80px;" oninput="autoResizeTextarea(this)">${escapeHtml(text)}</textarea>
+            </div>
+            <div class="session-logger-footer">
+                <button class="primary-btn" type="button" onclick="_saveCorrectionFromCreator('${escapeHtml(skillId)}')">save correction</button>
+            </div>
+        </div>`;
+    document.querySelector('.fab')?.classList.remove('visible');
+    document.querySelector('.bottom-nav')?.classList.remove('visible');
+    requestAnimationFrame(() => overlay.classList.add('open'));
+}
+
+function _closeCorrectionCreator() {
+    const overlay = document.getElementById('correction-creator-overlay');
+    if (overlay) overlay.classList.remove('open');
+    document.querySelector('.fab')?.classList.add('visible');
+    document.querySelector('.bottom-nav')?.classList.add('visible');
+    appState._pendingCorrectionLineSave = null;
+}
+
+function _saveCorrectionFromCreator(skillId) {
+    const textarea = document.getElementById('correction-creator-text');
+    const text = textarea?.value?.trim();
+    if (!text) { textarea?.focus(); return; }
+    const now = Date.now();
+    appState.corrections.push({ id: now, skillId, text, createdAt: now, sessionId: null, source: 'self', type: 'technical', isRecurring: false });
+    storage.save('corrections', appState.corrections);
+    const pending = appState._pendingCorrectionLineSave;
+    if (pending) {
+        appState.learnLineSaves = appState.learnLineSaves || [];
+        appState.learnLineSaves.push({ id: now, lineText: pending.lineText, saveType: 'correction', objectId: now, createdAt: now });
+        storage.save('learnLineSaves', appState.learnLineSaves);
+        _refreshAllLineSaveStates();
+    }
+    _closeCorrectionCreator();
+}
+
+function _refreshAllLineSaveStates() {
+    document.querySelectorAll('.learn-line-tappable').forEach(el => {
+        const lineText = el.dataset.lineText;
+        const saveType = el.dataset.saveType;
+        const pageType = el.dataset.pageType;
+        const itemId   = el.dataset.itemId;
+        if (!lineText || !saveType) return;
+        const expand = el.querySelector('.learn-line-save-expand');
+        if (!expand) return;
+        expand.innerHTML = _renderLineSavePrompt(lineText, saveType, pageType, itemId);
+        const save = getLearnLineSave(lineText, saveType);
+        if (save) { el.classList.add('save-open'); expand.classList.add('open'); }
+    });
+}
+
 function toggleSkillFocus(skillId) {
     const skill = appState.skills.find(s => s.id === skillId);
     if (!skill) return;
@@ -6306,12 +6739,20 @@ function showSkillKnowledgePage(skillId, returnTo) {
         : '<li class="skill-know-list-item skill-know-stub">Content coming soon</li>';
 
     const correctionsHtml = knowledge.commonCorrections.length > 0
-        ? knowledge.commonCorrections.map((c, i) => `
-            <li class="skill-know-list-item skill-know-correction skill-know-tappable"
-                onclick="showKnowledgeItemPopover(this, '${skillId}', ${JSON.stringify(c).replace(/'/g, "&#39;")}, 'correction')">
+        ? knowledge.commonCorrections.map((c) => {
+            const escaped = c.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            return `<li class="skill-know-list-item learn-line-tappable"
+                data-line-text="${escaped}"
+                data-save-type="correction"
+                data-page-type="skill"
+                data-item-id="${skillId}"
+                onclick="openLearnLineSave(this)">
                 ${c}
-                <span class="skill-know-save-hint">tap to save</span>
-            </li>`).join('')
+                <div class="learn-line-save-expand">
+                    ${_renderLineSavePrompt(c, 'correction', 'skill', skillId)}
+                </div>
+            </li>`;
+        }).join('')
         : '<li class="skill-know-list-item skill-know-stub">Content coming soon</li>';
 
     const musclesHtml = knowledge.muscles.length > 0
