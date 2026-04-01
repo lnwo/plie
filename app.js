@@ -62,6 +62,8 @@ const ICONS = {
         'learn-core':       'barbell',
  
         // ── Actions / utility ─────────────────────────────────
+        'bookmark':         'bookmark-simple',
+        'bookmark-fill':    'bookmark-simple-fill',
         'flag':             'flag-pennant-fill',        // filled — skill in focus
         'flag-outline':     'flag-pennant',             // outline — not yet flagged
         'edit':             'pencil-simple',
@@ -1294,6 +1296,8 @@ function skipToProfile() {
     const timeline         = storage.load('timeline');
     const skillNotes       = storage.load('skillNotes');
     const learnNotes       = storage.load('learnNotes');
+    const learnBookmarks   = storage.load('learnBookmarks');
+    const learnLineSaves   = storage.load('learnLineSaves');
 
     if (sessions)         appState.sessions         = sessions;
     if (sessionTemplates) appState.sessionTemplates = sessionTemplates;
@@ -1308,6 +1312,8 @@ function skipToProfile() {
     if (timeline)         appState.timeline         = timeline;
     if (skillNotes)       appState.skillNotes       = skillNotes;
     if (learnNotes)       appState.learnNotes       = learnNotes;
+    if (learnBookmarks)   appState.learnBookmarks   = learnBookmarks;
+    if (learnLineSaves)   appState.learnLineSaves   = learnLineSaves;
 
     // Load preferences
     const prefs = storage.load('preferences');
