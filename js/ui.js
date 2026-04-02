@@ -111,22 +111,16 @@ function getBlockTopics() {
 
 function openSessionLogger(mode) {
     const today = new Date().toISOString().split('T')[0];
-    const todayDow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
-
-    // Day-of-week session prediction (only for full session mode)
-    const predictedTemplate = (mode !== 'note') ? (appState.sessionTemplates.find(t =>
-        t.days && t.days.includes(todayDow)
-    ) || null) : null;
 
     appState.currentSession = {
         id:              Date.now(),
         date:            today,
-        templateId:      predictedTemplate?.id || null,
-        sessionName:     predictedTemplate?.name || null,
-        sessionLocation: predictedTemplate?.location || null,
-        classType:       predictedTemplate?.classType || null,
+        templateId:      null,
+        sessionName:     null,
+        sessionLocation: null,
+        classType:       null,
         blocks:          [],
-        _predicted:      predictedTemplate ? true : false,
+        _predicted:      false,
         _mode:           mode || 'session',
     };
 
@@ -383,6 +377,7 @@ function renderSessionLogger() {
             </div>
             ${templatePreviewHtml}
         </div>
+        <div id="session-day-suggestions"></div>
         <div id="new-session-form-container"></div>
         <div class="session-field">
             <label class="session-field-label">Class type <span class="session-field-optional">optional</span></label>
@@ -470,11 +465,8 @@ function renderSessionLogger() {
     if (appState._addingNewTemplate) renderNewSessionForm();
     if (appState._showMoreClassTypes) renderMoreClassTypesPanel();
 
-    // Auto-select predicted class type visually (not committed to state)
-    if (predictedType && !s.classType) {
-        const chip = overlay.querySelector(`[onclick="selectClassType('${predictedType}')"]`);
-        if (chip) chip.classList.add('predicted');
-    }
+    // Show day-of-week suggestions if no session selected yet
+    renderDaySuggestions();
 }
 
 // ── Swipe-to-dismiss (re-attachable after re-render) ──
@@ -528,8 +520,26 @@ function handleSessionNameInput(value) {
     // Update free-text name on session, clear any template link
     appState.currentSession.sessionName = value;
     appState.currentSession.templateId = null;
+    const sugg = document.getElementById('session-day-suggestions');
+    if (sugg) sugg.innerHTML = '';
     renderSessionComboboxDropdown(value);
     checkSessionTitleForSkills(value);
+}
+
+function renderDaySuggestions() {
+    const container = document.getElementById('session-day-suggestions');
+    if (!container) return;
+    const s = appState.currentSession;
+    if (s.templateId || s.sessionName) { container.innerHTML = ''; return; }
+    const todayDow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
+    const matches = appState.sessionTemplates.filter(t => t.days && t.days.includes(todayDow));
+    if (!matches.length) { container.innerHTML = ''; return; }
+    const rows = matches.map((t, i) => {
+        const meta = [t.location, t.days?.join(', ')].filter(Boolean).join(' · ');
+        const last = i === matches.length - 1;
+        return `<div class="session-day-suggestion-row${last ? ' session-day-suggestion-row--last' : ''}" onmousedown="selectSessionTemplate(${t.id})"><div class="session-combobox-row-info"><span class="session-combobox-row-name">${t.name}</span>${meta ? `<span class="session-combobox-row-meta">${meta}</span>` : ''}</div></div>`;
+    }).join('');
+    container.innerHTML = rows;
 }
 
 function showSessionDropdown() {
@@ -605,7 +615,9 @@ function selectSessionTemplate(templateId) {
     if (input) input.value = t.name;
     const dropdown = document.getElementById('session-combobox-dropdown');
     if (dropdown) dropdown.style.display = 'none';
-    // Update template preview
+    // Dismiss day suggestions and update preview
+    const sugg = document.getElementById('session-day-suggestions');
+    if (sugg) sugg.innerHTML = '';
     renderTemplatePreviewInline(templateId);
 }
 

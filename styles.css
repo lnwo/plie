@@ -2581,6 +2581,35 @@ h1, h2, .screen-heading {
 
 .session-combobox-add span { color: var(--primary); }
 
+/* ── Day-of-week session suggestions ── */
+#session-day-suggestions:not(:empty) {
+    margin-top: -4px;
+    margin-bottom: var(--sp-md);
+    border: 1px solid var(--border-mid);
+    border-radius: var(--r-md);
+    overflow: hidden;
+}
+
+.session-day-suggestion-row {
+    display: flex;
+    align-items: center;
+    padding: 12px var(--sp-lg);
+    cursor: pointer;
+    font-size: var(--fs-body);
+    color: var(--ink);
+    border-bottom: 1px solid var(--ink-6);
+    transition: background 0.15s ease;
+}
+
+.session-day-suggestion-row--last,
+.session-day-suggestion-row:last-child {
+    border-bottom: none;
+}
+
+.session-day-suggestion-row:hover {
+    background: var(--gold-wash);
+}
+
 .session-logger-footer {
     display: flex;
     gap: var(--sp-sm);
