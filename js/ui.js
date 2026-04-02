@@ -880,7 +880,7 @@ function cancelNewSession() {
 // Block modes
 const BLOCK_MODES = ['correction', 'praise', 'reflection'];
 
-function addBlock(focusTitle = false) {
+function addBlock(focusTitle = false, type = 'correction') {
     const block = {
         id:          Date.now(),
         topicId:     'general',
@@ -888,7 +888,7 @@ function addBlock(focusTitle = false) {
         text:        '',
         notes:       '',
         notesOpen:   false,
-        source:      null,
+        blockType:   type,
         isHighlight: false,
     };
     appState.currentSession.blocks.push(block);
@@ -956,7 +956,9 @@ function renderBlocksOnly() {
 function renderBlockHtml(block, index) {
     const topics = getBlockTopics();
     const isGeneral = block.topicId === 'general';
-    const source = block.source || null;
+
+    // Resolve blockType — new field; fall back to legacy source for old records
+    const blockType = block.blockType || block.source || 'correction';
 
     // Migrate legacy content into block.text for display in the editor
     // (corrections[], praiseText, reflectionText → text)
@@ -971,15 +973,8 @@ function renderBlockHtml(block, index) {
         }
     }
 
-    // Source chips: Correction · Observation
-    const sourcesHtml = `
-        <div class="block-source-chips">
-            <button class="block-source-chip ${source === 'correction' ? 'active' : ''}"
-                    onmousedown="setBlockSource(${block.id}, 'correction')">correction</button>
-            <button class="block-source-chip ${source === 'observation' ? 'active' : ''}"
-                    onmousedown="setBlockSource(${block.id}, 'observation')">observation</button>
-        </div>
-    `;
+    // Block type label (replaces source chips)
+    const blockTypeLabelHtml = `<div class="block-type-label">${blockType}</div>`;
 
     // Notes section (collapsible)
     const notesHtml = `
@@ -1014,6 +1009,8 @@ function renderBlockHtml(block, index) {
             </div>
 
             <div class="session-block" id="block-${block.id}">
+                    ${blockTypeLabelHtml}
+
                     <div class="session-block-header">
                         <button class="block-star-btn ${block.isHighlight ? 'active' : ''}"
                                 onmousedown="toggleBlockHighlight(${block.id})"
@@ -1046,8 +1043,6 @@ function renderBlockHtml(block, index) {
                              onblur="normalizeBulletEntry(this)"
                              oninput="updateBlockBullets(${block.id}, this)"
                              >${bulletDivsHtml}</div>
-
-                        ${sourcesHtml}
 
                         ${notesHtml}
                     </div>
@@ -1659,7 +1654,8 @@ function saveSession() {
             || block.reflectionText?.trim()
             || '';
 
-        const isCorrection = block.source === 'correction' || (!block.source && !!block.mode && block.mode === 'correction');
+        const resolvedType = block.blockType || block.source || (block.mode === 'correction' ? 'correction' : null) || 'correction';
+        const isCorrection = resolvedType === 'correction';
 
         // Save all non-empty lines as Correction objects regardless of source —
         // this is what renderDetailBlockHtml reads for session detail display.
@@ -5374,7 +5370,7 @@ function showBarreTimelineSheet() {
             // Fallback for data predating T57 (no assessment timeline entry stored)
             const levelName = (DATA.levelLabels[level] || 'Beginner').charAt(0).toUpperCase()
                 + (DATA.levelLabels[level] || 'Beginner').slice(1).toLowerCase();
-            firstEntryText = `set own level \u00b7 ${levelName}`;
+            firstEntryText = `Set own level \u00b7 ${levelName}`;
         }
     }
 

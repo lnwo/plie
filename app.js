@@ -905,8 +905,8 @@ function confirmOrientationLevel(personaKey) {
             type:     'assessment',
             objectId: assessment.id,
             title:    _fromQuiz
-                ? `orientation quiz · ${persona.name}`
-                : `set own level · ${persona.name}`,
+                ? `Completed orientation quiz · ${persona.name}`
+                : `Set own level · ${persona.name}`,
             body:     null,
             date:     assessment.date,
         });
