@@ -321,7 +321,7 @@ function renderSessionLogger() {
     // Class type carousel — primary chips + More button
     const primaryChips = CLASS_TYPES_PRIMARY.map(ct =>
         '<div class="class-type-carousel-item">' +
-        '<button class="class-type-chip ' + (s.classType === ct.id ? 'selected' : '') + ' ' + (predictedType === ct.id && !s.classType ? 'predicted' : '') + '" onclick="selectClassType('' + ct.id + '')">' +
+        '<button class="class-type-chip ' + (s.classType === ct.id ? 'selected' : '') + ' ' + (predictedType === ct.id && !s.classType ? 'predicted' : '') + '" onclick="selectClassType(\'' + ct.id + '\')">' +
         '<span class="class-type-chip-label">' + ct.label + '</span>' +
         (ct.sub ? '<span class="class-type-chip-sub">' + ct.sub + '</span>' : '') +
         '</button></div>'
@@ -331,7 +331,7 @@ function renderSessionLogger() {
     const selectedSecondary = s.classType ? CLASS_TYPES_SECONDARY.find(ct => ct.id === s.classType) : null;
     const selectedSecondaryChip = selectedSecondary ?
         '<div class="class-type-carousel-item">' +
-        '<button class="class-type-chip selected" onclick="selectClassType('' + selectedSecondary.id + '')">' +
+        '<button class="class-type-chip selected" onclick="selectClassType(\'' + selectedSecondary.id + '\')">' +
         '<span class="class-type-chip-label">' + selectedSecondary.label + '</span>' +
         (selectedSecondary.sub ? '<span class="class-type-chip-sub">' + selectedSecondary.sub + '</span>' : '') +
         '</button></div>' : '';
