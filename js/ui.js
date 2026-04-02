@@ -608,24 +608,6 @@ function clearSessionName() {
     renderSessionLogger();
 }
 
-function renderTemplatePreviewInline(templateId) {
-    // Update or insert the preview tag under the combobox without re-rendering the whole logger
-    const combobox = document.getElementById('session-combobox');
-    if (!combobox) return;
-    let preview = combobox.parentElement.querySelector('.session-template-preview');
-    const text = renderTemplatePreview(templateId);
-    if (text) {
-        if (!preview) {
-            preview = document.createElement('div');
-            preview.className = 'session-template-preview';
-            combobox.after(preview);
-        }
-        preview.innerHTML = `<span class="template-preview-text">${text}</span>`;
-    } else if (preview) {
-        preview.remove();
-    }
-}
-
 function openNewSessionForm() {
     const dropdown = document.getElementById('session-combobox-dropdown');
     if (dropdown) dropdown.style.display = 'none';
@@ -973,26 +955,44 @@ function renderBlocksOnly() {
 
 function renderBlockHtml(block, index) {
     const topics = getBlockTopics();
-    const isGeneral = block.topicId === 'general';
+    const isExpanded = block.id === appState.currentSession?._expandedBlockId;
 
     // Resolve blockType — new field; fall back to legacy source for old records
     const blockType = block.blockType || block.source || 'correction';
 
     // Migrate legacy content into block.text for display in the editor
-    // (corrections[], praiseText, reflectionText → text)
-    let blockText = block.text || '';
-    if (!blockText) {
-        if (Array.isArray(block.corrections) && block.corrections.length) {
-            blockText = block.corrections.join('\n');
-        } else if (block.praiseText) {
-            blockText = block.praiseText;
-        } else if (block.reflectionText) {
-            blockText = block.reflectionText;
+    const resolveBlockText = () => {
+        let t = block.text || '';
+        if (!t) {
+            if (Array.isArray(block.corrections) && block.corrections.length) t = block.corrections.join('\n');
+            else if (block.praiseText) t = block.praiseText;
+            else if (block.reflectionText) t = block.reflectionText;
         }
+        return t;
+    };
+
+    // ── Collapsed state — card with preview, tap to expand ──
+    if (!isExpanded) {
+        const previewText = resolveBlockText().split('\n')[0].trim();
+        const starSvg = '<svg class="star-icon" width="16" height="16" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+        return '<div class="swipe-row" data-block-id="' + block.id + '">' +
+            '<div class="swipe-action-left swipe-action-remove">' + ICONS.get('x', 16) + 'remove</div>' +
+            '<div class="session-block session-block--collapsed" id="block-' + block.id + '" onmousedown="expandBlock(' + block.id + ')">' +
+                '<div class="session-block-header">' +
+                    '<button class="block-star-btn ' + (block.isHighlight ? 'active' : '') + '" onmousedown="event.stopPropagation(); toggleBlockHighlight(' + block.id + ')" aria-label="Highlight">' + starSvg + '</button>' +
+                    '<div class="session-block-collapsed-preview">' +
+                        '<span class="session-block-type-inline">' + blockType + '</span>' +
+                        (previewText ? '<span class="session-block-preview-text">' + escapeHtml(previewText) + '</span>' : '<span class="session-block-preview-empty">tap to edit</span>') +
+                    '</div>' +
+                    '<button class="block-remove-btn" onmousedown="event.stopPropagation()" onclick="removeBlock(' + block.id + ')" aria-label="Remove">' + ICONS.get('x', 14) + '</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
     }
 
-    // Block type label (replaces source chips)
-    const blockTypeLabelHtml = `<div class="block-type-label">${blockType}</div>`;
+    // ── Expanded state — lives on sheet surface, no bg/border ──
+    const blockText = resolveBlockText();
+    const blockTypeLabelHtml = '<div class="block-type-label">' + blockType + '</div>';
 
     // Notes section (collapsible)
     const notesHtml = `
@@ -1026,7 +1026,7 @@ function renderBlockHtml(block, index) {
                 remove
             </div>
 
-            <div class="session-block" id="block-${block.id}">
+            <div class="session-block session-block--expanded" id="block-${block.id}">
                     ${blockTypeLabelHtml}
 
                     <div class="session-block-header">
@@ -1546,6 +1546,8 @@ function openSessionEditor(sessionId) {
         generalNotes:    session.notes,
         blocks,
         _isEdit:         true,   // flag so saveSession knows to overwrite not append
+        _expandedBlockId: blocks[0]?.id || null,
+        _addMenuOpen:    false,
     };
 
     // Open the overlay

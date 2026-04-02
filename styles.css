@@ -2693,6 +2693,65 @@ h1, h2, .screen-heading {
 
 .session-input::placeholder { color: var(--ink-3); }
 
+/* ── Session name field (document-style logger) ── */
+.session-name-field {
+    margin-bottom: var(--sp-md);
+    position: relative;
+}
+
+.session-name-input-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-sm);
+}
+
+.session-name-input {
+    flex: 1;
+    min-width: 0;
+    background: var(--surface-warm);
+    border: 1.5px solid var(--gold-soft);
+    border-radius: 8px;
+    padding: 13px var(--sp-md);
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-body);
+    color: var(--ink);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.session-name-input:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(196, 144, 12, 0.12);
+}
+
+.session-name-input::placeholder { color: var(--ink-4); }
+
+.session-name-clear {
+    all: unset;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-4);
+    cursor: pointer;
+    flex-shrink: 0;
+    border-radius: var(--r-md);
+    transition: color 0.15s ease;
+}
+
+.session-name-clear:hover { color: var(--ink-2); }
+
+.session-metadata-row {
+    margin-top: var(--sp-xs);
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    color: var(--ink-4);
+    padding-left: 2px;
+}
+
 /* Unified placeholder style — all inputs/textareas inside any sheet overlay */
 .session-overlay input::placeholder,
 .session-overlay textarea::placeholder {
@@ -2742,38 +2801,20 @@ h1, h2, .screen-heading {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--sp-sm);
     padding: 0 var(--sp-xs);
     min-height: 44px;
     border-left: 1px solid var(--border);
     border-right: 1px solid var(--border);
     text-align: center;
     cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.date-display:active { background: var(--gold-wash); }
-
-.date-display-label {
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-body);
     font-weight: 600;
     color: var(--ink);
-    line-height: 1;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.date-display-sep {
-    font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-caption);
-    color: var(--border);
-}
-
-.date-display-sub {
-    font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
-    color: var(--ink-3);
-    line-height: 1;
-}
+.date-display:active { background: var(--gold-wash); }
 
 /* Inline calendar popup */
 
@@ -3142,12 +3183,114 @@ h1, h2, .screen-heading {
 
 .add-block-btn:hover { color: var(--ink-2); }
 
+/* + add trigger */
+.add-block-trigger {
+    all: unset;
+    display: block;
+    width: 100%;
+    padding: var(--sp-sm) 0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 500;
+    color: var(--ink-4);
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.add-block-trigger:hover { color: var(--ink-2); }
+
+.add-block-menu {
+    display: flex;
+    gap: var(--sp-sm);
+    flex-wrap: wrap;
+    padding: var(--sp-sm) 0;
+}
+
+.add-block-menu-item {
+    all: unset;
+    padding: 5px 14px;
+    border-radius: var(--r-full);
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 500;
+    color: var(--ink-2);
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.add-block-menu-item:hover {
+    border-color: var(--ink-3);
+    color: var(--ink);
+}
+
+.add-block-menu-item--disabled {
+    color: var(--ink-5);
+    border-color: var(--border);
+    cursor: default;
+}
+
 .session-block {
     background: var(--surface-warm);
     border: 1px solid var(--border);
     border-radius: var(--r-md);
     margin-bottom: var(--sp-sm);
     overflow: visible;
+}
+
+/* Expanded — lives on sheet surface, no card */
+.session-block--expanded {
+    background: none;
+    border: none;
+    border-radius: 0;
+}
+
+/* Collapsed — white card, ink-6 border, tappable */
+.session-block--collapsed {
+    background: var(--surface);
+    border: 1px solid var(--ink-6);
+    border-radius: var(--r-md);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.session-block--collapsed .session-block-header {
+    padding: var(--sp-sm) var(--sp-md);
+}
+
+.session-block-collapsed-preview {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-sm);
+    overflow: hidden;
+}
+
+.session-block-type-inline {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: var(--fs-caption);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-5);
+    flex-shrink: 0;
+}
+
+.session-block-preview-text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink-3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.session-block-preview-empty {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink-5);
+    font-style: italic;
 }
 
 .session-block-header {
