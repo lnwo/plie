@@ -2165,7 +2165,7 @@ function saveSession() {
     storage.save('skillNotes',    appState.skillNotes);
     persistSkillState();
 
-    // 3b. Goal blocks — create appState.goals[] entries for non-blank goals
+    // 3b. Goal blocks — create appState.goals[] entries + SessionSkill records for session detail
     const goalBlocks = s.blocks.filter(b => b.blockType === 'goal' && b._goalDraft?.title?.trim());
     if (goalBlocks.length) {
         const sessionDateTs = new Date(s.date + 'T12:00:00').getTime();
@@ -2174,8 +2174,9 @@ function saveSession() {
             const progressMarkers = (d.progressMarkers || [])
                 .filter(m => m.text?.trim())
                 .map(m => ({ id: nextId(), text: m.text.trim(), done: false }));
+            const goalId = nextId();
             appState.goals.unshift({
-                id:               nextId(),
+                id:               goalId,
                 title:            d.title.trim(),
                 body:             d.body?.trim() || null,
                 createdAt:        sessionDateTs,
@@ -2195,8 +2196,22 @@ function saveSession() {
                 howOften:         d.howOften || null,
                 skillIds:         [],
             });
+            // SessionSkill record links this goal to the session for session detail display
+            appState.sessionSkills.push({
+                id:            nextId(),
+                sessionId:     session.id,
+                skillId:       null,
+                notes:         null,
+                correctionIds: [],
+                tracked:       true,
+                source:        'goal',
+                goalId:        goalId,
+                isHighlight:   !!b.isHighlight,
+                bodyTag:       false,
+            });
         });
-        storage.save('goals', appState.goals);
+        storage.save('goals',        appState.goals);
+        storage.save('sessionSkills', appState.sessionSkills);
     }
 
     // 3a. If this is a goal reflection, update the goal and skip the timeline entry
@@ -6011,7 +6026,6 @@ function showSessionDetail(sessionId) {
             </div>`;
         bodyHtml = `
             <div class="session-detail-section">
-                <div class="session-detail-section-label">Notes &amp; corrections</div>
                 <div class="session-detail-blocks">
                     ${sessionNotesHtml}
                     ${blocksHtml}
@@ -6083,22 +6097,39 @@ function openNoteEditor(sessionId) {
 }
 
 function renderDetailBlockHtml(sessionSkill) {
+    const source = sessionSkill.source || sessionSkill.mode || 'correction';
+
+    // Goal blocks — dedicated renderer
+    if (source === 'goal') {
+        const goal = (appState.goals || []).find(g => g.id === sessionSkill.goalId);
+        if (!goal) return '';
+        return renderGoalDetailBlockHtml(goal, sessionSkill);
+    }
+
     const skill = sessionSkill.skillId ? DATA.skills.find(s => s.id === sessionSkill.skillId) : null;
     const corrections = (sessionSkill.correctionIds || [])
         .map(id => appState.corrections.find(c => c.id === id))
         .filter(Boolean);
-    const source = sessionSkill.source || sessionSkill.mode || null;
     const hasCorrections = corrections.length > 0;
     const isHighlight = !!(sessionSkill.isHighlight || corrections.some(c => c.isHighlight));
 
     if (!skill && !sessionSkill.notes && !hasCorrections) return '';
 
-    const borderClass = isHighlight        ? 'note-block--highlight'
-                      : hasCorrections     ? 'note-block--correction'
-                      : 'note-block--observation';
-    const bgClass = (isHighlight && !skill) ? ' note-block--gold-bg' : '';
+    // Block type label
+    const TYPE_DISPLAY = { correction: 'correction', observation: 'observation', note: 'note' };
+    const typeLabel = TYPE_DISPLAY[source] || 'correction';
+    const typeLabelHtml = `<div class="detail-block-type-label">${typeLabel}</div>`;
 
-    // Skill row — shown only when a skill is linked
+    // Left border: highlight overrides everything; otherwise by type
+    const borderClass = isHighlight    ? 'note-block--highlight'
+                      : source === 'observation' ? 'note-block--observation'
+                      : source === 'note'        ? 'note-block--note'
+                      : 'note-block--correction';
+
+    // Divider between type label and skill row — only when skill is present
+    const dividerHtml = skill ? `<div class="detail-block-divider"></div>` : '';
+
+    // Skill / star row
     const starBtn = `<button class="note-block-star${isHighlight ? ' active' : ''}" onmousedown="toggleDetailBlockHighlight(${sessionSkill.id})">${isHighlight ? ICONS.get('star-fill', 14) : ICONS.get('star', 14)}</button>`;
     const bodyTagHtml = sessionSkill.bodyTag ? `<span class="note-block-body-tag">Body</span>` : '';
     let skillRowHtml = '';
@@ -6108,43 +6139,92 @@ function renderDetailBlockHtml(sessionSkill) {
                 <span class="note-block-skill-name">${skill.french}</span>
                 <span class="note-block-skill-right">${bodyTagHtml}${starBtn}<button class="note-block-view-link" onclick="showSkillDetail('${skill.id}', appState.currentScreen)">view →</button></span>
             </div>`;
-    } else if (isHighlight) {
-        skillRowHtml = `
-            <div class="note-block-highlight-row">
-                ${bodyTagHtml}${starBtn}
-                <span class="note-block-highlight-label">highlight</span>
-            </div>`;
     } else {
         skillRowHtml = `
-            <div class="note-block-highlight-row note-block-highlight-row--inactive">
+            <div class="note-block-highlight-row${isHighlight ? '' : ' note-block-highlight-row--inactive'}">
                 ${bodyTagHtml}${starBtn}
             </div>`;
     }
 
-    // Free text body
+    // Free text body (no truncation — always fully expanded per spec)
     const bodyHtml = sessionSkill.notes ? `
         <div class="note-block-body">
-            <div class="note-block-body-text" id="nbt-${sessionSkill.id}">${nl2br(sessionSkill.notes)}</div>
-            <button class="note-block-see-more" id="nbm-${sessionSkill.id}"
-                    onclick="expandBlockBody(${sessionSkill.id})" style="display:none;">see more</button>
-            <button class="note-block-see-more" id="nbh-${sessionSkill.id}"
-                    onclick="collapseBlockBody(${sessionSkill.id})" style="display:none;">hide</button>
+            <div class="note-block-body-text">${nl2br(sessionSkill.notes)}</div>
         </div>` : '';
 
-    // Bullets
-    const isObs = source === 'observation';
+    // Content lines — fully expanded, no truncation
     const bulletsHtml = hasCorrections ? `
         <div class="note-block-bullets">
             ${corrections.map(c => `
-                <div class="note-block-bullet${isObs ? ' note-block-bullet--obs' : ''}">
+                <div class="note-block-bullet">
                     <span class="note-block-dash">—</span><span class="note-block-bullet-text">${c.text}</span>
                 </div>`).join('')}
         </div>` : '';
 
     return `
-        <div class="note-block ${borderClass}${bgClass}" id="note-block-${sessionSkill.id}">
+        <div class="note-block ${borderClass}" id="note-block-${sessionSkill.id}">
+            ${typeLabelHtml}
+            ${dividerHtml}
             ${skillRowHtml}${bodyHtml}${bulletsHtml}
         </div>`;
+}
+
+function renderGoalDetailBlockHtml(goal, sessionSkill) {
+    const isHighlight = !!sessionSkill.isHighlight;
+    const borderClass = isHighlight ? 'note-block--highlight' : 'note-block--goal';
+    const ssid = sessionSkill.id;
+
+    const TYPE_LABELS = { skill: 'a skill', body: 'body', intention: 'a feeling', habit: 'a habit' };
+    const goalTypeLabel = TYPE_LABELS[goal.goalType] || '';
+    const linkedSkill = goal.skillId ? DATA.skills.find(s => s.id === goal.skillId) : null;
+    const createdDate = goal.createdAt ? formatTimelineDate(new Date(goal.createdAt).toISOString().split('T')[0]) : '';
+
+    const markersHtml = (goal.progressMarkers || []).length > 0 ? `
+        <div class="goal-detail-markers">
+            ${(goal.progressMarkers || []).map(m => `
+                <div class="goal-detail-marker">
+                    <span class="goal-detail-marker-check">${m.done ? ICONS.get('check', 12) : ''}</span>
+                    <span class="goal-detail-marker-text">${escapeHtml(m.text)}</span>
+                </div>`).join('')}
+        </div>` : '';
+
+    const hasExtra = goal.body || (goal.progressMarkers || []).length || goal.commitmentPeriod || linkedSkill || createdDate;
+
+    const expandHtml = hasExtra ? `
+        <div class="goal-detail-extra" id="gde-${ssid}" style="display:none;">
+            ${goal.body ? `<div class="goal-detail-body">${escapeHtml(goal.body)}</div>` : ''}
+            ${markersHtml}
+            ${goal.commitmentPeriod ? `<div class="goal-detail-meta-line">${escapeHtml(goal.commitmentPeriod)}</div>` : ''}
+            ${linkedSkill ? `<div class="goal-detail-meta-line">${escapeHtml(linkedSkill.french)}</div>` : ''}
+            ${createdDate ? `<div class="goal-detail-meta-line goal-detail-meta-line--muted">${createdDate}</div>` : ''}
+        </div>
+        <button class="note-block-see-more" id="gdm-${ssid}" onclick="toggleGoalDetailExpand(${ssid})">show more</button>
+        <button class="note-block-see-more" id="gdh-${ssid}" style="display:none;" onclick="toggleGoalDetailExpand(${ssid})">hide</button>
+    ` : '';
+
+    return `
+        <div class="note-block ${borderClass}" id="note-block-${ssid}">
+            <div class="detail-block-type-label">goal</div>
+            <div class="detail-block-divider"></div>
+            <div class="note-block-skill-row">
+                <div class="detail-goal-title-col">
+                    <span class="note-block-skill-name">${escapeHtml(goal.title)}</span>
+                    ${goalTypeLabel ? `<span class="detail-goal-type-label">${goalTypeLabel}</span>` : ''}
+                </div>
+            </div>
+            ${expandHtml}
+        </div>`;
+}
+
+function toggleGoalDetailExpand(ssid) {
+    const extra = document.getElementById(`gde-${ssid}`);
+    const more  = document.getElementById(`gdm-${ssid}`);
+    const hide  = document.getElementById(`gdh-${ssid}`);
+    if (!extra) return;
+    const expanded = extra.style.display !== 'none';
+    extra.style.display = expanded ? 'none' : '';
+    if (more) more.style.display = expanded ? '' : 'none';
+    if (hide) hide.style.display = expanded ? 'none' : '';
 }
 
 function toggleDetailBlockHighlight(sessionSkillId) {
