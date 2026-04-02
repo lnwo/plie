@@ -884,7 +884,6 @@ h1, h2, .screen-heading {
 }
 
 /* Skill name headings — italic, ink unchanged */
-.active-skill-name,
 .skill-detail-title {
     font-style: italic;
 }
@@ -1888,11 +1887,11 @@ h1, h2, .screen-heading {
 
 .barre-section-label {
     font-family: 'DM Sans', sans-serif;
-    font-weight: 500;
+    font-weight: 600;
     font-size: var(--fs-caption);
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--ink-3);
+    color: var(--ink-5);
 }
 
 .barre-section-count {
@@ -2016,10 +2015,9 @@ h1, h2, .screen-heading {
 }
 
 .active-skill-name {
-    font-family: 'EB Garamond', Georgia, serif;
-    font-style: italic;
-    font-size: var(--fs-title);
-    font-weight: 400;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-h2);
+    font-weight: 600;
     color: var(--ink);
     line-height: 1.2;
     flex: 1;
