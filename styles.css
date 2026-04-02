@@ -3646,15 +3646,7 @@ h1, h2, .screen-heading {
     background: var(--gold-mid);
 }
 
-.correction-recurring-badge {
-    color: var(--coral);
-    background: var(--coral-soft);
-    border: none;
-    font-weight: 600;
-    font-size: var(--fs-caption);
-}
-
-.goal-category-tag, .difficulty-badge, .correction-recurring-badge {
+.goal-category-tag, .difficulty-badge {
     border-radius: var(--r-full);
 }
 
@@ -5045,16 +5037,6 @@ h1, h2, .screen-heading {
 .block-praise-btn.active { color: var(--gold-mid); }
 
 /* Source badge in session/skill detail */
-.detail-block-source-badge {
-    font-size: var(--fs-caption);
-    font-weight: 500;
-    color: var(--ink-3);
-    background: var(--surface-warm);
-    padding: 2px 8px;
-    border-radius: var(--r-full);
-    border: 1px solid var(--border);
-    margin-left: auto;
-}
 
 .detail-block.detail-block-praise {
     border-color: var(--gold-soft);
