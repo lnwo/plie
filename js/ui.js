@@ -1015,9 +1015,15 @@ function renderBlockHtml(block, index) {
                 bodyHtml = '<div class="session-block-preview-line session-block-preview-line--italic">' + escapeHtml(firstLine) + '</div>';
             }
         } else if (blockType === 'goal') {
-            const goalTitle = block._goalDraft?.title || firstLine;
+            const gd = block._goalDraft;
+            const goalTitle = gd?.title || firstLine;
+            const GOAL_TYPE_LABELS = { skill: 'a skill', body: 'body', intention: 'a feeling', habit: 'a habit' };
+            const goalTypeLabel = GOAL_TYPE_LABELS[gd?.goalType] || null;
             if (goalTitle) {
-                bodyHtml = '<div class="session-block-preview-line session-block-preview-line--italic">' + escapeHtml(goalTitle) + '</div>';
+                bodyHtml = '<div class="session-block-preview-line session-block-preview-line--bold">' + escapeHtml(goalTitle) + '</div>';
+            }
+            if (goalTypeLabel) {
+                bodyHtml += '<div class="session-block-preview-line" style="color:var(--ink-5);">' + goalTypeLabel + '</div>';
             }
         } else {
             // correction / observation
@@ -1052,6 +1058,7 @@ function renderBlockHtml(block, index) {
         const typeTabsHtml = d.goalType ? `
             <div class="goal-type-tabs" id="inline-goal-type-tabs-${block.id}">
                 <button class="goal-type-tab ${d.goalType === 'skill'     ? 'active' : ''}" onmousedown="setBlockGoalType(${block.id}, 'skill')">A skill</button>
+                <button class="goal-type-tab ${d.goalType === 'body'      ? 'active' : ''}" onmousedown="setBlockGoalType(${block.id}, 'body')">Body</button>
                 <button class="goal-type-tab ${d.goalType === 'intention' ? 'active' : ''}" onmousedown="setBlockGoalType(${block.id}, 'intention')">A feeling or state</button>
                 <button class="goal-type-tab ${d.goalType === 'habit'     ? 'active' : ''}" onmousedown="setBlockGoalType(${block.id}, 'habit')">A habit</button>
             </div>` : '';
@@ -1173,12 +1180,35 @@ function renderInlineGoalFormHtml(block) {
     const bid = block.id;
     if (!d) return '';
 
+    const phIdx = Math.floor(Date.now() / 86400000) % 3;
+    const markerPlaceholders = [
+        'get a correction on it from my teacher',
+        'land two back to back without thinking about the arms',
+        'feel it click in centre without the mirror',
+    ];
+    const removeSvg = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg>';
+
+    // Title is always shown — above type selection and above type-specific fields
+    const titleHtml = `
+        <div class="session-field">
+            <input type="text" class="session-input" id="inline-goal-title-${bid}"
+                   placeholder="name this goal"
+                   value="${escapeHtml(d.title || '')}"
+                   oninput="updateBlockGoalDraftField(${bid}, 'title', this.value)" />
+        </div>`;
+
+    // No type selected — title + type selection cards
     if (!d.goalType) {
         return `
-            <div class="goal-type-cards" style="padding:0;">
+            ${titleHtml}
+            <div class="goal-type-cards" style="padding:0; margin-top:var(--sp-sm);">
                 <button class="goal-type-card" onmousedown="setBlockGoalType(${bid}, 'skill')">
                     <span class="goal-type-card-name">A skill</span>
                     <span class="goal-type-card-desc">Something specific. A technique, a step, a quality of movement.</span>
+                </button>
+                <button class="goal-type-card" onmousedown="setBlockGoalType(${bid}, 'body')">
+                    <span class="goal-type-card-name">Body</span>
+                    <span class="goal-type-card-desc">Alignment, proprioception, physical conditioning cues.</span>
                 </button>
                 <button class="goal-type-card" onmousedown="setBlockGoalType(${bid}, 'intention')">
                     <span class="goal-type-card-name">A feeling or state</span>
@@ -1191,25 +1221,12 @@ function renderInlineGoalFormHtml(block) {
             </div>`;
     }
 
-    const phIdx = Math.floor(Date.now() / 86400000) % 3;
+    // Duration chips (T74 will replace with full picker)
     const periodOptions = ['A week', 'Two weeks', 'A month', 'Three months'];
-    const markerPlaceholders = [
-        'get a correction on it from my teacher',
-        'land two back to back without thinking about the arms',
-        'feel it click in centre without the mirror',
-    ];
-
     const periodChipsHtml = periodOptions.map(p => {
         const isActive = d.commitmentPeriod === p;
         return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onmousedown="setBlockGoalPeriod(${bid}, '${p}')">${p}</button>`;
     }).join('');
-
-    const titlePlaceholders = {
-        skill:     ['improve pirouettes en dedans from fifth, on my left side', 'sort out the arms in grand allegro', 'stop gripping in the hip flexor on développé devant'],
-        intention: ['feel at home in the Friday intermediate class', 'stop dreading centre', 'actually enjoy the adage'],
-        habit:     ['actually warm up before class', 'get to conditioning', 'stretch on the days I don\'t have class'],
-    };
-    const titlePh = (titlePlaceholders[d.goalType] || titlePlaceholders.skill)[phIdx];
 
     let typeFields = '';
 
@@ -1223,13 +1240,8 @@ function renderInlineGoalFormHtml(block) {
                        value="${escapeHtml(m.text)}"
                        placeholder="${markerPlaceholders[i % markerPlaceholders.length]}"
                        oninput="updateBlockGoalProgressMarker(${bid}, ${i}, this.value)" />
-                <button class="block-remove-btn" onmousedown="removeBlockGoalMarker(${bid}, ${i})">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                        <line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/>
-                    </svg>
-                </button>
+                <button class="block-remove-btn" onmousedown="removeBlockGoalMarker(${bid}, ${i})">${removeSvg}</button>
             </div>`).join('');
-
         typeFields = `
             <div class="session-field">
                 <label class="session-field-label">What does it look like when it happens? <span class="session-field-optional">optional</span></label>
@@ -1249,6 +1261,28 @@ function renderInlineGoalFormHtml(block) {
                            onblur="setTimeout(()=>{const el=document.getElementById('inline-goal-skill-dropdown-${bid}');if(el)el.style.display='none';},200)" />
                     <div class="block-topic-dropdown" id="inline-goal-skill-dropdown-${bid}" style="display:none;"></div>
                 </div>
+            </div>
+            <div class="session-field">
+                <label class="session-field-label">Milestones <span class="session-field-optional">optional</span></label>
+                <div id="inline-goal-markers-${bid}">${markersHtml}</div>
+                <button class="add-block-btn" style="margin-top:var(--sp-sm);" onmousedown="addBlockGoalMarker(${bid})">+ add a step</button>
+            </div>`;
+
+    } else if (d.goalType === 'body') {
+        const markersHtml = (d.progressMarkers || []).map((m, i) => `
+            <div class="goal-marker-row">
+                <input type="text" class="goal-marker-input"
+                       value="${escapeHtml(m.text)}"
+                       placeholder="${markerPlaceholders[i % markerPlaceholders.length]}"
+                       oninput="updateBlockGoalProgressMarker(${bid}, ${i}, this.value)" />
+                <button class="block-remove-btn" onmousedown="removeBlockGoalMarker(${bid}, ${i})">${removeSvg}</button>
+            </div>`).join('');
+        typeFields = `
+            <div class="session-field">
+                <label class="session-field-label">What does it look like when it happens? <span class="session-field-optional">optional</span></label>
+                <textarea class="session-input" rows="2" style="resize:none;"
+                          oninput="updateBlockGoalDraftField(${bid}, 'body', this.value); autoResizeTextarea(this);"
+                          >${escapeHtml(d.body || '')}</textarea>
             </div>
             <div class="session-field">
                 <label class="session-field-label">Milestones <span class="session-field-optional">optional</span></label>
@@ -1310,13 +1344,7 @@ function renderInlineGoalFormHtml(block) {
     }
 
     return `
-        <div class="session-field">
-            <label class="session-field-label">Title</label>
-            <input type="text" class="session-input" id="inline-goal-title-${bid}"
-                   placeholder="${titlePh}"
-                   value="${escapeHtml(d.title)}"
-                   oninput="updateBlockGoalDraftField(${bid}, 'title', this.value)" />
-        </div>
+        ${titleHtml}
         ${typeFields}
         <div class="session-field">
             <label class="session-field-label">Work on this for</label>
