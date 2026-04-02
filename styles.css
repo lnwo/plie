@@ -2027,9 +2027,10 @@ h1, h2, .screen-heading {
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-caption);
     font-weight: 600;
-    font-variant: small-caps;
-    color: var(--ink-5);
-    line-height: 1.2;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    display: block;
 }
 
 .sl-card-name {

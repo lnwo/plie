@@ -2448,7 +2448,7 @@ function renderSavedFromLearnCard(b) {
         if (idx > -1) action = `openSavedLearningItem('pointer','${b.itemId.replace(/'/g, "\\'")}')`;
 
     } else {
-        typeLabel = 'key point';
+        typeLabel = b.pageType;
         action = `openSavedLearningItem('${b.pageType}','${b.itemId.replace(/'/g, "\\'")}')`;
     }
 
@@ -6420,44 +6420,57 @@ function renderBookmarkedLearnItems() {
     const bookmarks = appState.learnBookmarks || [];
     if (!bookmarks.length) return '<p class="learn-helper-text">No bookmarks yet.</p>';
     const pointerSection = DATA.learnSections.find(s => s.id === 'pointers');
-    return bookmarks.map(b => {
-        let name = b.itemId, action = '', eyebrow = b.pageType;
+
+    // Group by section
+    const groups = {};
+    bookmarks.forEach(b => {
+        let name = b.itemId, action = '', groupKey = b.pageType, groupLabel = b.pageType;
         if (b.pageType === 'skill') {
             const skill = DATA.skills.find(s => s.id === b.itemId);
-            name = skill?.french || b.itemId; eyebrow = 'skill';
+            name = skill?.french || b.itemId;
+            groupKey = 'skill'; groupLabel = 'Skills';
             action = `showSkillKnowledgePage('${b.itemId}')`;
         } else if (b.pageType === 'pointer') {
             const pointer = pointerSection?.items.find(p => p.name === b.itemId);
-            name = pointer?.name || b.itemId; eyebrow = 'pointer';
+            name = pointer?.name || b.itemId;
+            groupKey = 'pointer'; groupLabel = 'Pointers';
             const idx = pointer ? pointerSection.items.indexOf(pointer) : -1;
             if (idx > -1) action = `showPointerDetail(${idx})`;
         } else {
-            eyebrow = b.pageType;
+            const section = DATA.learnSections.find(s => s.id === b.pageType);
+            groupLabel = section?.name || b.pageType;
             action = `showLearnDetail('${b.pageType}', '${b.itemId.replace(/'/g, "\\'")}')`;
         }
-        return `<div class="skill-category-card" style="margin-bottom: var(--sp-sm);" ${action ? `onclick="${action}"` : ''}>
-            <div class="skill-category-icon">${ICONS.get('bookmark-fill', 24)}</div>
-            <div class="skill-category-info">
-                <div class="pointer-eyebrow">${eyebrow}</div>
-                <div class="skill-category-name">${name}</div>
-            </div>
-        </div>`;
-    }).join('');
+        if (!groups[groupKey]) groups[groupKey] = { label: groupLabel, rows: [] };
+        groups[groupKey].rows.push({ name, action });
+    });
+
+    return Object.values(groups).map(g => `
+        <div class="learn-search-group">
+            <div class="learn-search-group-label">${g.label}</div>
+            ${g.rows.map(r => `
+                <div class="glossary-term-row glossary-term-skill" ${r.action ? `onclick="${r.action}"` : ''}>
+                    <div class="glossary-term-main">
+                        <span class="glossary-term-name">${r.name}</span>
+                    </div>
+                </div>`).join('')}
+        </div>`).join('');
 }
 
 function renderInFocusLearnItems() {
     const focused = (appState.skills || []).filter(s => s.flagged);
     if (!focused.length) return '<p class="learn-helper-text">No skills in focus.</p>';
-    return focused.map(skill => {
-        const name = skill.french || skill.name || skill.id;
-        return `<div class="skill-category-card" style="margin-bottom: var(--sp-sm);" onclick="showSkillKnowledgePage('${skill.id}')">
-            <div class="skill-category-icon">${ICONS.get('skills', 24)}</div>
-            <div class="skill-category-info">
-                <div class="pointer-eyebrow">skill · in focus</div>
-                <div class="skill-category-name">${name}</div>
-            </div>
-        </div>`;
-    }).join('');
+    return `<div class="learn-search-group">
+        <div class="learn-search-group-label">In Focus</div>
+        ${focused.map(skill => {
+            const name = skill.french || skill.name || skill.id;
+            return `<div class="glossary-term-row glossary-term-skill" onclick="showSkillKnowledgePage('${skill.id}')">
+                <div class="glossary-term-main">
+                    <span class="glossary-term-name">${name}</span>
+                </div>
+            </div>`;
+        }).join('')}
+    </div>`;
 }
 
 // ── Learn line saves ──────────────────────────────────────────────────────────

@@ -518,7 +518,7 @@ const DATA = {
     },
     {
         id: 'conditioning',
-        name: 'Conditioning & drills',
+        name: 'Conditioning',
         desc: 'The work that supports the work. Strength, stability, and the targeted exercises that make technique possible.',
         icon: 'cat-centre',
         chips: ['All', 'Strength', 'Flexibility', 'Stability', 'Warm-up'],
