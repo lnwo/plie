@@ -1053,7 +1053,7 @@ function renderBlockHtml(block, index) {
     }
 
     return `
-        <div class="swipe-row" data-block-id="${block.id}">
+        <div class="swipe-row swipe-row--expanded" data-block-id="${block.id}">
             <div class="swipe-action-left swipe-action-remove">
                 ${ICONS.get('x', 16)}
                 remove
@@ -1074,7 +1074,7 @@ function renderBlockHtml(block, index) {
                                    type="text"
                                    autocomplete="off"
                                    spellcheck="false"
-                                   value="${topics.find(t => t.id === block.topicId)?.label || 'General'}"
+                                   value="${topics.find(t => t.id === block.topicId)?.label || ''}"
                                    oninput="filterBlockTopics(${block.id}, this.value)"
                                    onfocus="openBlockTopicDropdown(${block.id})"
                                    onblur="closeBlockTopicDropdown(${block.id}, 300)"
@@ -1089,9 +1089,25 @@ function renderBlockHtml(block, index) {
                     <div class="session-block-fields">
                         ${entryHtml}
                     </div>
+                    ${(blockType === 'correction' || blockType === 'observation') ? `
+                    <div class="block-tag-row">
+                        <button class="block-tag-chip${block.bodyTag ? ' active' : ''}"
+                                onmousedown="toggleBlockBodyTag(${block.id})">Body</button>
+                    </div>` : ''}
                 </div>
             </div>
     `;
+}
+
+function toggleBlockBodyTag(blockId) {
+    const block = getBlockById(blockId);
+    if (!block) return;
+    block.bodyTag = !block.bodyTag;
+    const el = document.getElementById(`block-${blockId}`);
+    if (el) {
+        const chip = el.querySelector('.block-tag-chip');
+        if (chip) chip.classList.toggle('active', block.bodyTag);
+    }
 }
 
 
@@ -1714,6 +1730,7 @@ function saveSession() {
                     createdAt:   now,
                     sessionId:   session.id,
                     isHighlight: !!block.isHighlight,
+                    bodyTag:     !!block.bodyTag,
                 };
                 appState.corrections.push(correction);
                 blockCorrectionIds.push(correction.id);
@@ -1750,6 +1767,7 @@ function saveSession() {
                 blockTitle:    block.title?.trim() || null,
                 source:        resolvedType,
                 isHighlight:   !!block.isHighlight,
+                bodyTag:       !!block.bodyTag,
             };
             appState.sessionSkills.push(sessionSkill);
 
@@ -3013,7 +3031,7 @@ function showAllGoalsScreen() {
         ...keys.filter(k => !FIXED_ORDER.includes(k) && !monthNames.includes(k)).sort((a, b) => b - a),
     ];
 
-    const TYPE_LABELS   = { skill: 'Skill', intention: 'Feeling / state', habit: 'Habit' };
+    const TYPE_LABELS   = { skill: 'Skill', body: 'Body', intention: 'Feeling / state', habit: 'Habit' };
     const STATUS_LABELS = { active: 'active', completed: 'completed', paused: 'paused', letgo: 'let go' };
 
     function renderAllGoalCard(g) {
@@ -3578,6 +3596,55 @@ function renderGoalCreator() {
         `;
     }
 
+    function bodyGoalFormHtml() {
+        return `
+            <div class="session-field">
+                <label class="session-field-label">Title</label>
+                <input type="text" class="session-input" id="goal-title-input"
+                       placeholder="${['work on ankle stability and theraband exercises', 'stop gripping in the hip flexor', 'improve turnout from the hip, not the knee'][phIdx]}"
+                       value="${escapeHtml(d.title)}"
+                       oninput="appState._goalDraft.title = this.value; searchGoalCorrections(this.value);" />
+                <div id="goal-correction-search-results"></div>
+            </div>
+            ${(d.correctionIds || []).length ? `
+                <div class="session-field">
+                    <label class="session-field-label">Linked corrections</label>
+                    <div id="goal-linked-corrections">
+                        ${renderLinkedCorrectionsHtml(d.correctionIds)}
+                    </div>
+                </div>
+            ` : `<div id="goal-linked-corrections-wrapper"></div>`}
+            <div class="session-field">
+                <label class="session-field-label">What does it look like when it happens? <span class="session-field-optional">optional</span></label>
+                <textarea class="session-input" id="goal-body-input"
+                          placeholder="${['ankles feel stable in relevé without gripping', 'teacher stops correcting the same thing', 'weight shifts easily without compensating'][phIdx]}"
+                          rows="2"
+                          style="resize: none;"
+                          oninput="appState._goalDraft.body = this.value; autoResizeTextarea(this);">${escapeHtml(d.body || '')}</textarea>
+            </div>
+            <div class="session-field">
+                <label class="session-field-label">Milestones <span class="session-field-optional">optional</span></label>
+                <div id="goal-markers-list">${(d.progressMarkers || []).map((m, i) => `
+                    <div class="goal-marker-row">
+                        <input type="text" class="goal-marker-input"
+                               value="${escapeHtml(m.text)}"
+                               placeholder="${markerPlaceholders[i % markerPlaceholders.length]}"
+                               oninput="appState._goalDraft.progressMarkers[${i}].text = this.value" />
+                        <button class="block-remove-btn" onmousedown="removeProgressMarker(${i})">
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                <line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/>
+                            </svg>
+                        </button>
+                    </div>`).join('')}</div>
+                <button class="add-block-btn" style="margin-top: var(--sp-sm);" onmousedown="addProgressMarker()">+ add a step</button>
+            </div>
+            <div class="session-field">
+                <label class="session-field-label">Work on this for</label>
+                ${periodChipsHtml()}
+            </div>
+        `;
+    }
+
     function intentionFormHtml() {
         return `
             <div class="session-field">
@@ -3683,6 +3750,7 @@ function renderGoalCreator() {
     const typeTabsHtml = d.goalType ? `
         <div class="goal-type-tabs" id="goal-type-tabs">
             <button type="button" class="goal-type-tab ${d.goalType === 'skill' ? 'active' : ''}" data-type="skill">A skill</button>
+            <button type="button" class="goal-type-tab ${d.goalType === 'body' ? 'active' : ''}" data-type="body">Body</button>
             <button type="button" class="goal-type-tab ${d.goalType === 'intention' ? 'active' : ''}" data-type="intention">A feeling or state</button>
             <button type="button" class="goal-type-tab ${d.goalType === 'habit' ? 'active' : ''}" data-type="habit">A habit</button>
         </div>
@@ -3690,6 +3758,7 @@ function renderGoalCreator() {
 
     let bodyHtml = '';
     if (d.goalType === 'skill') bodyHtml = skillFormHtml();
+    else if (d.goalType === 'body') bodyHtml = bodyGoalFormHtml();
     else if (d.goalType === 'intention') bodyHtml = intentionFormHtml();
     else if (d.goalType === 'habit') bodyHtml = habitFormHtml();
     if (bodyHtml && d._editId) {
@@ -5536,9 +5605,6 @@ function showSessionDetail(sessionId) {
             : `<div class="session-detail-empty">No notes recorded for this session.</div>`;
         const sessionNotesHtml = session.notes ? `
             <div class="detail-block">
-                <div class="detail-block-header">
-                    <span class="detail-block-topic">General</span>
-                </div>
                 <div class="detail-block-notes">${session.notes}</div>
             </div>
         ` : '';
@@ -5645,23 +5711,24 @@ function renderDetailBlockHtml(sessionSkill) {
 
     // Skill row — shown only when a skill is linked
     const starBtn = `<button class="note-block-star${isHighlight ? ' active' : ''}" onmousedown="toggleDetailBlockHighlight(${sessionSkill.id})">${isHighlight ? ICONS.get('star-fill', 14) : ICONS.get('star', 14)}</button>`;
+    const bodyTagHtml = sessionSkill.bodyTag ? `<span class="note-block-body-tag">Body</span>` : '';
     let skillRowHtml = '';
     if (skill) {
         skillRowHtml = `
             <div class="note-block-skill-row">
                 <span class="note-block-skill-name">${skill.french}</span>
-                <span class="note-block-skill-right">${starBtn}<button class="note-block-view-link" onclick="showSkillDetail('${skill.id}', appState.currentScreen)">view →</button></span>
+                <span class="note-block-skill-right">${bodyTagHtml}${starBtn}<button class="note-block-view-link" onclick="showSkillDetail('${skill.id}', appState.currentScreen)">view →</button></span>
             </div>`;
     } else if (isHighlight) {
         skillRowHtml = `
             <div class="note-block-highlight-row">
-                ${starBtn}
+                ${bodyTagHtml}${starBtn}
                 <span class="note-block-highlight-label">highlight</span>
             </div>`;
     } else {
         skillRowHtml = `
             <div class="note-block-highlight-row note-block-highlight-row--inactive">
-                ${starBtn}
+                ${bodyTagHtml}${starBtn}
             </div>`;
     }
 
