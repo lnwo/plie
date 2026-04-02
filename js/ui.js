@@ -122,6 +122,8 @@ function openSessionLogger(mode) {
         blocks:          [],
         _predicted:      false,
         _mode:           mode || 'session',
+        _expandedBlockId: null,
+        _addMenuOpen:    false,
     };
 
     // Auto-create first block and focus its title (not needed for note mode)
@@ -200,20 +202,11 @@ function closeSessionLogger() {
 }
 
 function formatSessionDateDisplay(dateStr) {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const yest = new Date();
-    yest.setDate(yest.getDate() - 1);
-    const yesterdayStr = yest.toISOString().split('T')[0];
     const d = new Date(dateStr + 'T12:00:00');
-    const shortDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-    if (dateStr === todayStr) {
-        return `<span class="date-display-label">Today</span><span class="date-display-sep">·</span><span class="date-display-sub">${shortDate}</span>`;
-    } else if (dateStr === yesterdayStr) {
-        return `<span class="date-display-label">Yesterday</span><span class="date-display-sep">·</span><span class="date-display-sub">${shortDate}</span>`;
-    } else {
-        const dayName = d.toLocaleDateString('en-GB', { weekday: 'short' });
-        return `<span class="date-display-label">${dayName}</span><span class="date-display-sep">·</span><span class="date-display-sub">${shortDate}</span>`;
-    }
+    const weekday = d.toLocaleDateString('en-GB', { weekday: 'long' });
+    const day = d.getDate();
+    const month = d.toLocaleDateString('en-GB', { month: 'long' });
+    return `${weekday}, ${day} ${month}`;
 }
 
 function toggleDateCalendar() {
@@ -314,13 +307,6 @@ function renderSessionLogger() {
     const templates = appState.sessionTemplates;
     const isNoteMode = s._mode === 'note';
 
-    // Session dropdown options
-    const savedOptions = templates.map(t => `
-        <option value="template:${t.id}" ${s.templateId === t.id ? 'selected' : ''}>
-            ${t.name}${t.location ? ' · ' + t.location : ''}
-        </option>
-    `).join('');
-
     // Determine predicted class type from selected template
     const activeTemplate = templates.find(t => t.id === s.templateId);
     const predictedType = activeTemplate?.classType || null;
@@ -347,40 +333,65 @@ function renderSessionLogger() {
         </div>
     ` : '';
 
-    // Notes blocks HTML
+    // Blocks HTML
     const blocksHtml = s.blocks.map((block, i) => renderBlockHtml(block, i)).join('');
 
-    // Session combobox — show selected template name or free text
+    // Session name input value
     const sessionInputValue = s.templateId
         ? (templates.find(t => t.id === s.templateId)?.name || '')
         : (s.sessionName || '');
 
-    const templatePreviewHtml = activeTemplate
-        ? `<div class="session-template-preview"><span class="template-preview-text">${renderTemplatePreview(s.templateId)}</span></div>`
-        : '';
+    // Metadata row (location · days) shown when a template is selected
+    const metadataParts = [activeTemplate?.location, activeTemplate?.days?.join(', ')].filter(Boolean);
+    const sessionMetadataHtml = metadataParts.length
+        ? `<div class="session-metadata-row" id="session-metadata">${metadataParts.join(' · ')}</div>`
+        : `<div class="session-metadata-row" id="session-metadata" style="display:none;"></div>`;
 
-    const sessionAndClassFieldsHtml = isNoteMode ? '' : `
-        <div class="session-field">
-            <label class="session-field-label">Session <span class="session-field-optional">optional</span></label>
-            <div class="session-combobox" id="session-combobox">
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const sessionBodyHtml = isNoteMode ? `
+        <div class="session-field" style="padding-top: var(--sp-sm);">
+            <div contenteditable="true"
+                 id="note-editor"
+                 class="note-editor"
+                 spellcheck="true">${escapeHtml(s.generalNotes || '')}</div>
+        </div>
+    ` : `
+        <!-- Date row — no label, full weekday + date -->
+        <div class="session-date-picker" style="margin-bottom: var(--sp-md);">
+            <button class="date-nav-btn" onmousedown="stepSessionDate(-1)" aria-label="Previous day">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="10 4 6 8 10 12"/></svg>
+            </button>
+            <div class="date-display" onmousedown="toggleDateCalendar()">${formatSessionDateDisplay(s.date)}</div>
+            <button class="date-nav-btn${s.date === todayStr ? ' date-nav-disabled' : ''}" onmousedown="stepSessionDate(1)" aria-label="Next day" ${s.date === todayStr ? 'disabled' : ''}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 4 10 8 6 12"/></svg>
+            </button>
+        </div>
+
+        <!-- Session field — inline, no label -->
+        <div class="session-name-field">
+            <div class="session-name-input-row" id="session-combobox">
                 <input
                     type="text"
-                    class="session-input session-combobox-input"
+                    class="session-name-input"
                     id="session-name-input"
-                    placeholder="Name this session or choose a saved one…"
+                    placeholder="Session name…"
                     value="${sessionInputValue}"
                     autocomplete="off"
                     oninput="handleSessionNameInput(this.value)"
                     onfocus="showSessionDropdown()"
                 />
-                <div class="session-combobox-dropdown" id="session-combobox-dropdown" style="display:none;"></div>
+                ${(s.sessionName || s.templateId) ? '<button class="session-name-clear" onmousedown="clearSessionName()">' + ICONS.get('x', 14) + '</button>' : ''}
             </div>
-            ${templatePreviewHtml}
+            <div id="session-day-suggestions"></div>
+            <div class="session-combobox-dropdown" id="session-combobox-dropdown" style="display:none;"></div>
+            ${sessionMetadataHtml}
         </div>
-        <div id="session-day-suggestions"></div>
+
         <div id="new-session-form-container"></div>
-        <div class="session-field">
-            <label class="session-field-label">Class type <span class="session-field-optional">optional</span></label>
+
+        <!-- Class type — only when no saved template selected -->
+        <div id="class-type-section"${s.templateId ? ' style="display:none;"' : ''}>
             <div class="class-type-carousel">
                 ${primaryChips}
                 ${selectedSecondaryChip}
@@ -393,70 +404,39 @@ function renderSessionLogger() {
             </div>
             <div id="more-class-types-panel" style="display:none;"></div>
         </div>
-    `;
 
-    overlay.innerHTML = `
-        <div class="session-logger-sheet">
-            <div class="session-sheet-handle"></div>
+        <!-- Blocks — no section label -->
+        <div id="session-blocks-container">
+            ${blocksHtml}
+        </div>
 
-            <div class="session-logger-header">
-                <div>
-                    <div class="session-logger-eyebrow">${isNoteMode ? 'Quick note' : 'New session'}</div>
-                    <h2 class="session-logger-title">${isNoteMode ? 'Add a note' : 'Log a class'}</h2>
-                </div>
-                <button class="session-close-btn" onclick="closeSessionLogger()" aria-label="Close">
-                    ${ICONS.get('x', 18)}
-                </button>
-            </div>
-
-            <div class="session-logger-body" id="session-logger-body">
-
-                ${isNoteMode ? `
-                <div class="session-field" style="padding-top: var(--sp-sm);">
-                    <div contenteditable="true"
-                         id="note-editor"
-                         class="note-editor"
-                         spellcheck="true">${escapeHtml(s.generalNotes || '')}</div>
-                </div>
-                ` : `
-                <!-- Date -->
-                <div class="session-field">
-                    <label class="session-field-label">Date</label>
-                    <div class="session-date-picker">
-                        <button class="date-nav-btn" onmousedown="stepSessionDate(-1)" aria-label="Previous day">
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="10 4 6 8 10 12"/></svg>
-                        </button>
-                        <div class="date-display" onmousedown="toggleDateCalendar()">${formatSessionDateDisplay(s.date)}</div>
-                        <button class="date-nav-btn${s.date === new Date().toISOString().split('T')[0] ? ' date-nav-disabled' : ''}" onmousedown="stepSessionDate(1)" aria-label="Next day" ${s.date === new Date().toISOString().split('T')[0] ? 'disabled' : ''}>
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 4 10 8 6 12"/></svg>
-                        </button>
-                    </div>
-                </div>
-
-                ${sessionAndClassFieldsHtml}
-
-                <!-- Notes & corrections blocks -->
-                <div class="session-field" style="margin-bottom: var(--sp-sm);">
-                    <label class="session-field-label">Notes &amp; corrections</label>
-                </div>
-
-                <div id="session-blocks-container">
-                    ${blocksHtml}
-                </div>
-
-                <button class="add-block-btn" onclick="addBlock()">+ add notes &amp; corrections</button>
-                `}
-
-                <div style="height: var(--sp-3xl);"></div>
-
-            </div>
-
-            <div class="session-logger-footer">
-                <button class="session-discard-btn" onmousedown="closeSessionLogger()">discard</button>
-                <button class="btn-large session-save-btn" onmousedown="saveSession()">${isNoteMode ? 'save note' : 'save session'}</button>
-            </div>
+        <!-- + add trigger -->
+        <div id="add-block-trigger-container">
+            ${renderAddTrigger()}
         </div>
     `;
+
+    overlay.innerHTML =
+        '<div class="session-logger-sheet">' +
+        '<div class="session-sheet-handle"></div>' +
+        '<div class="session-logger-header">' +
+        '<div>' +
+        '<div class="session-logger-eyebrow">' + (isNoteMode ? 'Quick note' : 'New session') + '</div>' +
+        '<h2 class="session-logger-title">' + (isNoteMode ? 'Add a note' : 'Log a class') + '</h2>' +
+        '</div>' +
+        '<button class="session-close-btn" onclick="closeSessionLogger()" aria-label="Close">' +
+        ICONS.get('x', 18) +
+        '</button>' +
+        '</div>' +
+        '<div class="session-logger-body" id="session-logger-body">' +
+        sessionBodyHtml +
+        '<div style="height: var(--sp-3xl);"></div>' +
+        '</div>' +
+        '<div class="session-logger-footer">' +
+        '<button class="session-discard-btn" onmousedown="closeSessionLogger()">discard</button>' +
+        '<button class="btn-large session-save-btn" onmousedown="saveSession()">' + (isNoteMode ? 'save note' : 'save session') + '</button>' +
+        '</div>' +
+        '</div>';
 
     // Re-attach swipe listeners to new handle
     attachSheetSwipe();
@@ -524,6 +504,14 @@ function handleSessionNameInput(value) {
     if (sugg) sugg.innerHTML = '';
     renderSessionComboboxDropdown(value);
     checkSessionTitleForSkills(value);
+    // Show class type section, hide metadata (template cleared)
+    const classTypeSection = document.getElementById('class-type-section');
+    if (classTypeSection) classTypeSection.style.display = '';
+    const metadata = document.getElementById('session-metadata');
+    if (metadata) metadata.style.display = 'none';
+    // Show/hide clear button
+    const clearBtn = document.querySelector('.session-name-clear');
+    if (clearBtn) clearBtn.style.display = value ? '' : 'none';
 }
 
 function renderDaySuggestions() {
@@ -610,15 +598,14 @@ function selectSessionTemplate(templateId) {
     if (t.classType && !appState.currentSession.classType) {
         appState.currentSession.classType = t.classType;
     }
-    // Update input value and close dropdown without full re-render
-    const input = document.getElementById('session-name-input');
-    if (input) input.value = t.name;
-    const dropdown = document.getElementById('session-combobox-dropdown');
-    if (dropdown) dropdown.style.display = 'none';
-    // Dismiss day suggestions and update preview
-    const sugg = document.getElementById('session-day-suggestions');
-    if (sugg) sugg.innerHTML = '';
-    renderTemplatePreviewInline(templateId);
+    renderSessionLogger();
+}
+
+function clearSessionName() {
+    if (!appState.currentSession) return;
+    appState.currentSession.sessionName = null;
+    appState.currentSession.templateId = null;
+    renderSessionLogger();
 }
 
 function renderTemplatePreviewInline(templateId) {
@@ -892,6 +879,8 @@ function addBlock(focusTitle = false, type = 'correction') {
         isHighlight: false,
     };
     appState.currentSession.blocks.push(block);
+    appState.currentSession._expandedBlockId = block.id;
+    appState.currentSession._addMenuOpen = false;
     sortBlocks();
     renderBlocksOnly();
     if (focusTitle) {
@@ -935,11 +924,40 @@ function getBlockIndexById(blockId) {
     return appState.currentSession?.blocks.findIndex(b => b.id === blockId) ?? -1;
 }
 
+function expandBlock(blockId) {
+    if (!appState.currentSession) return;
+    appState.currentSession._expandedBlockId = blockId;
+    renderBlocksOnly();
+}
+
+function renderAddTrigger() {
+    if (appState.currentSession?._addMenuOpen) {
+        return '<div class="add-block-menu">' +
+            '<button class="add-block-menu-item" onmousedown="addBlock(true, \'correction\')">correction</button>' +
+            '<button class="add-block-menu-item" onmousedown="addBlock(true, \'observation\')">observation</button>' +
+            '<button class="add-block-menu-item" onmousedown="addBlock(true, \'note\')">note</button>' +
+            '<button class="add-block-menu-item" onmousedown="addBlock(true, \'goal\')">goal</button>' +
+            '<button class="add-block-menu-item add-block-menu-item--disabled" disabled>photo or video</button>' +
+            '</div>';
+    }
+    return '<button class="add-block-trigger" onmousedown="openAddMenu()">+ add</button>';
+}
+
+function openAddMenu() {
+    if (!appState.currentSession) return;
+    appState.currentSession._addMenuOpen = true;
+    const container = document.getElementById('add-block-trigger-container');
+    if (container) container.innerHTML = renderAddTrigger();
+}
+
 function renderBlocksOnly() {
     const container = document.getElementById('session-blocks-container');
     if (!container) return;
     const s = appState.currentSession;
     container.innerHTML = s.blocks.map((block, i) => renderBlockHtml(block, i)).join('');
+    // Also re-render the add trigger in case _addMenuOpen changed
+    const triggerContainer = document.getElementById('add-block-trigger-container');
+    if (triggerContainer) triggerContainer.innerHTML = renderAddTrigger();
     // Attach swipe-to-remove on each block
     container.querySelectorAll('.swipe-row[data-block-id]').forEach(row => {
         const blockId = parseInt(row.dataset.blockId);
@@ -5389,9 +5407,7 @@ function showBarreTimelineSheet() {
                 </button>
             </div>
             <div style="padding: 0 var(--sp-lg); overflow-y: auto; flex: 1;">
-                ${entries.length > 0
-                    ? renderGroupedTimelineHtml(entries, firstEntryText)
-                    : '<p class="learn-empty" style="padding: var(--sp-lg) 0;">No activity yet.</p>'}
+                ${renderGroupedTimelineHtml(entries, firstEntryText)}
                 <div style="height: 40px;"></div>
             </div>
         </div>
