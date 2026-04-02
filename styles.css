@@ -3171,32 +3171,15 @@ h1, h2, .screen-heading {
     color: var(--ink-4);
 }
 
-/* Source chips (Correction · Observation) */
-.block-source-chips {
-    display: flex;
-    gap: var(--sp-xs);
-    margin-top: var(--sp-sm);
-}
-
-.block-source-chip {
-    all: unset;
-    display: inline-block;
-    padding: 3px 12px;
-    border-radius: var(--r-full);
+/* Block type label */
+.block-type-label {
     font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
     font-size: var(--fs-caption);
-    font-weight: 500;
-    color: var(--ink-3);
-    background: transparent;
-    border: 1px solid var(--border);
-    cursor: pointer;
-    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
-}
-
-.block-source-chip.active {
-    background: var(--ink);
-    color: #fff;
-    border-color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-5);
+    padding: var(--sp-md) var(--sp-md) 0;
 }
 
 /* Star/highlight button in block header */

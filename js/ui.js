@@ -1678,7 +1678,7 @@ function saveSession() {
 
             // Skill-linked observation blocks also write to skillNotes so they appear
             // in "my notes" on the skill detail page.
-            if (isSkill && skillId && block.source === 'observation') {
+            if (isSkill && skillId && resolvedType === 'observation') {
                 pendingSkillNotes.push({
                     id:          nextId(),
                     skillId:     skillId,
@@ -1703,7 +1703,7 @@ function saveSession() {
                 correctionIds: blockCorrectionIds,
                 tracked:       true,
                 blockTitle:    block.title?.trim() || null,
-                source:        block.source || null,
+                source:        resolvedType,
                 isHighlight:   !!block.isHighlight,
             };
             appState.sessionSkills.push(sessionSkill);
