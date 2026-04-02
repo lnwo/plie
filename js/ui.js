@@ -704,7 +704,7 @@ function renderNewSessionForm() {
     container.innerHTML = `
         <div class="new-session-form">
             <div class="new-session-form-header">
-                <span class="new-session-form-title">New session</span>
+                <span class="new-session-form-title">${appState._editingTemplateId ? 'Edit session' : 'New session'}</span>
                 <button class="new-session-cancel" onclick="cancelNewSession()">← back</button>
             </div>
 
@@ -814,16 +814,22 @@ function saveNewTemplate() {
     }
 
     const isRecurring = d.days?.length > 0;
+    const editingId = appState._editingTemplateId || null;
+
     const template = {
-        id:        Date.now(),
+        id:        editingId || Date.now(),
         name:      d.name.trim(),
         location:  d.location?.trim() || null,
         classType: d.classType || null,
         days:      d.days || [],
-        // recurring if days.length > 0 — no separate recurrence field needed
     };
 
-    if (isRecurring) {
+    if (editingId) {
+        // Update existing template in-place
+        const idx = appState.sessionTemplates.findIndex(t => t.id === editingId);
+        if (idx !== -1) appState.sessionTemplates[idx] = template;
+        storage.save('sessionTemplates', appState.sessionTemplates);
+    } else if (isRecurring) {
         appState.sessionTemplates.push(template);
         storage.save('sessionTemplates', appState.sessionTemplates);
         appState.currentSession.templateId = template.id;
@@ -839,12 +845,14 @@ function saveNewTemplate() {
     }
 
     appState._addingNewTemplate = false;
+    appState._editingTemplateId = null;
     appState._draftTemplate = null;
     renderSessionLogger();
 }
 
 function cancelNewSession() {
     appState._addingNewTemplate = false;
+    appState._editingTemplateId = null;
     appState._draftTemplate = null;
     const container = document.getElementById('new-session-form-container');
     if (container) container.innerHTML = '';
@@ -4539,11 +4547,20 @@ function deleteSkillNote(noteId, skillId) {
 }
 
 function editSessionTemplate(templateId) {
-    // Close dropdown, open the new session form pre-populated with this template's data
+    const template = appState.sessionTemplates.find(t => t.id === templateId);
+    if (!template) return;
     const dropdown = document.getElementById('session-combobox-dropdown');
     if (dropdown) dropdown.style.display = 'none';
     appState._editingTemplateId = templateId;
-    openNewSessionForm();
+    appState._addingNewTemplate = true;
+    // Pre-populate draft from existing template data
+    appState._draftTemplate = {
+        name:      template.name,
+        location:  template.location || '',
+        classType: template.classType || null,
+        days:      [...(template.days || [])],
+    };
+    renderNewSessionForm();
 }
 
 function deleteSessionTemplate(templateId) {
