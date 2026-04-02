@@ -8525,6 +8525,13 @@ button, a, input, select, textarea,
     border-bottom-color: var(--gold);
 }
 
+/* Inside an inline block the tabs are already in a padded container */
+.session-block--expanded .goal-type-tabs {
+    padding: 0;
+    margin: 0 calc(-1 * var(--sp-md));
+    padding: 0 var(--sp-md);
+}
+
 .goal-type-hint {
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-small);
