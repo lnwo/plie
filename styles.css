@@ -3718,6 +3718,32 @@ input.session-block-topic-input:focus {
     font-weight: 400;
 }
 
+.block-tag-row {
+    display: flex;
+    gap: var(--sp-sm);
+    padding: var(--sp-sm) var(--sp-md) var(--sp-md);
+}
+
+.block-tag-chip {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    font-weight: 500;
+    color: var(--ink-4);
+    background: none;
+    border: 1px solid var(--ink-6);
+    border-radius: var(--r-full);
+    padding: 3px 10px;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.block-tag-chip.active {
+    background: var(--ink);
+    color: #fff;
+    border-color: var(--ink);
+}
+
 /* Collapsed block preview — bold segment (skill name, goal title, first line) */
 .session-block-preview-bold {
     font-family: 'DM Sans', sans-serif;
@@ -4205,6 +4231,17 @@ input.session-block-topic-input:focus {
     font-size: 11px;
     color: var(--ink-5);
     cursor: pointer;
+}
+
+.note-block-body-tag {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    font-weight: 500;
+    color: var(--ink);
+    background: var(--ink-6);
+    border-radius: var(--r-full);
+    padding: 2px 8px;
+    flex-shrink: 0;
 }
 
 .note-block-star {
@@ -4833,6 +4870,11 @@ input.session-block-topic-input:focus {
     position: relative;
     overflow: hidden;
     border-radius: var(--r-md);
+}
+
+/* Expanded blocks don't need swipe clipping — allow dropdowns to overflow */
+.swipe-row.swipe-row--expanded {
+    overflow: visible;
 }
 
 /* Revealed action panels — sit behind .swipe-content */
