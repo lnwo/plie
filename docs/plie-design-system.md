@@ -35,15 +35,15 @@ Every colour has exactly one job. If you are reaching for a colour and it does n
 | `--coral` | `#A84030` | Correction source label, delete action, alert/error state | Success, general warning, any positive state |
 | `--coral-soft` | `#F0D5CF` | Recurring note row background at reduced opacity | Anything else |
 | `--sage` | `#4A7038` | Completed goal indicator, ticked progress marker | Any other "done" or positive state |
-| `--brown-btn` | `#5A4030` | All primary action buttons and FAB | Secondary buttons, text links, decorative elements |
-| `--ink` | `#1A1714` | Primary button fill, primary text, actions | Secondary text, metadata |
+| `--brown-btn` | `#5A4030` | All primary action buttons and FAB — unified. `--btn-primary` token removed. `--ink` is never used as a button fill. | Secondary buttons, text links, decorative elements |
+| `--ink` | `#1A1714` | Primary text, actions | Button fill, secondary text, metadata |
 | `--ink-2` | `#2D2520` | Body text | Primary text, headings |
 | `--ink-3` | `#3D3530` | Secondary body text | Metadata, captions |
 | `--ink-4` | `#5C5149` | Tertiary text | Body text |
 | `--ink-5` | `#9A8E87` | Metadata, captions, hint text | Body text |
 | `--ink-6` | `#C8BFB8` | Disabled states, decorative dots | Any active state |
 
-**Audit check:** Gold (`#C4900C`) appearing anywhere other than the six jobs listed above is a violation. Brown (`#5A4030`) must not appear on secondary buttons, text links, or decorative elements — primary actions and FAB only.
+**Audit check:** Gold (`#C4900C`) appearing anywhere other than the six jobs listed above is a violation. Brown (`#5A4030`) must not appear on secondary buttons, text links, or decorative elements — primary actions and FAB only. `--ink` (`#1A1714`) must never appear as a button background fill — it is text and surface only.
 
 ---
 
@@ -111,6 +111,7 @@ The default surface for any discrete piece of content.
 | Border radius | 8px |
 | Border | 0.5px solid rgba(26,23,20,0.10) |
 | Padding | `--sp-lg` (16px) all sides |
+| Gap between cards | 12px (`--sp-md`) |
 
 **Never** use `--surface-warm` as a card background unless the card is a note block or a sheet. The warm surface is reserved for tactile input moments.
 
@@ -131,7 +132,7 @@ Note blocks appear inside the session logger and in session detail views. They a
 
 **Header row:** `[★] [topic input] [×]` — star left of topic, × right. Never rearrange.
 
-**Source chips:** Correction · Observation. Two chips, beneath the content area. Both optional, neither required.
+**Block type:** Set at creation (Correction / Observation / Note / Goal). Shown as a small-caps label above the block. No source chips inside the block — the type label replaces them.
 
 **Highlight star states:**
 
@@ -160,7 +161,7 @@ One primary button per screen maximum. If you have two primary buttons on a scre
 **Primary**
 | Property | Value |
 |---|---|
-| Background | `--brown-btn` (`#5A4030`) |
+| Background | `--brown-btn` (`#5A4030`) — same token as FAB. Never `--ink`. |
 | Text | White, DM Sans 600, `--fs-body` |
 | Border radius | 8px |
 | Outer border | 1px solid `#7A5848` |
@@ -238,18 +239,19 @@ One primary button per screen maximum. If you have two primary buttons on a scre
 
 ### Chips
 
-Used for filters, class type selection, source chips on notes, and goal type tabs.
+Used for filters, class type selection, and goal type tabs.
 
 | State | Background | Text | Border |
 |---|---|---|---|
 | Default | White | `--ink-3` | 1px solid rgba(26,23,20,0.15) |
 | Selected | `--ink` (`#1A1714`) | White | None |
+| Disabled | Any | `--ink-6` | 1px solid rgba(26,23,20,0.08) |
 
 Shape: pill only (fully rounded). No square or slightly-rounded chip variants.
 
 **Class type chips** must use the pill chip treatment. The square-card component used in earlier builds is retired.
 
-**Source chips** (Correction · Observation) follow the same pattern. Two chips, no label above them. Both optional.
+**Source chips** inside note blocks are removed. Block type (Correction / Observation / Note / Goal) is set at creation and shown as a small-caps label. Source chips may still appear in other filter contexts.
 
 **Audit check:** Any chip that is square or only slightly rounded is a legacy violation — migrate on contact.
 
@@ -500,11 +502,15 @@ Documented here because The Barre is the primary daily-use screen and has the mo
 
 | Element | Decision |
 |---|---|
-| **FAB menu options** | Log a session / Add a note / Set a goal. No "Note a reflection". |
-| **Note block** | Single free text field. Source chips (Correction / Observation). Highlight star. No Correction/Praise/Reflection tabs. |
-| **Quick note mode** | Single contenteditable field (not a block list). First line is bold and acts as the note title. No date shown in the logger — date is set at save. |
-| **Note detail view** | Notes open as their own page (not a sheet). Page title: "Note". Body uses learn-page text styling. |
-| **Timeline — note entries** | type='note' entry shows first-line text as the title. Tap to review → opens note detail. |
+| **FAB menu options** | Log a session / Add a correction / Set a goal / Save a note. Four options. "Add a reflection" removed. |
+| **Block types** | Modular blocks: Correction, Observation, Note, Goal, Photo/video (deferred). Logger opens with one blank Correction block. |
+| **Block type label** | Each block shows its type as a small-caps label — DM Sans 600, `--ink-5`, same treatment as GET STARTED / IN FOCUS section labels on The Barre. Set at block creation, not changeable via chips inside the block. |
+| **Blocks at rest** | Inactive blocks collapse to a white card showing only the type label and topic. |
+| **Source chips** | Removed. Block type is set at creation. No chips inside blocks. |
+| **Corrections standalone** | Corrections no longer require a session. "Add a correction" in FAB opens a correction-only capture flow. Session is context, not a parent requirement. |
+| **Goal block** | Creates a full `appState.goals[]` object on session save. Goal blocks with no title are ignored on save. |
+| **Duration picker** | Inline expanding list replacing pill chips — in both the goal creator and inline goal block. Options: A week / Two weeks / A month / Three months / Custom date. |
+| **Save a note** | Routes to standalone note (reflection sheet). Reflections are the standalone note object — no separate type. |
 | **Keyboard shortcuts** | Remove everywhere. No "Enter to add" or similar. |
 | **Post-save prompt** | "Session saved. You noted [skill], set a goal around it?" with set a goal / not now. |
 | **Post-save completion state** | Tick only on getting started cards. No "You've logged your first session!" |
@@ -521,7 +527,8 @@ These patterns have been explicitly retired or decided against. If they appear i
 | Cormorant Garamond | Retired. Replace with EB Garamond. |
 | Georgia | Retired (replaced by EB Garamond, T34). Replace with EB Garamond. |
 | DM Serif Display | Retired (replaced by EB Garamond, T34). Replace with EB Garamond. |
-| Correction / Praise / Reflection tabs inside note blocks | Replaced by source chips + free text. |
+| Correction / Praise / Reflection tabs inside note blocks | Replaced by block types set at creation. |
+| Source chips inside note blocks | Removed. Block type label replaces them. |
 | Square class type chip cards | Replaced by pill chips. |
 | Assess tab in navigation | Removed. Four tabs only. |
 | "Skills in focus" section heading on The Barre | Removed. Section label is now "in focus". |

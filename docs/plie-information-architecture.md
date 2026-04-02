@@ -51,15 +51,17 @@
 ### Global Navigation ✅
 - FAB (always visible above nav, hidden during onboarding/quiz/logger)
   - Log a session ✅
-  - Add a note 📋
+  - Add a correction 📋 (standalone — no session required)
   - Set a goal ✅
+  - Save a note 📋 (routes to standalone note/reflection)
 - Bottom nav: The Barre · Goals · Learn · Profile ✅ (4 tabs — Assess dissolved)
 - Both hidden during onboarding, quiz, session logger ✅
 
-### Training States 📋
-- Active — currently attending regular classes
-- Resting — taking a break (goals paused, no prompts)
-- Recovering — injury/illness (goals paused, different messaging)
+### Training States 🔧
+- Active — default; full experience
+- Resting — voluntary break; tone shifts, goals can pause
+- Recovering — injury/illness; conditioning and goal prompts recede; nothing gated
+- Set in Profile settings. Affects hero card copy and Profile insight sentence.
 
 ### Empty States
 | Screen | Status |
@@ -101,7 +103,7 @@ Profile — first-visit launchpad ✅
 
 ---
 
-## Session Logger ✅
+## Session Logger ✅ (block redesign upcoming)
 ```
 Session Logger
   ├── Date (autofills today, editable, retrospective dates allowed) ✅
@@ -110,16 +112,23 @@ Session Logger
   │     ├── One-off entry ✅
   │     └── Add new session (name, location, class type, recurrence) ✅
   ├── Class type (pill chips) 📋 (currently square cards — migrate to pills)
-  └── Note blocks ✅
+  └── Modular blocks 📋 (upcoming redesign — currently note blocks)
+        Block types: Correction / Observation / Note / Goal / Photo (deferred)
+        Opens with one blank Correction block
+        Inactive blocks collapse to white card (type label + topic only)
+        Block type label: small-caps DM Sans 600, --ink-5
         Each block:
+          ├── Type label (set at creation, not changeable via chips) 📋
           ├── Skill title (free text) ✅
           ├── Linked skill (auto-detected or manual) ✅
           ├── Free text notes ✅
-          ├── Source chips: Correction · Observation 📋 (replaces mode tabs)
           ├── Highlight star ✅
           └── Swipe to remove ✅
+        Goal block: creates appState.goals[] object on save; blank title ignored 📋
+        Duration picker: inline expanding list (A week / Two weeks / A month /
+                         Three months / Custom date) 📋
 ```
-On save → writes to: Sessions, SessionSkills, Corrections, SkillNotes, Timeline, Skills ✅
+On save → writes to: Sessions, SessionSkills, Corrections, Goals, SkillNotes, Timeline, Skills ✅
 
 ---
 

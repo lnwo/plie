@@ -88,30 +88,30 @@ Training state adjusts what Plié emphasises and how it speaks — never what it
 
 ### What a note is
 
-A note is the core unit of capture. It replaces the three-mode system (Correction / Praise / Reflection) with a single neutral container. Source and significance are separate, optional fields.
+A note is the core unit of capture. It replaces the three-mode system (Correction / Praise / Reflection) with modular block types set at creation.
 
 | Field | Description |
 |---|---|
+| **Block type** | Set at creation: Correction / Observation / Note / Goal. Shown as a small-caps label on the block. No chips inside the block. A Note block has no source. |
 | **Content** | Free text. No length constraint. |
-| **Source chips** | Correction · Observation. Two chips, no label, both optional. Neither required to save a note. Default state is neither selected. Parked for user testing — 'Correction' used in the ballet sense: teacher input, positive or negative, not a value judgement. |
-| **Highlight ★** | Boolean. Surfaces the note prominently in skill view and timeline. Replaces the implicit valence of the Praise mode. |
+| **Highlight ★** | Boolean. Surfaces the note prominently in skill view and timeline. |
 | **Linked skill** | Optional. Central to long-term findability. Multiple choice from skill library. Always overridable. |
-| **Linked session** | Automatic when logged within a session. |
+| **Linked session** | Automatic when logged within a session. Corrections can also be logged standalone via FAB with no session. |
+
+**Reflections / standalone notes:** A standalone note logged via "Save a note" in the FAB is a note with no session and no skill link. It uses the same object type — there is no separate reflection type. 'Reflection' as a distinct mode is removed.
 
 ### Note block structure
 
 | Element | Position | Notes |
 |---|---|---|
-| Highlight star | Left of topic input | Moved from trailing position in T22. `[★] [topic] [×]` order. |
+| Type label | Above block header | Block type (CORRECTION / OBSERVATION / NOTE / GOAL). Small-caps, DM Sans 600, `--ink-5`. Set at creation. |
+| Highlight star | Left of topic input | `[★] [topic] [×]` order. |
 | Topic input | Centre | Skill or topic name. Triggers skill suggestion chips when typed. |
 | Content area | Below header row | Contenteditable with live `—` dash prefix per line (CSS `::before`, not typed). No title field above it. |
-| Source chips | Below content | Correction · Observation. Both optional. |
 
 **Title field:** removed. Notes have a topic but not a separate title. The content area leads.
 
-### Metadata row
-
-`[ Correction ] [ Observation ] ★` describes source chips + star as data fields. In the UI, the star has moved left: `[★] [topic input] [×]` is the block header; chips sit below the content area.
+**Source chips:** removed. Block type replaces them entirely.
 
 ### Highlight toggle
 
@@ -243,7 +243,9 @@ The type is set invisibly in the background. She answers a question about her ac
 
 Goals have a commitment period she sets at the start — rather than a hard due date. The date tag on a goal card reflects this period. Duration-based, not calendar-position.
 
-Presets: this week · two weeks · this month · three months · custom
+Presets: A week · Two weeks · A month · Three months · Custom date
+
+**Duration picker UI:** Inline expanding list — not pill chips. Tapping the field expands a list of options in place. Same component used in both the goal creator and the inline goal block inside the session logger.
 
 Percentage-based proximity triggers the renewal prompt. A one-week goal surfaces it at five days; a month-long goal at around three weeks. Proportionally equivalent regardless of period length.
 
@@ -409,6 +411,17 @@ The Assess tab is dissolved. Navigation becomes: The Barre · Goals · Learn · 
 | **Learn** | Skill library, glossary, musicality, conditioning, repertoire, pointers. All content in one place. |
 | **Profile** | Dimensions, timeline, orientation quiz entry point, settings. |
 
+### FAB structure
+
+Four options. Session is primary. Correction, goal, note are secondary. Session contains all block types.
+
+| Option | Description |
+|---|---|
+| **Log a session** | Primary. Opens session logger. All block types available inside. |
+| **Add a correction** | Standalone correction with no session required. Session is context, not a parent. |
+| **Set a goal** | Opens goal creator. |
+| **Save a note** | Opens standalone note. Reflections are the note object — no separate type. |
+
 ### What moved where
 
 | Feature | New home |
@@ -452,7 +465,39 @@ Placeholder content principles: reference specific dancers, specific physical me
 
 ---
 
-## 12. Recurring Corrections
+## 12. In Focus — Skill Flagging
+
+### Mechanic
+
+The user explicitly marks a skill as "in focus" from:
+- The skill detail personal view (top right)
+- The skill knowledge page in Learn
+
+Both surfaces toggle the same `skill.flagged` boolean. The Barre surfaces only skills explicitly marked in focus. If nothing is marked, the In Focus section is absent entirely — no empty state.
+
+### Skills with no corrections
+
+An in-focus skill that has no corrections shows on The Barre with an "add a correction →" action rather than a correction quote. This keeps the surface useful even for newly-flagged skills.
+
+### Saved from Learn
+
+Bookmarked Learn items (skills, pointers, section key points) surface on The Barre as a collapsible horizontal carousel below In Focus. Hidden if no bookmarks.
+
+Each card shows:
+- Type label (SKILL / POINTER / CONDITIONING / etc.) — small-caps, DM Sans 600, `--ink-4`
+- Item name — DM Sans 500, `--fs-small`, `--ink`
+- For skills only: active goal count · correction count — `--fs-small`, `--ink-5`
+
+Whole card tappable → navigates to the Learn item. Bookmarks removed via the Learn page icon only.
+
+### TODOs
+
+- Auto-suggest session corrections when linking to goal block (currently manual search)
+- Photo/video block: deferred
+
+---
+
+## 12a. Recurring Corrections
 
 ### Detection algorithm
 
@@ -475,7 +520,7 @@ The recurring flag lives on individual correction objects (`isRecurring`). It is
 
 ---
 
-## 12. Session Logger Updates
+## 13. Session Logger Updates
 
 ### Note block — confirmed decisions (T22)
 

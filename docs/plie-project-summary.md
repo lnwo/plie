@@ -16,7 +16,7 @@ KNOWN BUG           — identified, not yet fixed
 
 **4 tabs**: The Barre · Goals · Learn · Profile
 - Assess tab fully dissolved: orientation quiz accessible from Profile, check-in assessments deferred
-- FAB: Log a session / Add a note / Set a goal
+- FAB: Log a session / Add a correction / Set a goal / Save a note
 - "Add a note" = standalone note without a session, routes to simplified note logger
 
 ---
@@ -72,7 +72,7 @@ js/ui.js      — All screen builders and render functions:
 
 ### Colour tokens
 ```
---ink:   #1A1714   (primary text, primary button fill)
+--ink:   #1A1714   (primary text — never used as button fill)
 --ink-2: #2D2520
 --ink-3: #3D3530
 --ink-4: #5C5149
@@ -82,7 +82,7 @@ js/ui.js      — All screen builders and render functions:
 --gold:  #C4900C   (active nav, category labels, highlight star, key point dashes, input focus ONLY)
          Note: --gold-mid renamed to --gold; old --gold (#8A5E0A) retired
 
---brown-btn: #5A4030  (FAB only — violation if used elsewhere)
+--brown-btn: #5A4030  (all primary buttons + FAB — unified; --btn-primary token removed)
 
 --surface-warm: warm off-white page background
 --surface-card: card/sheet background
@@ -90,7 +90,7 @@ js/ui.js      — All screen builders and render functions:
 ```
 
 ### Buttons
-- Primary: `--ink` fill (#1A1714), white text, dual border (outer 1px solid --ink, inner 1px solid --ink-3 inset)
+- Primary: `--brown-btn` fill (#5A4030), white text — same token as FAB. Never `--ink`.
 - Secondary: outlined, --ink text
 - FAB: --brown-btn background only
 - Labels: always lowercase
@@ -132,7 +132,7 @@ js/ui.js      — All screen builders and render functions:
 - Session delete, skill note delete
 - Note blocks — contenteditable bullet entry with live — dash prefix, source chips, highlight star
 - Note block star moved left of topic input; title field removed (T22)
-- Session save — all block types (correction + observation + general) create sessionSkills; corrections always go to correctionIds; observation blocks also write to skillNotes; all stores saved atomically; isHighlight saved on sessionSkill; edit flow cleans up stale skillNotes (T23)
+- Session save — all block types create sessionSkills; corrections → correctionIds; observation → skillNotes; isHighlight saved on sessionSkill; edit flow cleans up stale skillNotes (T23)
 - Recurring correction detection — ≥3 corrections for same skill across ≥2 sessions within 60 days sets isRecurring on all corrections for that skill (T27)
 - Barre "in focus" — All / Recurring filter tabs; Recurring shows empty state if no in-focus skills qualify (T28)
 - Highlights section on skill detail — shows highlighted sessionSkills and skillNotes with gold border, star to un-star; absent if empty (T26)
@@ -161,7 +161,8 @@ js/ui.js      — All screen builders and render functions:
 - Profile status card — level animal watermark, squircle avatar, insight sentence
 - Focus area card stack — 5 areas, full + compact + unassessed states
 - Focus area sheet — tabs, all sections, pointe dismiss
-- Settings sheet — all sections, pointe toggle, reset
+- Settings sheet — all sections, pointe toggle, reset, training state (Active/Resting/Recovering)
+- Training states — affect hero card copy and Profile insight sentence
 - Profile picture picker — 3 defaults, photo upload via FileReader
 - Preferences persistence (plie:preferences)
 - Collapsing hero IntersectionObserver on iOS
@@ -179,9 +180,20 @@ js/ui.js      — All screen builders and render functions:
 - Observation blocks write a timeline entry via legacy praise path — should not
 - Goal swipe-left delete uses native confirm() dialog — should be in-app discard pattern
 - Goal pause/dismiss states unbuilt — swipe-left permanently deletes with no undo
+- Swipe to dismiss predictive hero not implemented
+- Source chip bug: observation blocks saving as correction — persists
+
+### UPCOMING (decided, not yet built)
+- Session logger: modular block types (Correction / Observation / Note / Goal / Photo); opens with one Correction block; blocks collapse to white card when inactive
+- Corrections standalone: FAB "Add a correction" flow; session is context not parent
+- Goal block inline in logger: creates appState.goals[] object on session save; blank titles ignored
+- Duration picker: inline expanding list replacing pill chips in goal creator + goal block
+- FAB restructure: 4 options (Log a session / Add a correction / Set a goal / Save a note)
+- "Save a note" → standalone note (reflection); reflections are the note object, no separate type
+- Source chips in note blocks → replaced by block type set at creation
 
 ### DEFERRED
-- Training states: Active / Resting / Recovering (settings toggle + goal pause behaviour)
+- Training states: goal pause behaviour on state change
 - Goals: goal pause / dismiss (non-destructive swipe-left)
 - Goals: goal renewal / reactivation flow (lineage model, renewal prompt)
 - Goals: All Goals page status grouping (paused / let go / completed within each year)
@@ -271,13 +283,12 @@ Order back→front: pointe · artistry · body · movement · technique
 ---
 
 ## Level animals
+Four levels only. Rabbit (elementary) and Rose/La Sylphide (upper-intermediate) retired.
 ```
-beginner:           Duckling
-elementary:         Rabbit
-improver:           Deer
-intermediate:       Swan
-upper-intermediate: Rose (La Sylphide)
-advanced:           Feather (Firebird)
+beginner:    Duckling
+improver:    Deer
+intermediate: Swan
+advanced:    Firebird
 ```
 All: warm dark brown (#1A1714) linework, transparent PNG, embedded in illustrations.js
 
