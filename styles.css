@@ -863,7 +863,7 @@ h1, h2, .screen-heading {
 
 .profile-header h1 {
     font-family: 'EB Garamond', Georgia, serif;
-    font-size: var(--fs-display);
+    font-size: var(--fs-h1);
     font-weight: 400;
     color: var(--primary);
     margin-bottom: var(--sp-sm);
@@ -1753,9 +1753,6 @@ h1, h2, .screen-heading {
 
 @media (max-width: 430px) {
     .welcome-hero h1 { font-size: 1.75rem; }
-    .profile-header h1,
-    .barre-header h1,
-    .profile-sticky-label { font-size: 2rem; }
 }
 
 @media (min-width: 431px) {
@@ -1861,7 +1858,7 @@ h1, h2, .screen-heading {
     font-family: 'EB Garamond', Georgia, serif;
     font-style: italic;
     font-weight: 500;
-    font-size: var(--fs-display);
+    font-size: var(--fs-h1);
     color: var(--ink-2);
     line-height: 1.15;
 }
@@ -6914,7 +6911,7 @@ button, a, input, select, textarea,
 }
 .profile-sticky-label {
     font-family: 'EB Garamond', Georgia, serif;
-    font-size: var(--fs-display);
+    font-size: var(--fs-h1);
     font-style: italic;
     font-weight: 500;
     color: var(--ink-2);
