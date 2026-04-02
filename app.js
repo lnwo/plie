@@ -18,6 +18,7 @@ const ICONS = {
     _svg: {
         'cat-pointe':      (s) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4 L8 16 C8 18 10 20 13 20 C16 20 17 18 17 17 C17 15 15 14 12 15"/><line x1="5" y1="4" x2="11" y2="4"/></svg>`,
         'learn-pirouette': (s) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/><circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="14"/></svg>`,
+        'bookmark-fill':   (s) => `<ph-bookmark-simple size="${s}" weight="fill" style="display:inline-flex;align-items:center;line-height:1;"></ph-bookmark-simple>`,
     },
 
     get(key, size = 24) {

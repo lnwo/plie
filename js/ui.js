@@ -4857,14 +4857,6 @@ function _renderLineSavePrompt(text, saveType, pageType, itemId) {
     return `<button class="learn-line-save-btn" onclick="saveLearnLine(this)">${label}</button>`;
 }
 
-function openLearnLineSave(el) {
-    const isOpen = el.classList.contains('open');
-    document.querySelectorAll('.learn-line-tappable.open').forEach(other => {
-        other.classList.remove('open');
-    });
-    if (!isOpen) el.classList.add('open');
-}
-
 function saveLearnLine(btn) {
     const li = btn.closest('.learn-line-tappable');
     if (!li) return;
@@ -6272,7 +6264,8 @@ function toggleLearnBookmark(pageType, itemId, btnEl) {
     const isNow = isLearnBookmarked(pageType, id);
     if (btnEl) {
         btnEl.classList.toggle('bookmarked', isNow);
-        btnEl.innerHTML = ICONS.get(isNow ? 'bookmark-fill' : 'bookmark', 20);
+        const ph = btnEl.querySelector('ph-bookmark-simple');
+        if (ph) ph.setAttribute('weight', isNow ? 'fill' : 'light');
         btnEl.setAttribute('aria-label', isNow ? 'remove bookmark' : 'bookmark');
     }
     _refreshLearnBookmarkedPill();
