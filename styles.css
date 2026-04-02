@@ -5301,24 +5301,20 @@ mark.search-highlight {
     display: none;
     padding: var(--sp-xs) 0 var(--sp-xs);
 }
-.learn-line-tappable.open .learn-line-save-expand {
+.learn-line-save-expand.open {
     display: block;
 }
-.learn-line-save-btn {
-    background: var(--gold-wash);
-    color: var(--gold);
-    border: 1px solid var(--gold-soft);
-    border-radius: var(--r-full);
+.learn-line-save-action {
     font-size: var(--fs-caption);
     font-weight: 600;
-    padding: 4px 12px;
     cursor: pointer;
+    padding: 4px 0;
+    display: inline-block;
 }
-.learn-line-saved-msg {
-    font-size: var(--fs-caption);
-    color: var(--ink-4);
-    font-style: italic;
-}
+.learn-line-save-action.goal-action { color: var(--gold); }
+.learn-line-save-action.corr-action { color: var(--coral); }
+.learn-line-save-action.saved-label { color: var(--ink-4); font-weight: 400; cursor: default; }
+.learn-line-save-action.saved-link  { color: var(--gold); text-decoration: underline; }
 
 .skill-know-muscles {
     display: flex;

@@ -2614,7 +2614,6 @@ function showAssessScreen() {
                                 <div class="skill-category-count">${a.badge}</div>
                                 <div style="font-size: var(--fs-small); color: var(--text-muted); margin-top: 2px; line-height: 1.4;">${a.desc}</div>
                             </div>
-                            <div class="skill-category-arrow">→</div>
                         </div>
                     `).join('')}
                 </div>
@@ -4473,7 +4472,6 @@ function renderPointerCards() {
                 <div class="skill-category-name">${p.name}</div>
                 <div style="font-size: var(--fs-small); color: var(--ink-3); margin-top: 2px; line-height: 1.4;">${p.question}</div>
             </div>
-            <div class="skill-category-arrow">→</div>
         </div>`).join('');
 }
 
@@ -4585,8 +4583,11 @@ function showPointerDetail(index) {
             <ul class="skill-know-list">${whatToTryItems}</ul>
         </div>
         ${inspirationHtml}
+        <div class="skill-know-section skill-detail-section" id="learn-notes-section-pointer-${index}"></div>
         <div style="height: 120px;"></div>
     `;
+    const notesSectionEl = screen.querySelector(`#learn-notes-section-pointer-${index}`);
+    if (notesSectionEl) renderLearnNotesSectionInPlace('pointer', pointerName, notesSectionEl);
     showScreen(screenId);
 }
 
@@ -6324,7 +6325,6 @@ function renderBookmarkedLearnItems() {
                 <div class="pointer-eyebrow">${eyebrow}</div>
                 <div class="skill-category-name">${name}</div>
             </div>
-            <div class="skill-category-arrow">→</div>
         </div>`;
     }).join('');
 }
@@ -6613,7 +6613,6 @@ function updateSkillLibResults() {
                             <div class="skill-category-name">${cat.name}</div>
                             <div class="skill-category-count">${cat.count}</div>
                         </div>
-                        <div class="skill-category-arrow">→</div>
                     </div>`;
                 } else {
                     return `<div class="skill-category-card skill-category-card--muted">
@@ -7156,6 +7155,10 @@ const SKILL_KNOWLEDGE = {
     },
 };
 
+// Accented-ID aliases — data.js uses piqué-turn / piqué-pointe
+SKILL_KNOWLEDGE['piqué-turn']   = SKILL_KNOWLEDGE['pique-turn'];
+SKILL_KNOWLEDGE['piqué-pointe'] = SKILL_KNOWLEDGE['pique-pointe'];
+
 // Default stub for skills without full knowledge content yet
 const SKILL_KNOWLEDGE_STUB = {
     description: 'Full reference content for this skill is being prepared.',
@@ -7331,9 +7334,15 @@ function showSkillKnowledgePage(skillId, returnTo) {
 
             ${isStub ? `<div class="skill-know-section"><p class="skill-know-stub-notice">Full reference content for this skill is being prepared.</p></div>` : ''}
 
+            <!-- My notes -->
+            <div class="skill-know-section skill-detail-section" id="learn-notes-section-skill-${skillId}"></div>
+
             <div style="height: 120px;"></div>
         </div>
     `;
+
+    const notesSectionEl = screen.querySelector(`#learn-notes-section-skill-${skillId}`);
+    if (notesSectionEl) renderLearnNotesSectionInPlace('skill', skillId, notesSectionEl);
 
     showScreen(screenId);
 }
