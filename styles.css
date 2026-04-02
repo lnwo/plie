@@ -6154,6 +6154,12 @@ button, a, input, select, textarea,
     border-bottom: none;
 }
 
+.fab-action-item--primary {
+    padding-top: 18px;
+    padding-bottom: 18px;
+    border-bottom: 0.5px solid var(--border-mid);
+}
+
 .fab-action-item:active {
     background: var(--gold-wash);
 }
