@@ -3208,10 +3208,13 @@ function renderGoalCard(goal, completed) {
     const linkedSkill = goal.skillId
         ? (appState.skills || []).find(s => s.id === goal.skillId)
         : null;
+    const _catLabels = { general: 'General', musicality: 'Musicality', barre: 'Barre', centre: 'Centre', turns: 'Turns', allegro: 'Allegro', pointe: 'Pointe', flexibility: 'Flexibility' };
+    const linkedCategory = !linkedSkill && goal.dimensionId ? (_catLabels[goal.dimensionId] || null) : null;
 
     const tagsHtml = [
         typeLabel ? `<span class="goal-tag goal-tag-type">${typeLabel}</span>` : null,
         linkedSkill ? `<span class="goal-tag goal-tag-skill">${linkedSkill.french}</span>` : null,
+        linkedCategory ? `<span class="goal-tag goal-tag-skill">${linkedCategory}</span>` : null,
         goal.howOften ? `<span class="goal-tag goal-tag-cadence">${goal.howOften.startsWith('x') ? goal.howOften.slice(1) + '× a week' : goal.howOften}</span>` : null,
     ].filter(Boolean).join('');
 
@@ -3506,7 +3509,8 @@ function renderGoalCreator() {
 
     function skillFormHtml() {
         const selectedSkill = d.skillId ? (appState.skills || []).find(s => s.id === d.skillId) : null;
-        const selectedSkillLabel = selectedSkill ? selectedSkill.french : '';
+        const _topicCatLabels = { general: 'General', musicality: 'Musicality', barre: 'Barre', centre: 'Centre', turns: 'Turns', allegro: 'Allegro', pointe: 'Pointe', flexibility: 'Flexibility' };
+        const selectedSkillLabel = selectedSkill ? selectedSkill.french : (d.dimensionId ? (_topicCatLabels[d.dimensionId] || '') : '');
 
         const markersHtml = (d.progressMarkers || []).map((m, i) => `
             <div class="goal-marker-row">
@@ -3931,34 +3935,43 @@ function adjustGoalHowOftenNum(delta) {
 function filterGoalSkills(query) {
     const dropdown = document.getElementById('goal-skill-dropdown');
     if (!dropdown) return;
-    const q = (query || '').toLowerCase().trim();
-    const skills = (appState.skills || []).filter(s => !(appState.hidePointe && s.dimensionId === 'pointe'));
-    const matches = q.length >= 1
-        ? skills.filter(s =>
-            s.french.toLowerCase().includes(q) ||
-            (s.english || '').toLowerCase().includes(q) ||
-            (s.aliases || []).some(a => a.toLowerCase().includes(q))
-          )
-        : skills.slice(0, 24);
+
+    const topics = getBlockTopics().filter(t => !(appState.hidePointe && t.id === 'pointe'));
+    const matches = topics.filter(t => _topicMatchesQuery(t, query));
 
     if (!matches.length) {
         dropdown.style.display = 'none';
         return;
     }
 
-    dropdown.innerHTML = matches.map(s => `
-        <div class="block-topic-option"
-             onmousedown="selectGoalSkill('${escapeHtml(s.id)}', '${escapeHtml(s.french).replace(/'/g, "\\'")}')">
-            ${escapeHtml(s.french)}${s.english ? `<span class="block-topic-option-sub"> — ${escapeHtml(s.english)}</span>` : ''}
-        </div>
+    const groups = [
+        { label: 'General',  items: matches.filter(t => t.group === 'General')  },
+        { label: 'Category', items: matches.filter(t => t.group === 'Category') },
+        { label: 'Skills',   items: matches.filter(t => t.group === 'Skills')   },
+    ].filter(g => g.items.length);
+
+    dropdown.innerHTML = groups.map(g => `
+        <div class="block-topic-group-label">${g.label}</div>
+        ${g.items.map(t => `
+            <div class="block-topic-option"
+                 onmousedown="selectGoalLinkedTopic('${t.id}', '${t.label.replace(/'/g, "\\'")}')">
+                ${t.label}${t.sub ? `<span class="block-topic-option-sub"> — ${t.sub}</span>` : ''}
+            </div>`).join('')}
     `).join('');
+
     dropdown.style.display = 'block';
 }
 
-function selectGoalSkill(skillId, label) {
+function selectGoalLinkedTopic(topicId, label) {
     const d = appState._goalDraft;
     if (!d) return;
-    d.skillId = skillId;
+    if (topicId.startsWith('skill:')) {
+        d.skillId = topicId.replace('skill:', '');
+        d.dimensionId = null;
+    } else {
+        d.skillId = null;
+        d.dimensionId = topicId;
+    }
     const input = document.getElementById('goal-skill-input');
     if (input) input.value = label;
     const dropdown = document.getElementById('goal-skill-dropdown');
@@ -3969,6 +3982,7 @@ function clearGoalSkill() {
     const d = appState._goalDraft;
     if (!d) return;
     d.skillId = null;
+    d.dimensionId = null;
     const input = document.getElementById('goal-skill-input');
     if (input) { input.value = ''; input.focus(); }
     const dropdown = document.getElementById('goal-skill-dropdown');
