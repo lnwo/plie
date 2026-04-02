@@ -1,5 +1,5 @@
 # Plié — Information Architecture & Sitemap
-*Supersedes all previous IA documents. Last updated: March 2026.*
+*Supersedes all previous IA documents. Last updated: April 2026.*
 
 ---
 
@@ -29,7 +29,7 @@
 - Hosted on GitHub Pages ✅
 - Storage: localStorage only ✅
 - Cross-device sync / cloud backup ⬜
-- Font: EB Garamond italic (tab screen titles, skill names on cards/detail pages), DM Sans 600 (all sheet/overlay headings), DM Sans (UI) — Georgia and Cormorant Garamond retired ✅
+- Font: EB Garamond italic (tab screen h1 at `--fs-h1` 26px, skill names on cards/detail pages), DM Sans 600 (all sheet/overlay headings), DM Sans (UI) — Georgia and Cormorant Garamond retired ✅
 - Radius: 4px components, 9999px pills, 12px sheets/cards ✅
 
 ---
@@ -128,14 +128,31 @@ On save → writes to: Sessions, SessionSkills, Corrections, SkillNotes, Timelin
 The Barre
   ├── Hero card — session CTA ("Did you go today?") 📋
   │     Variants: Active / Resting / Recovering / named session if scheduled
-  ├── Active skills ✅
+  ├── Get started carousel ✅ (hidden once all 5 tasks complete)
+  │     5 cards: Log your first class / Save a note / Set a goal /
+  │              Try a pointer / Explore Learn
+  ├── In focus ✅ (collapsible — tap label to collapse; count shown inline when collapsed)
+  │     Section label: "in focus"
+  │     Filter tabs: All / Recurring
   │     Each skill card:
-  │       ├── Skill name (EB Garamond italic, --ink, 24px) + category ✅
-  │       ├── Last correction (italic, quoted) ✅
-  │       ├── Last worked on ✅
-  │       ├── Swipe to remove ✅
-  │       └── → Skill detail (personal view) ✅
-  ├── [Empty state] 🔧
+  │       ├── Skill name (DM Sans 600, --fs-small, --ink) ✅
+  │       ├── Last correction (EB Garamond italic, quoted) ✅
+  │       ├── Last worked on (--fs-small, --ink-5) ✅
+  │       └── Swipe to remove ✅
+  │     Hidden if no flagged skills
+  ├── Saved learning ✅ (collapsible — tap label to collapse; count shown inline when collapsed)
+  │     Horizontal carousel; hidden if no bookmarks
+  │     Each card (148×96px, matches Get Started):
+  │       ├── Type label (DM Sans 600, uppercase, --fs-caption, --ink-4)
+  │       │     Values: SKILL / POINTER / CONDITIONING / MUSICALITY / etc.
+  │       ├── Item name (DM Sans 500, --fs-small, --ink)
+  │       └── Connection indicators for skills only:
+  │             Active goals count · Corrections count (--fs-small, --ink-5)
+  │     Whole card tappable → navigates to Learn item
+  │     Bookmarks removed via Learn page icon only
+  ├── Recent activity ✅
+  │     3 most recent timeline entries (inline)
+  │     "see all →" → full timeline sheet
   └── Browse by category
         ├── Barre work → Folder (8 skills) ✅
         ├── Centre work → ⬜
@@ -210,33 +227,52 @@ All Goals page 📋
 
 ---
 
-## Tab 3 — Learn 🔧 (partial — MVP scope reduced)
+## Tab 3 — Learn ✅
 
-### MVP Learn structure
+### Learn structure
 ```
 Learn
-  ├── Skill library ✅ (merged with glossary for MVP)
-  │     ├── Browse by category ✅
-  │     ├── Search (accent-normalised) ✅
-  │     ├── Filter: All / Skills I've recorded ✅
-  │     └── Skill knowledge page 🔧
-  │           ├── Name + pronunciation + difficulty ✅
-  │           ├── [My [skill] →] → Skill personal view ✅
-  │           ├── Description ✅ (4 full, 11 stubs)
-  │           ├── Key points ✅
-  │           ├── Musicality ✅
-  │           ├── Common corrections ✅
-  │           ├── Muscles involved ✅
-  │           ├── Builds on / Leads to ✅
-  │           └── Warm-up / Drills / Repertoire / Variations ⬜
-  ├── Pointers 📋 (diagnostic content type)
-  │     ├── Filter chip in Learn 📋
-  │     ├── 4 MVP pointer areas 📋
-  │     └── Each pointer: short diagnostic + what to try
-  ├── Famous ballets → stub "coming soon" 📋
-  ├── Composers → stub "coming soon" ⬜
-  ├── Variations → stub "coming soon" ⬜
-  └── Legendary dancers → stub "coming soon" ⬜
+  ├── Search bar (accent-normalised, searches all sections) ✅
+  ├── Filter pills: All / Bookmarked / In Focus ✅
+  │     All: default, shows section cards
+  │     Bookmarked: disabled if no bookmarks; shows bookmarked items
+  │                 grouped by section in search-results layout
+  │     In Focus: disabled if no flagged skills; shows flagged skills
+  │               in search-results layout
+  │     Multi-select: Bookmarked + In Focus can be active simultaneously
+  │     Filtered results use .glossary-term-row list layout (same as search)
+  ├── Section cards (when All active):
+  │     ├── Skills ✅
+  │     │     ├── Browse by category ✅
+  │     │     ├── Search (accent-normalised) ✅
+  │     │     ├── Filter: All / Skills I've recorded ✅
+  │     │     └── Skill knowledge page ✅
+  │     │           ├── Name + pronunciation + difficulty ✅
+  │     │           ├── [My [skill] →] → Skill personal view ✅
+  │     │           ├── Description ✅ (4 full, 11 stubs)
+  │     │           ├── Key points (tap-to-save as goal or correction) ✅
+  │     │           ├── Musicality ✅
+  │     │           ├── Common corrections ✅
+  │     │           ├── Muscles involved ✅
+  │     │           ├── Builds on / Leads to ✅
+  │     │           ├── Bookmark toggle ✅
+  │     │           └── Warm-up / Drills / Repertoire / Variations ⬜
+  │     ├── Pointers ✅ (diagnostic content type)
+  │     │     ├── Each pointer: insight + what to try + tap-to-save ✅
+  │     │     └── Bookmark toggle ✅
+  │     ├── Conditioning ✅ (was "Conditioning & Drills")
+  │     │     ├── Key points (tap-to-save as correction) ✅
+  │     │     └── Bookmark toggle ✅
+  │     ├── Musicality ✅
+  │     ├── Repertoire ✅
+  │     ├── Glossary ✅
+  │     ├── Famous ballets → stub "coming soon" 📋
+  │     ├── Composers → stub "coming soon" ⬜
+  │     └── Legendary dancers → stub "coming soon" ⬜
+  └── Bookmarks ✅
+        Saved via bookmark icon on any learn page
+        Viewed via Bookmarked filter pill
+        Removed via bookmark icon on the learn page (not from Barre carousel)
 ```
 
 ### Content gap
@@ -269,9 +305,15 @@ Profile
 Timeline
   ├── Sessions (tappable → session detail) ✅
   ├── Assessments ✅
+  │     Entry text: "Completed orientation quiz · [Level]" if quiz answered
+  │                 "Set own level · [Level]" if user skipped to level picker
   ├── Milestones ✅
   ├── Reflections ✅
   └── Manual entries ✅
+
+All timeline cards display a relative date bottom-right:
+  Today / Yesterday / "3 Apr" (same year, ≤3 months ago)
+  "3 Apr 2025" (last year OR >3 months ago)
 ```
 
 ### Session Detail ✅

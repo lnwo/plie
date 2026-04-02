@@ -1,6 +1,6 @@
 # Plié Design System
 ## Component Reference
-v1.0 — March 2026
+v1.1 — April 2026
 
 *This document is the single source of truth for visual and interaction decisions in Plié. It should be used to audit existing screens and guide new build work. Where the codebase diverges from this document, the document wins unless a deliberate decision has been made to update it.*
 
@@ -71,12 +71,13 @@ Only two weights permitted: regular (400) and semibold (600). Never 700 (bold). 
 
 | Token | Size | Use |
 |---|---|---|
-| `--fs-display` | 36px | EB Garamond italic only. Screen title, onboarding display. |
+| `--fs-display` | 40px | EB Garamond italic only. Onboarding display text. Never used for tab screen titles. |
+| `--fs-h1` | 26px | EB Garamond italic. Tab screen titles (The Barre, Goals, Learn, Profile). |
+| `--fs-h2` | 20px | EB Garamond italic. Sub-headings within screens. |
 | `--fs-title` | 24px | EB Garamond italic. Skill name heading, session title, sheet headings. |
-| `--fs-heading` | 20px | DM Sans 600. Card title, form label. |
-| `--fs-body` | 16px | DM Sans 400. Body text, note content. |
-| `--fs-small` | 14px | DM Sans 400. Metadata, hint text. |
-| `--fs-caption` | 12px | DM Sans 400. Captions, section labels. |
+| `--fs-body` | 15px | DM Sans 400. Body text, note content. |
+| `--fs-small` | 13px | DM Sans 400. Metadata, hint text, skill names in In Focus cards. |
+| `--fs-caption` | 11px | DM Sans 400. Captions, section labels, type labels on Saved Learning cards. |
 
 ---
 
@@ -439,25 +440,40 @@ Documented here because The Barre is the primary daily-use screen and has the mo
 | Element | Decision |
 |---|---|
 | **Context strip** | Removed. Level badge moves to top right of screen header. |
-| **Screen title** | "The Barre" in Georgia `--fs-display`. |
-| **Hero card** | Named session title leads in Georgia. Class type and day in eyebrow (`--fs-small`, `--ink-5`). "Did you go today?" as the primary question. Primary button: log now. Text link: don't remind me again. Swipe to dismiss temporarily. |
+| **Screen title** | "The Barre" in EB Garamond italic, `--fs-h1` (26px). |
+| **Hero card** | Named session title leads in EB Garamond. Class type and day in eyebrow (`--fs-small`, `--ink-5`). "Did you go today?" as the primary question. Primary button: log now. Text link: don't remind me again. Swipe to dismiss temporarily. |
 | **Hero — no saved session** | Class type as title, day in eyebrow. |
 | **Hero — no recurring sessions** | Generic "log your session" prompt. |
 | **Hero — resting state** | "Taking a break" / "Anything worth noting while you're away?" / log now → |
 | **Hero — recovering state** | "Focusing on recuperating" / "You can still log anything useful, physio notes, what you can work on, things to remember." / log now → |
 | **Hero — predictive state** | Surfaces when today matches a saved session template day and the user hasn't logged yet. Swipe left or right to dismiss until tomorrow (`dismissPredictiveHero()`, suppressed via `predictiveHeroSuppressed` localStorage key). |
 | **Hero copy rules** | No motivational copy. No interpretation of absence ("you haven't logged in X days"). App does not comment on the user's behaviour. |
-| **Skills section label** | "corrections in focus" in small-caps muted (`--ink-5`) with skill count on the right. |
-| **Skill cards** | EB Garamond italic for skill name (`--fs-title`). Most recent correction in italic EB Garamond with typographic quotes (" "). Category label in `--gold` small-caps top right. Date metadata bottom left (`--fs-small`, `--ink-5`). "view →" text link bottom right. |
+| **"In focus" section label** | "in focus" (not "corrections in focus"). Small-caps muted (`--ink-5`) with skill count on the right. Tapping the label collapses/expands the section. |
+| **In focus skill name** | DM Sans 600, `--fs-small`, `--ink`. Not EB Garamond italic. |
+| **In focus skill card correction** | EB Garamond italic, typographic quotes. `--ink-3`. |
 | **Recurring skill cards** | `#FDF0EE` background. Three dots plus "recurring" as metadata. No badge. |
 | **Section separator** | 0.5px solid rgba(26,23,20,0.08) between skills section and recent activity. |
-| **"Skills in focus" heading** | Removed. Cards are self-evident. |
+| **Collapsible sections** | "In focus" and "Saved learning" section labels are tappable to collapse. Collapsed: label appended with " · [count]", content hidden. State persisted to localStorage under `collapsedSections`. |
+| **Saved learning section** | Horizontal carousel below "In focus". Hidden if no bookmarks. Cards 148×96px matching Get Started dimensions. Type label in `--fs-caption` 600 uppercase `--ink-4`. Item name in `--fs-small` 500 `--ink`. Connection indicators (skills only) in `--fs-small` `--ink-5`. Whole card tappable. |
 | **Getting started cards** | Section label: "get started" small-caps muted. Horizontal carousel, two visible at a time. Cards complete automatically — no manual tick. Completed state: title greyed out, tick only, no copy. Section persists until all complete. |
 | **App start screen** | Always lands on The Barre. Never Profile. |
 
 ---
 
-## 10. Goals Screen — Confirmed Decisions
+## 10. Learn Screen — Confirmed Decisions
+
+| Element | Decision |
+|---|---|
+| **Filter pills** | Three static pills: All / Bookmarked / In Focus. "Pointers" pill removed — Pointers accessible as a section card. Bookmarked is disabled (greyed, not interactive) when no bookmarks exist. In Focus is disabled when no skills are flagged. |
+| **Multi-select filters** | Bookmarked and In Focus can be active simultaneously. Selecting All deactivates all others. Deactivating the last specific filter reverts to All. |
+| **Filtered result layout** | Bookmarked and In Focus results use the same `.glossary-term-row` list layout as search results — not cards. Results grouped by section (e.g. Skills, Pointers, Conditioning). |
+| **Bookmark toggle** | Present on all learn item pages (skill knowledge, pointer detail, section detail). Bookmark stores `{ pageType, itemId, createdAt }`. Removing a bookmark only happens via the bookmark icon on the learn page — not from the Barre carousel. |
+| **Tap-to-save** | Key points on learn pages are tappable to save as a goal or correction. Saved state persists in `learnLineSaves`. |
+| **Section naming** | "Conditioning" (not "Conditioning & Drills"). |
+
+---
+
+## 11. Goals Screen — Confirmed Decisions
 
 | Element | Decision |
 |---|---|
@@ -508,7 +524,10 @@ These patterns have been explicitly retired or decided against. If they appear i
 | Correction / Praise / Reflection tabs inside note blocks | Replaced by source chips + free text. |
 | Square class type chip cards | Replaced by pill chips. |
 | Assess tab in navigation | Removed. Four tabs only. |
-| "Skills in focus" section heading on The Barre | Removed. |
+| "Skills in focus" section heading on The Barre | Removed. Section label is now "in focus". |
+| "Corrections in focus" section label | Replaced by "in focus". |
+| Pointers filter pill in Learn | Removed. Pointers accessible as section card. Replaced by Bookmarked + In Focus pills. |
+| EB Garamond italic for skill names in In Focus cards | Replaced by DM Sans 600 `--fs-small`. |
 | Context strip on The Barre | Removed. Level badge in header instead. |
 | Placement quiz / assessment language | Replaced by orientation conversation. |
 | "Note a reflection" in FAB menu | Removed. |

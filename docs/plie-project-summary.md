@@ -1,5 +1,5 @@
-# Plié — Project Summary v7.0
-*Last updated: March 2026. Reflects decisions from iCloud design system, summary, and decisions docs.*
+# Plié — Project Summary v8.0
+*Last updated: April 2026. Reflects T51–T65 and all intervening ticket work.*
 
 ## DEVELOPMENT PROTOCOL — STATUS TRACKING
 ```
@@ -34,8 +34,10 @@ KNOWN BUG           — identified, not yet fixed
 ## js/ module map
 ```
 js/data.js    — DATA: skills (15 + aliases), folders, questions, levelLabels,
-                dimensionNames, skillCategories, assessments, learnSections,
+                dimensionNames, skillCategories, assessments, learnSections
+                (Skills, Pointers, Conditioning, Musicality, Repertoire, Glossary…),
                 profileCapabilities, stageLabels, armPositions
+                Note: learnSections.conditioning.name = "Conditioning" (not "Conditioning & Drills")
 
 js/state.js   — STORAGE_KEYS, storage adapter (save/load/clear),
                 appState (including hidePointe, profilePicture, displayName)
@@ -58,14 +60,15 @@ js/ui.js      — All screen builders and render functions:
 ## Design System (March 2026)
 
 ### Typography
-- **EB Garamond italic, --ink-2, 36px** — tab screen titles (The Barre, Goals, Learn, Profile)
-- **EB Garamond italic, --ink, 24px/32px** — skill names on cards and detail pages
-- **DM Sans 600** — everything inside sheets and overlays (headings, sheet titles, session logger heading "Log a class", goal creator "What are you working toward?", section headings within sheets); use `--fs-heading` or `--fs-title` as appropriate — never EB Garamond inside a sheet or overlay
+- **EB Garamond italic, --ink-2, `--fs-h1` (26px)** — tab screen titles (The Barre, Goals, Learn, Profile)
+- **EB Garamond italic, --ink, `--fs-title` (24px)** — skill names on cards and detail pages, sheet headings
+- **DM Sans 600** — everything inside sheets and overlays; section headings within sheets — never EB Garamond inside a sheet or overlay
+- **DM Sans 600, `--fs-small` (13px)** — skill names in In Focus cards on The Barre (not EB Garamond)
 - **DM Sans** — all UI text, labels, body
 - **Georgia**: RETIRED — do not use
 - **Cormorant Garamond**: RETIRED — do not use
-- Font sizes: display 36px / title 24px / heading 20px / body 16px / small 14px / caption 12px
-- Section labels: DM Sans 600, small-caps, --ink-5
+- Font sizes: display 40px / h1 26px / h2 20px / title 24px / body 15px / small 13px / caption 11px
+- Section labels: DM Sans 600, uppercase/small-caps, --ink-5
 
 ### Colour tokens
 ```
@@ -131,17 +134,27 @@ js/ui.js      — All screen builders and render functions:
 - Note block star moved left of topic input; title field removed (T22)
 - Session save — all block types (correction + observation + general) create sessionSkills; corrections always go to correctionIds; observation blocks also write to skillNotes; all stores saved atomically; isHighlight saved on sessionSkill; edit flow cleans up stale skillNotes (T23)
 - Recurring correction detection — ≥3 corrections for same skill across ≥2 sessions within 60 days sets isRecurring on all corrections for that skill (T27)
-- Barre corrections in focus — All / Recurring filter tabs; Recurring shows empty state if no in-focus skills qualify (T28)
+- Barre "in focus" — All / Recurring filter tabs; Recurring shows empty state if no in-focus skills qualify (T28)
 - Highlights section on skill detail — shows highlighted sessionSkills and skillNotes with gold border, star to un-star; absent if empty (T26)
 - Timeline session entries show gold ★ if any sessionSkill for that session has isHighlight (T26)
 - User-entered text: line breaks preserved (nl2br), long text truncates at 4 lines with see more / hide (T24)
 - Timeline date groups, icons, tappable sessions
+- Timeline relative dates — Today / Yesterday / "3 Apr" / "3 Apr 2025" on all cards (T57)
+- Timeline first entry — "Completed orientation quiz · [Level]" vs "Set own level · [Level]" (T57)
 - Profile capability cards
 - Profile — orientation quiz CTA (start or retake)
 - Skill library search
 - All Goals history page (grouped by year, expand on tap)
 - Barre hero card — context-aware "Did you go today?" variants
-- Barre skill cards — EB Garamond italic name, italic quoted correction, "view →" link
+- Barre "in focus" skill cards — DM Sans 600 name, EB Garamond italic quoted correction (T53)
+- Barre "in focus" section label — "in focus" (not "corrections in focus") (T53)
+- Barre "in focus" + "saved learning" sections — collapsible via label tap; state persisted (T65)
+- Barre "saved learning" carousel — horizontal, 148×96px cards, hidden if no bookmarks (T65)
+- Learn pointers — full section with insight, what to try, tap-to-save (T51)
+- Learn bookmarks — toggle on any learn page, Bookmarked filter pill, stored in learnBookmarks (T50/T51)
+- Learn tap-to-save — key points saveable as goal or correction from learn pages (T51)
+- Learn filter pills — All / Bookmarked (disabled if empty) / In Focus (disabled if no flagged skills), multi-select (T65)
+- Learn filtered results — search-results row layout (glossary-term-row), grouped by section (T65)
 - All 4 tabs navigate correctly
 
 ### BUILT NOT VERIFIED (real device)
@@ -176,7 +189,7 @@ js/ui.js      — All screen builders and render functions:
 - Session logger: retrospective date floor removed (any past date allowed)
 - Profile: signal lines replacing score bars
 - Remaining Barre categories: Centre, Turns, Allegro, Pointe, Flexibility & strength
-- Learn: Pointers content type (diagnostic, 4 MVP areas)
+- Learn: Pointers content — additional areas beyond current MVP set
 - Onboarding: collapse to single welcome screen; CTAs "let's go →" / "skip quiz →"
 - Orientation quiz: pointe "not interested" option
 - Orientation quiz: strength + turnout questions
@@ -194,16 +207,29 @@ js/ui.js      — All screen builders and render functions:
 
 ## Data shapes
 
-### appState additions (v5+)
+### appState (selected fields)
 ```js
+// Preferences (persisted under plie:preferences)
 hidePointe:     boolean  // hides pointe from profile, skills, goals
 profilePicture: string   // data URL or key e.g. 'default-bun'
 displayName:    string   // optional, shown on status card
+trainingState:  'active' | 'resting' | 'recovering'
+
+// Learn
+learnBookmarks:    [{ pageType, itemId, createdAt }]
+learnLineSaves:    [{ lineText, saveType, objectId, pageType, itemId }]
+
+// UI state
+collapsedSections: { inFocus?: boolean, savedLearning?: boolean }
+                   // persisted under raw key 'collapsedSections' (not plie: prefixed)
 ```
 
 ### STORAGE_KEYS
 ```js
-'plie:preferences' // { hidePointe, profilePicture, displayName }
+'plie:preferences'     // { hidePointe, profilePicture, displayName, trainingState }
+'plie:learnBookmarks'  // [{ pageType, itemId, createdAt }]
+'plie:learnLineSaves'  // tap-to-save state for learn key points
+'collapsedSections'    // { inFocus, savedLearning } — note: no plie: prefix
 ```
 
 ### Goal object
