@@ -2332,6 +2332,7 @@ function showBarreScreen() {
         <div style="height: 120px;"></div>
     `;
     showScreen('barre-screen');
+    window.scrollTo({ top: 0, behavior: 'instant' });
 
     // Populate inline timeline
     const inlineTimeline = document.getElementById('barre-timeline-inline');
