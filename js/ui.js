@@ -869,11 +869,39 @@ function getBlockIndexById(blockId) {
     return appState.currentSession?.blocks.findIndex(b => b.id === blockId) ?? -1;
 }
 
+function expandBlock(blockId) {
+    if (!appState.currentSession) return;
+    appState.currentSession._expandedBlockId = blockId;
+    renderBlocksOnly();
+}
+
+function renderAddTrigger() {
+    if (appState.currentSession?._addMenuOpen) {
+        return '<div class="add-block-menu">' +
+            '<button class="add-block-menu-item" onmousedown="addBlock(true, \'correction\')">correction</button>' +
+            '<button class="add-block-menu-item" onmousedown="addBlock(true, \'observation\')">observation</button>' +
+            '<button class="add-block-menu-item" onmousedown="addBlock(true, \'note\')">note</button>' +
+            '<button class="add-block-menu-item" onmousedown="addBlock(true, \'goal\')">goal</button>' +
+            '<button class="add-block-menu-item add-block-menu-item--disabled" disabled>photo or video</button>' +
+            '</div>';
+    }
+    return '<button class="add-block-trigger" onmousedown="openAddMenu()">+ add</button>';
+}
+
+function openAddMenu() {
+    if (!appState.currentSession) return;
+    appState.currentSession._addMenuOpen = true;
+    const container = document.getElementById('add-block-trigger-container');
+    if (container) container.innerHTML = renderAddTrigger();
+}
+
 function renderBlocksOnly() {
     const container = document.getElementById('session-blocks-container');
     if (!container) return;
     const s = appState.currentSession;
     container.innerHTML = s.blocks.map((block, i) => renderBlockHtml(block, i)).join('');
+    const triggerContainer = document.getElementById('add-block-trigger-container');
+    if (triggerContainer) triggerContainer.innerHTML = renderAddTrigger();
     // Attach swipe-to-remove on each block
     container.querySelectorAll('.swipe-row[data-block-id]').forEach(row => {
         const blockId = parseInt(row.dataset.blockId);
