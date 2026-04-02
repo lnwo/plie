@@ -192,6 +192,11 @@ js/ui.js      — All screen builders and render functions:
 - "Save a note" → standalone note (reflection); reflections are the note object, no separate type
 - Source chips in note blocks → replaced by block type set at creation
 
+### TODO / DEFERRED (Group E)
+
+**T77 · Reminder affordance on corrections and notes** — STATUS: TODO, discuss before building
+A saved correction or observation should have a path to becoming an actionable reminder — distinct from creating a goal. A reminder is "do this thing" (e.g. theraband ankle exercises); a goal implies measurable progress over time. Questions to resolve: does a reminder live in goals with a distinct type, or is it a separate object? What triggers it — push notification, hero card, or in-app surfacing only? Is it scoped per session or ongoing? Use goals as a workaround in the interim. Revisit when notification strategy (Section 29 of decisions doc) is fully specced.
+
 ### DEFERRED
 - Training states: goal pause behaviour on state change
 - Goals: goal pause / dismiss (non-destructive swipe-left)
