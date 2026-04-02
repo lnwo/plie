@@ -1186,6 +1186,15 @@ h1, h2, .screen-heading {
     display: none;
 }
 
+.timeline-entry-date {
+    position: absolute;
+    bottom: var(--sp-md);
+    right: var(--sp-md);
+    font-size: var(--fs-caption);
+    color: var(--ink-3);
+    pointer-events: none;
+}
+
 .timeline-content {
     background: transparent;
     border-radius: 0;

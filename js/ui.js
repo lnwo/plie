@@ -5210,8 +5210,14 @@ function formatTimelineDate(dateStr) {
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
 
-    if (d.toDateString() === today.toDateString()) return 'today';
-    if (d.toDateString() === yesterday.toDateString()) return 'yesterday';
+    const threeMonthsAgo = new Date(today);
+    threeMonthsAgo.setMonth(today.getMonth() - 3);
+
+    if (d.toDateString() === today.toDateString()) return 'Today';
+    if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    if (d < threeMonthsAgo || d.getFullYear() !== today.getFullYear()) {
+        return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
     return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
@@ -5230,7 +5236,7 @@ function buildTimelineEntries() {
             skillId:    n.skillId,
         }));
     return [
-        ...(appState.timeline || []).map(e => ({ ...e, _noteEntry: false })),
+        ...(appState.timeline || []).filter(e => e.type !== 'manual').map(e => ({ ...e, _noteEntry: false })),
         ...noteEntries,
     ].sort((a, b) => {
         const dateA = a.date || new Date(a.createdAt || 0).toISOString().split('T')[0];
@@ -5241,6 +5247,9 @@ function buildTimelineEntries() {
 }
 
 function renderTimelineEntry(entry) {
+    const entryDate = entry.date || (entry.createdAt ? new Date(entry.createdAt).toISOString().split('T')[0] : '');
+    const dateHtml  = entryDate ? `<span class="timeline-entry-date">${formatTimelineDate(entryDate)}</span>` : '';
+
     if (entry._noteEntry) {
         const skillRef = entry.skillId ? DATA.skills.find(s => s.id === entry.skillId) : null;
         const isReflection = entry._type === 'reflection';
@@ -5256,6 +5265,7 @@ function renderTimelineEntry(entry) {
                     <button class="timeline-note-btn timeline-note-btn-delete" onmousedown="deleteTimelineNote(${entry.id})">delete</button>
                 </div>
             </div>
+            ${dateHtml}
         </div>`;
     }
     // Special rendering for goal completion milestones
@@ -5285,6 +5295,7 @@ function renderTimelineEntry(entry) {
                     ${reflectionHtml}
                     ${tapHint}
                 </div>
+                ${dateHtml}
             </div>`;
         }
     }
@@ -5307,6 +5318,7 @@ function renderTimelineEntry(entry) {
             ${entry.body ? `<div class="timeline-subtitle">${entry.body}${hasHighlight ? ` <span class="timeline-star">${ICONS.get('star-fill', 11)}</span>` : ''}</div>` : ''}
             ${isTappable ? `<div class="timeline-tap-hint">tap to review \u2192</div>` : ''}
         </div>
+        ${dateHtml}
     </div>`;
 }
 
@@ -5356,23 +5368,8 @@ function showBarreTimelineSheet() {
     if (existing) existing.remove();
 
     const entries = buildTimelineEntries();
-    const level = appState.level || 'not-assessed';
-    let firstEntryText = 'Joined pli\u00e9';
-    if (level && level !== 'not-assessed') {
-        // Prefer the title stored by appendTimelineEntry during onboarding — it was
-        // written with the correct quiz-vs-self-selected wording at the time.
-        const assessmentEntry = (appState.timeline || [])
-            .filter(e => e.type === 'assessment')
-            .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))[0];
-        if (assessmentEntry?.title) {
-            firstEntryText = assessmentEntry.title;
-        } else {
-            // Fallback for data predating T57 (no assessment timeline entry stored)
-            const levelName = (DATA.levelLabels[level] || 'Beginner').charAt(0).toUpperCase()
-                + (DATA.levelLabels[level] || 'Beginner').slice(1).toLowerCase();
-            firstEntryText = `Set own level \u00b7 ${levelName}`;
-        }
-    }
+    // Assessment entries sort into entries[] by date; only 'manual' (Joined plié) stays as the fixed bottom anchor
+    const firstEntryText = 'Joined pli\u00e9';
 
     const sheet = document.createElement('div');
     sheet.id = 'barre-timeline-sheet';
