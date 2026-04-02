@@ -2231,8 +2231,9 @@ function renderSettings() {
             <div class="settings-row">
                 <div>
                     <div class="settings-row-label">Export training log</div>
-                    <div class="settings-row-sub settings-tbd">coming soon — PDF and CSV</div>
+                    <div class="settings-row-sub">Save a readable copy of your data</div>
                 </div>
+                <button class="settings-row-action" onclick="exportReadableData()">export</button>
             </div>
             <div class="settings-row">
                 <div>
@@ -2406,6 +2407,87 @@ function handlePicUpload(input) {
         renderProfileStatus();
     };
     reader.readAsDataURL(file);
+}
+
+function exportReadableData() {
+    const skillName = id => (appState.skills || []).find(s => s.id === id)?.name || null;
+    const fmtDate   = ts  => ts ? new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+
+    const lines = [];
+
+    // ── Sessions ────────────────────────────────────────────────
+    const sessions = (appState.sessions || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    if (sessions.length) {
+        lines.push('SESSIONS', '─'.repeat(40));
+        sessions.forEach(session => {
+            const label = session.sessionName || session.templateId || 'Session';
+            lines.push(`\n${label}  ·  ${session.date || ''}`);
+            if (session.sessionLocation) lines.push(`  Location: ${session.sessionLocation}`);
+            if (session.classType)       lines.push(`  Type: ${session.classType}`);
+            if (session.notes)           lines.push(`  Notes: ${session.notes}`);
+
+            const skills = (appState.sessionSkills || []).filter(ss => ss.sessionId === session.id);
+            skills.forEach(ss => {
+                if (ss.source === 'goal') {
+                    const goal = (appState.goals || []).find(g => g.id === ss.goalId);
+                    if (goal) lines.push(`  [GOAL] ${goal.title}`);
+                    return;
+                }
+                const skill = ss.skillId ? skillName(ss.skillId) : null;
+                if (skill) lines.push(`  [${ss.source === 'observation' ? 'OBSERVATION' : 'CORRECTION'}] ${skill}`);
+                const corrections = (ss.correctionIds || [])
+                    .map(id => (appState.corrections || []).find(c => c.id === id))
+                    .filter(Boolean);
+                corrections.forEach(c => lines.push(`    – ${c.text}`));
+                if (ss.notes) lines.push(`    Note: ${ss.notes}`);
+            });
+        });
+        lines.push('');
+    }
+
+    // ── Goals ────────────────────────────────────────────────────
+    const goals = (appState.goals || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    if (goals.length) {
+        lines.push('GOALS', '─'.repeat(40));
+        goals.forEach(g => {
+            const status = g.status || (g.completedAt ? 'completed' : 'active');
+            const skill  = g.skillId ? ` · ${skillName(g.skillId)}` : '';
+            lines.push(`\n${g.title}${skill}  [${status}]`);
+            if (g.body) lines.push(`  ${g.body}`);
+            if (g.commitmentPeriod) lines.push(`  Period: ${g.commitmentPeriod}`);
+            const markers = g.progressMarkers || g.milestones || [];
+            markers.filter(m => m.text).forEach(m => lines.push(`  ${m.done ? '✓' : '○'} ${m.text}`));
+            if (g.completedAt) lines.push(`  Completed: ${fmtDate(g.completedAt)}`);
+        });
+        lines.push('');
+    }
+
+    // ── Corrections (standalone) ─────────────────────────────────
+    const standalone = (appState.corrections || []).filter(c => !c.sessionId);
+    if (standalone.length) {
+        lines.push('SAVED CORRECTIONS', '─'.repeat(40));
+        standalone.forEach(c => {
+            const skill = c.skillId ? ` [${skillName(c.skillId)}]` : '';
+            lines.push(`${fmtDate(c.createdAt)}${skill}  ${c.text}`);
+        });
+        lines.push('');
+    }
+
+    const text    = lines.join('\n');
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename = `plie-export-${dateStr}.txt`;
+
+    if (navigator.share && navigator.canShare?.({ files: [new File([text], filename, { type: 'text/plain' })] })) {
+        navigator.share({ files: [new File([text], filename, { type: 'text/plain' })] }).catch(() => {});
+    } else {
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
 }
 
 // Service Worker
