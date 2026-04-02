@@ -5363,17 +5363,19 @@ function showBarreTimelineSheet() {
     const level = appState.level || 'not-assessed';
     let firstEntryText = 'Joined pli\u00e9';
     if (level && level !== 'not-assessed') {
-        const levelName = (DATA.levelLabels[level] || 'Beginner').charAt(0).toUpperCase()
-            + (DATA.levelLabels[level] || 'Beginner').slice(1).toLowerCase();
-        const latestOrientAssessment = (appState.assessments || [])
-            .filter(a => a.persona)
-            .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0))[0];
-        const selfSelected = latestOrientAssessment
-            && !Object.values(latestOrientAssessment.answers || {}).some(
-                v => v !== undefined && (!Array.isArray(v) || v.length > 0));
-        firstEntryText = selfSelected
-            ? `set own level \u00b7 ${levelName}`
-            : `orientation quiz \u00b7 ${levelName}`;
+        // Prefer the title stored by appendTimelineEntry during onboarding — it was
+        // written with the correct quiz-vs-self-selected wording at the time.
+        const assessmentEntry = (appState.timeline || [])
+            .filter(e => e.type === 'assessment')
+            .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))[0];
+        if (assessmentEntry?.title) {
+            firstEntryText = assessmentEntry.title;
+        } else {
+            // Fallback for data predating T57 (no assessment timeline entry stored)
+            const levelName = (DATA.levelLabels[level] || 'Beginner').charAt(0).toUpperCase()
+                + (DATA.levelLabels[level] || 'Beginner').slice(1).toLowerCase();
+            firstEntryText = `set own level \u00b7 ${levelName}`;
+        }
     }
 
     const sheet = document.createElement('div');
