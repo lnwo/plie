@@ -2853,7 +2853,7 @@ function renderGoalsScreen() {
         goalsHtml = `
             <div class="barre-empty-state">
                 <div class="barre-empty-icon">${ICONS.get('goals', 32)}</div>
-                <div class="barre-empty-title">No goals yet</div>
+                <div class="barre-empty-title">No active goals</div>
                 <div class="barre-empty-text">Set targets and track progress. Goals can link to a specific skill or dimension.</div>
             </div>`;
     } else {
@@ -3019,7 +3019,7 @@ function showAllGoalsScreen() {
         </div>
         <div style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
             ${allGoals.length === 0
-                ? '<div class="barre-empty-state"><div class="barre-empty-title">No goals yet</div></div>'
+                ? '<div class="barre-empty-state"><div class="barre-empty-title">No active goals</div></div>'
                 : groupsHtml
             }
         </div>
