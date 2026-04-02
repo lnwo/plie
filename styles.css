@@ -1894,6 +1894,11 @@ h1, h2, .screen-heading {
     color: var(--ink-5);
 }
 
+.barre-collapsible-label {
+    cursor: pointer;
+    user-select: none;
+}
+
 .barre-section-count {
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-caption);
@@ -1987,6 +1992,53 @@ h1, h2, .screen-heading {
     font-size: var(--fs-caption);
     color: var(--ink-4);
     line-height: 1.4;
+}
+
+/* ── Saved from learn carousel ── */
+.saved-learning-carousel {
+    display: flex;
+    gap: var(--sp-md);
+    overflow-x: auto;
+    padding: 0 var(--sp-lg) var(--sp-md);
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-bottom: var(--sp-xl);
+}
+
+.saved-learning-carousel::-webkit-scrollbar { display: none; }
+
+.saved-learning-card {
+    flex: 0 0 148px;
+    background: var(--surface);
+    border-radius: 8px;
+    border: 0.5px solid rgba(26,23,20,0.10);
+    padding: var(--sp-lg);
+    scroll-snap-align: start;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-xs);
+    min-height: 96px;
+    justify-content: flex-start;
+}
+
+.sl-card-type {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    font-variant: small-caps;
+    color: var(--ink-5);
+    line-height: 1.2;
+}
+
+.sl-card-name {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 500;
+    color: var(--ink);
+    line-height: 1.3;
+    flex: 1;
 }
 
 /* ── Active skill card (redesigned) ── */
@@ -2244,6 +2296,12 @@ h1, h2, .screen-heading {
     background: var(--ink);
     border-color: var(--ink);
     color: #fff;
+}
+
+.learn-chip.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+    cursor: default;
 }
 
 .learn-item {

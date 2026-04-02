@@ -2314,16 +2314,18 @@ function showBarreScreen() {
     ` : '';
 
     // Corrections in focus
+    const inFocusCollapsed = !!(appState.collapsedSections || {}).inFocus;
     let activeSkillsHtml = '';
     if (focusedSkills.length > 0) {
         activeSkillsHtml = `
             <div class="barre-section-header">
-                <span class="barre-section-label">in focus</span>
-                <div style="display:flex;align-items:center;gap:var(--sp-md);">
+                <span class="barre-section-label barre-collapsible-label" onclick="toggleBarreSection('inFocus')">in focus${inFocusCollapsed ? ' · ' + focusedSkills.length : ''}</span>
+                ${!inFocusCollapsed ? `<div style="display:flex;align-items:center;gap:var(--sp-md);">
                     <span class="barre-section-count">${focusedSkills.length}</span>
                     ${focusedSkills.length > 3 ? '<button class="barre-see-all-btn" onclick="showFocusSkillsSheet()">see all →</button>' : ''}
-                </div>
+                </div>` : ''}
             </div>
+            ${!inFocusCollapsed ? `
             <div style="padding: 0 var(--sp-lg); margin-bottom: var(--sp-md);">
                 <div style="display:flex;gap:var(--sp-xs);margin-bottom:var(--sp-md);">
                     <button class="skill-corr-filter barre-focus-filter active" onmousedown="filterBarreSkills('all', this)">All</button>
@@ -2332,9 +2334,11 @@ function showBarreScreen() {
                 <div style="display: flex; flex-direction: column; gap: var(--sp-sm);" id="active-skills-list">
                     ${renderActiveSkillsList(displaySkills)}
                 </div>
-            </div>
+            </div>` : ''}
         `;
     }
+
+    const savedLearningHtml = renderSavedFromLearnSection();
 
     screen.innerHTML = `
         <div class="barre-header">
@@ -2347,6 +2351,7 @@ function showBarreScreen() {
         ${nudgeHtml}
         ${gettingStartedHtml}
         ${activeSkillsHtml}
+        ${savedLearningHtml}
         <div class="barre-section-header">
             <span class="barre-section-label">recent activity</span>
             <button class="barre-see-all-btn" onclick="showBarreTimelineSheet()">see all →</button>
@@ -2381,6 +2386,92 @@ function showBarreScreen() {
             startX = null;
             if (Math.abs(dx) > 60) dismissPredictiveHero();
         }, { passive: true });
+    }
+}
+
+function toggleBarreSection(key) {
+    appState.collapsedSections = appState.collapsedSections || {};
+    appState.collapsedSections[key] = !appState.collapsedSections[key];
+    storage.save('collapsedSections', appState.collapsedSections);
+    showBarreScreen();
+}
+
+function renderSavedFromLearnSection() {
+    const bookmarks = appState.learnBookmarks || [];
+    if (!bookmarks.length) return '';
+
+    const collapsed = !!(appState.collapsedSections || {}).savedLearning;
+    const count = bookmarks.length;
+
+    const cardsHtml = bookmarks.map(b => renderSavedFromLearnCard(b)).join('');
+
+    return `
+        <div class="barre-section-header">
+            <span class="barre-section-label barre-collapsible-label" onclick="toggleBarreSection('savedLearning')">saved from learn${collapsed ? ' · ' + count : ''}</span>
+            ${!collapsed ? `<span class="barre-section-count">${count}</span>` : ''}
+        </div>
+        ${!collapsed ? `
+        <div class="saved-learning-carousel">
+            ${cardsHtml}
+        </div>` : ''}
+    `;
+}
+
+function renderSavedFromLearnCard(b) {
+    const pointerSection = DATA.learnSections.find(s => s.id === 'pointers');
+
+    let name = b.itemId;
+    let typeLabel = 'key point';
+    let action = '';
+    let connectorsHtml = '';
+
+    if (b.pageType === 'skill') {
+        const skill = DATA.skills.find(s => s.id === b.itemId);
+        name = skill?.french || b.itemId;
+        typeLabel = 'skill';
+        action = `openSavedLearningItem('skill','${b.itemId.replace(/'/g, "\\'")}')`;
+
+        const goalsCount = (appState.goals || []).filter(g =>
+            !g.completedAt && g.status !== 'completed' && g.skillId === b.itemId
+        ).length;
+        const corrCount = (appState.corrections || []).filter(c => c.skillId === b.itemId).length;
+        const parts = [];
+        if (goalsCount) parts.push(goalsCount + (goalsCount === 1 ? ' goal' : ' goals'));
+        if (corrCount)  parts.push(corrCount + (corrCount === 1 ? ' correction' : ' corrections'));
+        if (parts.length) connectorsHtml = `<span class="active-skill-date">${parts.join(' · ')}</span>`;
+
+    } else if (b.pageType === 'pointer') {
+        const pointer = pointerSection?.items.find(p => p.name === b.itemId);
+        name = pointer?.name || b.itemId;
+        typeLabel = 'pointer';
+        const idx = pointer ? pointerSection.items.indexOf(pointer) : -1;
+        if (idx > -1) action = `openSavedLearningItem('pointer','${b.itemId.replace(/'/g, "\\'")}')`;
+
+    } else {
+        typeLabel = 'key point';
+        action = `openSavedLearningItem('${b.pageType}','${b.itemId.replace(/'/g, "\\'")}')`;
+    }
+
+    return `
+        <div class="saved-learning-card" ${action ? `onclick="${action}"` : ''}>
+            <div class="sl-card-type">${typeLabel}</div>
+            <div class="sl-card-name">${name}</div>
+            ${connectorsHtml}
+        </div>`;
+}
+
+function openSavedLearningItem(pageType, itemId) {
+    pushNavHistory();
+    if (pageType === 'skill') {
+        showSkillKnowledgePage(itemId);
+    } else if (pageType === 'pointer') {
+        const section = DATA.learnSections.find(s => s.id === 'pointers');
+        const idx = section ? section.items.findIndex(p => p.name === itemId) : -1;
+        if (idx > -1) showPointerDetail(idx);
+        else navigateTo('learn');
+    } else {
+        navigateTo('learn');
+        showLearnDetail(pageType, itemId);
     }
 }
 
@@ -4429,7 +4520,8 @@ function showLearnScreen() {
         <div id="learn-search-results" class="learn-search-results" style="display:none;"></div>
         <div class="learn-filter-chips" id="learn-filter-chips">
             <button class="learn-chip active" data-filter="all" onclick="filterLearnScreen('all', this)">All</button>
-            <button class="learn-chip" data-filter="pointers" onclick="showLearnSection('pointers')">Pointers</button>
+            <button class="learn-chip${(appState.learnBookmarks || []).length === 0 ? ' disabled' : ''}" data-filter="bookmarked" onclick="filterLearnScreen('bookmarked', this)">Bookmarked</button>
+            <button class="learn-chip${(appState.skills || []).filter(s => s.flagged).length === 0 ? ' disabled' : ''}" data-filter="infocus" onclick="filterLearnScreen('infocus', this)">In Focus</button>
         </div>
         <div id="learn-sections-list" style="padding: 0 var(--sp-lg); margin-bottom: 120px;">
             ${renderLearnSectionCards()}
@@ -4476,19 +4568,42 @@ function renderPointerCards() {
 }
 
 function filterLearnScreen(filter, btn) {
-    document.querySelectorAll('#learn-filter-chips .learn-chip').forEach(b => b.classList.remove('active'));
-    const activeChip = btn || document.querySelector('#learn-filter-chips [data-filter="' + filter + '"]');
-    if (activeChip) activeChip.classList.add('active');
+    const chipsRow = document.getElementById('learn-filter-chips');
     const list = document.getElementById('learn-sections-list');
-    if (!list) return;
-    if (filter === 'bookmarked') {
-        list.innerHTML = renderBookmarkedLearnItems();
+    if (!list || !chipsRow) return;
+
+    const chip = btn || chipsRow.querySelector(`[data-filter="${filter}"]`);
+
+    if (filter === 'all') {
+        chipsRow.querySelectorAll('.learn-chip').forEach(b => b.classList.remove('active'));
+        chipsRow.querySelector('[data-filter="all"]')?.classList.add('active');
+        // innerHTML is constructed from trusted DATA + user strings escaped via renderLearnSectionCards
+        list.innerHTML = '<p class="learn-helper-text">Search across all sections, or tap a card to explore.</p>' + renderLearnSectionCards(); // nosec
         return;
     }
-    const helperText = filter === 'all'
-        ? '<p class="learn-helper-text">Search across all sections, or tap a card to explore.</p>'
-        : '<p class="learn-helper-text">Diagnostic articles to help identify what\'s holding you back.</p>';
-    list.innerHTML = helperText + (filter === 'pointers' ? renderPointerCards() : renderLearnSectionCards());
+
+    // Disabled pills do nothing
+    if (!chip || chip.classList.contains('disabled')) return;
+
+    // Toggle this filter
+    chip.classList.toggle('active');
+
+    const activeFilters = [...chipsRow.querySelectorAll('.learn-chip.active:not([data-filter="all"])')].map(b => b.dataset.filter);
+
+    if (activeFilters.length === 0) {
+        // Nothing active — revert to All
+        chipsRow.querySelector('[data-filter="all"]')?.classList.add('active');
+        list.innerHTML = '<p class="learn-helper-text">Search across all sections, or tap a card to explore.</p>' + renderLearnSectionCards(); // nosec
+        return;
+    }
+
+    // Deactivate All when any specific filter is active
+    chipsRow.querySelector('[data-filter="all"]')?.classList.remove('active');
+
+    let html = '';
+    if (activeFilters.includes('bookmarked')) html += renderBookmarkedLearnItems();
+    if (activeFilters.includes('infocus'))    html += renderInFocusLearnItems();
+    list.innerHTML = html || '<p class="learn-helper-text">Nothing to show.</p>'; // nosec
 }
 
 function showPointerDetail(index) {
@@ -6287,20 +6402,17 @@ function _refreshLearnBookmarkedPill() {
     const container = document.getElementById('learn-filter-chips');
     if (!container) return;
     const hasBookmarks = (appState.learnBookmarks || []).length > 0;
-    const existing = container.querySelector('[data-filter="bookmarked"]');
-    if (hasBookmarks && !existing) {
-        const pill = document.createElement('button');
-        pill.className = 'learn-chip';
-        pill.dataset.filter = 'bookmarked';
-        pill.textContent = 'Bookmarked';
-        pill.onclick = function() { filterLearnScreen('bookmarked', this); };
-        container.appendChild(pill);
-    } else if (!hasBookmarks && existing) {
-        if (existing.classList.contains('active')) {
+    const pill = container.querySelector('[data-filter="bookmarked"]');
+    if (!pill) return;
+    if (!hasBookmarks) {
+        pill.classList.add('disabled');
+        if (pill.classList.contains('active')) {
+            pill.classList.remove('active');
             container.querySelector('[data-filter="all"]')?.classList.add('active');
             filterLearnScreen('all');
         }
-        existing.remove();
+    } else {
+        pill.classList.remove('disabled');
     }
 }
 
@@ -6327,6 +6439,21 @@ function renderBookmarkedLearnItems() {
             <div class="skill-category-icon">${ICONS.get('bookmark-fill', 24)}</div>
             <div class="skill-category-info">
                 <div class="pointer-eyebrow">${eyebrow}</div>
+                <div class="skill-category-name">${name}</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function renderInFocusLearnItems() {
+    const focused = (appState.skills || []).filter(s => s.flagged);
+    if (!focused.length) return '<p class="learn-helper-text">No skills in focus.</p>';
+    return focused.map(skill => {
+        const name = skill.french || skill.name || skill.id;
+        return `<div class="skill-category-card" style="margin-bottom: var(--sp-sm);" onclick="showSkillKnowledgePage('${skill.id}')">
+            <div class="skill-category-icon">${ICONS.get('skills', 24)}</div>
+            <div class="skill-category-info">
+                <div class="pointer-eyebrow">skill · in focus</div>
                 <div class="skill-category-name">${name}</div>
             </div>
         </div>`;

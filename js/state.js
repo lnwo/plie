@@ -119,8 +119,9 @@ let appState = {
     timeline:         [],
     skillNotes:       [],
     learnNotes:       [],
-    learnBookmarks:   [],
-    learnLineSaves:   [],
+    learnBookmarks:    [],
+    learnLineSaves:    [],
+    collapsedSections: {},  // persisted: { inFocus: bool, savedLearning: bool }
 
     // Misc
     notes:      [],

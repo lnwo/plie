@@ -1302,8 +1302,9 @@ function skipToProfile() {
     const timeline         = storage.load('timeline');
     const skillNotes       = storage.load('skillNotes');
     const learnNotes       = storage.load('learnNotes');
-    const learnBookmarks   = storage.load('learnBookmarks');
-    const learnLineSaves   = storage.load('learnLineSaves');
+    const learnBookmarks    = storage.load('learnBookmarks');
+    const learnLineSaves    = storage.load('learnLineSaves');
+    const collapsedSections = storage.load('collapsedSections');
 
     if (sessions)         appState.sessions         = sessions;
     if (sessionTemplates) appState.sessionTemplates = sessionTemplates;
@@ -1318,8 +1319,9 @@ function skipToProfile() {
     if (timeline)         appState.timeline         = timeline;
     if (skillNotes)       appState.skillNotes       = skillNotes;
     if (learnNotes)       appState.learnNotes       = learnNotes;
-    if (learnBookmarks)   appState.learnBookmarks   = learnBookmarks;
-    if (learnLineSaves)   appState.learnLineSaves   = learnLineSaves;
+    if (learnBookmarks)    appState.learnBookmarks    = learnBookmarks;
+    if (learnLineSaves)    appState.learnLineSaves    = learnLineSaves;
+    if (collapsedSections) appState.collapsedSections = collapsedSections;
 
     // Load preferences
     const prefs = storage.load('preferences');
