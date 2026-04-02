@@ -204,16 +204,13 @@ function formatSessionDateDisplay(dateStr) {
     const yest = new Date();
     yest.setDate(yest.getDate() - 1);
     const yesterdayStr = yest.toISOString().split('T')[0];
+    if (dateStr === todayStr) return 'Today';
+    if (dateStr === yesterdayStr) return 'Yesterday';
     const d = new Date(dateStr + 'T12:00:00');
-    const shortDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-    if (dateStr === todayStr) {
-        return `<span class="date-display-label">Today</span><span class="date-display-sep">·</span><span class="date-display-sub">${shortDate}</span>`;
-    } else if (dateStr === yesterdayStr) {
-        return `<span class="date-display-label">Yesterday</span><span class="date-display-sep">·</span><span class="date-display-sub">${shortDate}</span>`;
-    } else {
-        const dayName = d.toLocaleDateString('en-GB', { weekday: 'short' });
-        return `<span class="date-display-label">${dayName}</span><span class="date-display-sep">·</span><span class="date-display-sub">${shortDate}</span>`;
-    }
+    const weekday = d.toLocaleDateString('en-GB', { weekday: 'long' });
+    const day = d.getDate();
+    const month = d.toLocaleDateString('en-GB', { month: 'long' });
+    return `${weekday}, ${day} ${month}`;
 }
 
 function toggleDateCalendar() {
@@ -344,8 +341,11 @@ function renderSessionLogger() {
         ? (templates.find(t => t.id === s.templateId)?.name || '')
         : (s.sessionName || '');
 
-    // Metadata row (location · days) shown when a template is selected
-    const metadataParts = [activeTemplate?.location, activeTemplate?.days?.join(', ')].filter(Boolean);
+    // Metadata row (class type · location · days) shown when a template is selected
+    const templateClassTypeLabel = activeTemplate?.classType
+        ? (ALL_CLASS_TYPES.find(ct => ct.id === activeTemplate.classType)?.label || null)
+        : null;
+    const metadataParts = [templateClassTypeLabel, activeTemplate?.location, activeTemplate?.days?.join(', ')].filter(Boolean);
     const sessionMetadataHtml = metadataParts.length
         ? '<div class="session-metadata-row" id="session-metadata">' + metadataParts.join(' · ') + '</div>'
         : '<div class="session-metadata-row" id="session-metadata" style="display:none;"></div>';
@@ -382,8 +382,8 @@ function renderSessionLogger() {
 
         '<div id="new-session-form-container"></div>' +
 
-        // Class type — only when no saved template selected
-        '<div id="class-type-section"' + (s.templateId ? ' style="display:none;"' : '') + '>' +
+        // Class type — only when free-text name typed (not template, not blank)
+        '<div id="class-type-section"' + ((!s.sessionName || s.templateId) ? ' style="display:none;"' : '') + '>' +
         '<div class="class-type-carousel">' + primaryChips + selectedSecondaryChip +
         '<div class="class-type-carousel-item">' +
         '<button class="class-type-chip class-type-more" onclick="toggleMoreClassTypes()">' +
@@ -485,6 +485,11 @@ function handleSessionNameInput(value) {
     if (sugg) sugg.innerHTML = '';
     renderSessionComboboxDropdown(value);
     checkSessionTitleForSkills(value);
+    // Show/hide class type section based on whether a name has been typed
+    const classTypeSection = document.getElementById('class-type-section');
+    if (classTypeSection) {
+        classTypeSection.style.display = value.trim() ? '' : 'none';
+    }
 }
 
 function renderDaySuggestions() {
@@ -935,17 +940,38 @@ function renderBlockHtml(block, index) {
 
     // ── Collapsed state — card with preview, tap to expand ──
     if (!isExpanded) {
-        const previewText = resolveBlockText().split('\n')[0].trim();
+        const firstLine = resolveBlockText().split('\n')[0].trim();
+        const linkedSkill = block.topicId?.startsWith('skill:')
+            ? DATA.skills.find(sk => sk.id === block.topicId.replace('skill:', ''))
+            : null;
+        const skillName = linkedSkill?.french || null;
+
+        let previewHtml;
+        if (blockType === 'note') {
+            previewHtml = firstLine
+                ? '<span class="session-block-preview-text">' + escapeHtml(firstLine) + '</span>'
+                : '<span class="session-block-preview-empty">tap to edit</span>';
+        } else if (blockType === 'goal') {
+            const goalTypeLabel = block.goalType
+                ? (block.goalType === 'skill' ? 'a skill' : block.goalType === 'habit' ? 'a habit' : 'a feeling')
+                : null;
+            previewHtml = (firstLine ? '<span class="session-block-preview-bold">' + escapeHtml(firstLine) + '</span>' : '') +
+                (goalTypeLabel ? '<span class="session-block-preview-text">' + goalTypeLabel + '</span>' : '') +
+                (!firstLine && !goalTypeLabel ? '<span class="session-block-preview-empty">tap to edit</span>' : '');
+        } else {
+            // correction / observation
+            previewHtml = (skillName ? '<span class="session-block-preview-bold">' + escapeHtml(skillName) + '</span>' : '') +
+                (firstLine ? '<span class="session-block-preview-text">' + escapeHtml(firstLine) + '</span>' : '') +
+                (!skillName && !firstLine ? '<span class="session-block-preview-empty">tap to edit</span>' : '');
+        }
+
         const starSvg = '<svg class="star-icon" width="16" height="16" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
         return '<div class="swipe-row" data-block-id="' + block.id + '">' +
             '<div class="swipe-action-left swipe-action-remove">' + ICONS.get('x', 16) + 'remove</div>' +
             '<div class="session-block session-block--collapsed" id="block-' + block.id + '" onmousedown="expandBlock(' + block.id + ')">' +
                 '<div class="session-block-header">' +
                     '<button class="block-star-btn ' + (block.isHighlight ? 'active' : '') + '" onmousedown="event.stopPropagation(); toggleBlockHighlight(' + block.id + ')" aria-label="Highlight">' + starSvg + '</button>' +
-                    '<div class="session-block-collapsed-preview">' +
-                        '<span class="session-block-type-inline">' + blockType + '</span>' +
-                        (previewText ? '<span class="session-block-preview-text">' + escapeHtml(previewText) + '</span>' : '<span class="session-block-preview-empty">tap to edit</span>') +
-                    '</div>' +
+                    '<div class="session-block-collapsed-preview">' + previewHtml + '</div>' +
                     '<button class="block-remove-btn" onmousedown="event.stopPropagation()" onclick="removeBlock(' + block.id + ')" aria-label="Remove">' + ICONS.get('x', 14) + '</button>' +
                 '</div>' +
             '</div>' +
@@ -956,11 +982,30 @@ function renderBlockHtml(block, index) {
     const blockText = resolveBlockText();
     const blockTypeLabelHtml = '<div class="block-type-label">' + blockType + '</div>';
 
-    // Build contenteditable bullet lines from existing text
-    const bulletLines = blockText ? blockText.split('\n') : [];
-    const bulletDivsHtml = bulletLines.length
-        ? bulletLines.map(l => `<div>${escapeHtml(l) || '<br>'}</div>`).join('')
-        : '<div><br></div>';
+    // Note type: plain contenteditable, bold first line, no dash prefix
+    // All other types: dash-prefixed bullet lines
+    let entryHtml;
+    if (blockType === 'note') {
+        entryHtml = `<div class="block-bullet-entry block-bullet-entry--note"
+                         contenteditable="true"
+                         data-block-id="${block.id}"
+                         onfocus="normalizeBulletEntryOnFocus(this)"
+                         onblur="normalizeBulletEntry(this)"
+                         oninput="updateBlockBullets(${block.id}, this)"
+                         >${escapeHtml(blockText) || ''}</div>`;
+    } else {
+        const bulletLines = blockText ? blockText.split('\n') : [];
+        const bulletDivsHtml = bulletLines.length
+            ? bulletLines.map(l => `<div>${escapeHtml(l) || '<br>'}</div>`).join('')
+            : '<div><br></div>';
+        entryHtml = `<div class="block-bullet-entry"
+                         contenteditable="true"
+                         data-block-id="${block.id}"
+                         onfocus="normalizeBulletEntryOnFocus(this)"
+                         onblur="normalizeBulletEntry(this)"
+                         oninput="updateBlockBullets(${block.id}, this)"
+                         >${bulletDivsHtml}</div>`;
+    }
 
     return `
         <div class="swipe-row" data-block-id="${block.id}">
@@ -997,14 +1042,7 @@ function renderBlockHtml(block, index) {
                     </div>
 
                     <div class="session-block-fields">
-                        <div class="block-bullet-entry"
-                             contenteditable="true"
-                             data-block-id="${block.id}"
-                             onfocus="normalizeBulletEntryOnFocus(this)"
-                             onblur="normalizeBulletEntry(this)"
-                             oninput="updateBlockBullets(${block.id}, this)"
-                             >${bulletDivsHtml}</div>
-
+                        ${entryHtml}
                     </div>
                 </div>
             </div>

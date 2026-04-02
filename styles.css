@@ -2613,7 +2613,7 @@ h1, h2, .screen-heading {
     align-items: center;
     padding: var(--sp-md) var(--sp-lg);
     padding-bottom: max(var(--sp-lg), env(safe-area-inset-bottom));
-    border-top: 1px solid var(--border-light);
+    border-top: 1px solid var(--ink-6);
     background: var(--background);
     flex-shrink: 0;
 }
@@ -3334,6 +3334,18 @@ input.session-name-input:focus {
     box-shadow: 0 0 0 3px rgba(196, 144, 12, 0.12);
 }
 
+/* Topic input — overrides global input[type="text"] to keep transparent bg */
+input.session-block-topic-input {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+}
+
+input.session-block-topic-input:focus {
+    border: none;
+    box-shadow: none;
+}
+
 /* Block type label */
 .block-type-label {
     font-family: 'DM Sans', sans-serif;
@@ -3631,6 +3643,35 @@ input.session-name-input:focus {
 .block-bullet-entry > div:only-child:empty::before {
     content: "What happened…";
     color: var(--ink-4);
+}
+
+/* Note block — no dash prefix, no indent, bold first line */
+.block-bullet-entry--note {
+    min-height: 44px;
+}
+
+.block-bullet-entry--note > div {
+    padding-left: 0;
+}
+
+.block-bullet-entry--note > div::before {
+    content: none;
+}
+
+.block-bullet-entry--note > div:first-child {
+    font-weight: 600;
+}
+
+.block-bullet-entry--note > div:only-child:empty::before {
+    content: "Note…";
+    color: var(--ink-4);
+    font-weight: 400;
+}
+
+/* Collapsed block preview — bold segment (skill name, goal title, first line) */
+.session-block-preview-bold {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
 }
 
 .session-block-label {
