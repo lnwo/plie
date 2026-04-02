@@ -1,4 +1,4 @@
-const CACHE_NAME = 'plie-v6';
+const CACHE_NAME = 'plie-v10';
 const ASSETS_TO_CACHE = [
     '/index.html',
     '/manifest.json',

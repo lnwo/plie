@@ -146,7 +146,8 @@ function _restoreLastScreen(screenId) {
     if (screenId === 'learn-screen')         { navigateTo('learn');   return; }
     if (screenId === 'profile')              { navigateTo('profile'); return; }
     if (screenId === 'all-goals-screen')     { navigateTo('goals');   showAllGoalsScreen(); return; }
-    if (screenId === 'skill-library-screen') { navigateTo('learn');   showLearnSkillLibrary(); return; }
+    if (screenId === 'skill-library-screen')   { navigateTo('learn'); showLearnSkillLibrary();      return; }
+    if (screenId === 'learn-section-pointers') { navigateTo('learn'); showLearnSection('pointers'); return; }
 
     // session-detail-{id}
     const sessionMatch = screenId.match(/^session-detail-(\d+)$/);

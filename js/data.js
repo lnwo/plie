@@ -342,106 +342,6 @@ const DATA = {
         items: [] // populated from DATA.skills
     },
     {
-        id: 'glossary',
-        name: 'Glossary',
-        desc: 'The language of ballet. Terms, concepts, and the vocabulary used in class and in the studio.',
-        icon: 'learn-quiz',
-        chips: ['All', 'Technique', 'Musicality'],
-        action: null,
-        items: [
-            {
-                name: 'Épaulement',
-                chip: 'Technique',
-                description: 'The positioning and movement of the shoulders in relation to the hips and head. One of the most defining qualities of classical style — without it, dancing can appear flat or two-dimensional.',
-                keyPoints: ['Rotate the shoulder towards or away from the audience to create line and depth.', 'Always connected to the head and gaze.']
-            },
-            {
-                name: 'Aplomb',
-                chip: 'Technique',
-                description: 'The quality of perfect vertical alignment and balance. A dancer with aplomb appears rooted and effortless simultaneously.',
-                keyPoints: ['Weight centred over the standing leg.', 'Core engaged without tension.', 'The feeling of being pulled up rather than held up.']
-            },
-            {
-                name: 'En dehors',
-                chip: 'Technique',
-                description: 'Outward rotation, moving away from the supporting leg. Applies to turns, movements, and the direction of working leg gestures.',
-                keyPoints: ['Rotation initiates from the hip, not the knee.', 'Used in turns: a pirouette en dehors rotates away from the supporting leg.']
-            },
-            {
-                name: 'En dedans',
-                chip: 'Technique',
-                description: 'Inward rotation, moving towards the supporting leg. The counterpart to en dehors.',
-                keyPoints: ['Rotation initiates from the hip.', 'Often felt as the more natural direction for some movements.']
-            },
-            {
-                name: 'Turnout',
-                chip: 'Technique',
-                description: 'The outward rotation of both legs from the hip joint. A fundamental principle of classical ballet technique.',
-                keyPoints: ['Originates at the hip, not the knee or ankle.', 'Never force beyond your natural range.', 'Maintained through core and glute engagement.']
-            },
-            {
-                name: 'Alignment',
-                chip: 'Technique',
-                description: 'The relationship between body parts in space — head, shoulders, hips, knees, and feet stacked in correct relation to one another.',
-                keyPoints: ['Check alignment from both front and side.', 'Misalignment at the hip affects everything below it.']
-            },
-            {
-                name: 'Plumb line',
-                chip: 'Technique',
-                description: 'An imaginary vertical line through the centre of the body used as a reference for correct alignment and balance.',
-                keyPoints: ['Should pass through ear, shoulder, hip, and ankle in profile.', 'A useful mental image when finding balance on one leg.']
-            },
-            {
-                name: 'Weight placement',
-                chip: 'Technique',
-                description: 'Where the body\'s mass sits in relation to the supporting foot or feet. Critical for balance, transitions, and preparation for turns.',
-                keyPoints: ['Over-the-toe placement supports relevé and turns.', 'Shifting weight clearly and fully prevents falling out of steps.']
-            },
-            {
-                name: 'Adagio',
-                chip: 'Musicality',
-                description: 'Slow, sustained movement. In class, adagio exercises develop balance, control, and the ability to move through space with intention.',
-                keyPoints: ['Resist the pull of gravity — control the descent.', 'Musicality is especially visible in adagio.']
-            },
-            {
-                name: 'Rubato',
-                chip: 'Musicality',
-                description: 'A slight flexibility in tempo — slowing or speeding the phrase slightly for expressive effect, then returning to the pulse.',
-                keyPoints: ['Always resolve back to the beat.', 'Use sparingly.', 'The music leads, not the dancer.']
-            },
-            {
-                name: 'Phrase',
-                chip: 'Musicality',
-                description: 'A musical sentence — a unit of music with a beginning, middle, and end. Dancing in phrases means responding to this structure rather than counting individual beats.',
-                keyPoints: ['Identify where phrases begin and end.', 'Movement should breathe with the phrase, not cut across it.']
-            },
-            {
-                name: 'Dynamics',
-                chip: 'Musicality',
-                description: 'The variation of force, speed, and quality within movement. Dynamics are what give dancing texture and prevent it from looking mechanical.',
-                keyPoints: ['Contrast is the key — soft needs sharp to be visible.', 'Listen to the music for dynamic cues.']
-            },
-            {
-                name: 'Accent',
-                chip: 'Musicality',
-                description: 'A point of emphasis in the music or movement. Accents give rhythm its shape and movement its punctuation.',
-                keyPoints: ['Can fall on or off the beat.', 'Match movement accents to musical ones unless deliberately contrasting.']
-            },
-            {
-                name: 'Tempo',
-                chip: 'Musicality',
-                description: 'The speed of the music. In ballet, dancers must be able to adapt technique to a wide range of tempi without losing quality.',
-                keyPoints: ['Slow tempi expose technical weaknesses.', 'Fast tempi require economy of movement.']
-            },
-            {
-                name: 'Allegro',
-                chip: 'Musicality',
-                description: 'Fast, lively movement. In class, allegro exercises develop speed, elevation, and quick footwork.',
-                keyPoints: ['Preparation and landing are as important as the jump itself.', 'Small allegro (petit) and large allegro (grand) require different qualities.']
-            }
-        ]
-    },
-    {
         id: 'musicality',
         name: 'Musicality',
         desc: 'How movement and music become one. Phrasing, dynamics, and the art of dancing with the score rather than to it.',
@@ -465,13 +365,13 @@ const DATA = {
                 name: 'Finding the beat',
                 chip: 'Rhythm',
                 description: 'The fundamental skill of locating the underlying pulse of the music and anchoring movement to it.',
-                keyPoints: ['Listen for the bass line or percussion.', 'Feel it physically before you move.', 'Content coming soon.']
+                keyPoints: ['Listen for the bass line or percussion.', 'Feel it physically before you move.', 'Move with the beat, not to it — internalize rather than react.']
             },
             {
                 name: 'Counting in music',
                 chip: 'Rhythm',
                 description: 'Understanding how music is organised into bars and beats, and how this maps to movement phrases in class.',
-                keyPoints: ['Most ballet music is in 3/4 or 4/4.', 'Count from the preparation, not the first step.', 'Content coming soon.']
+                keyPoints: ['Most ballet music is in 3/4 or 4/4.', 'Count from the preparation, not the first step.', 'The "and" between counts is where many preparatory movements live.']
             },
             {
                 name: 'Musical accents',
@@ -606,14 +506,14 @@ const DATA = {
                 ]
             },
             // ── Vocabulary ─────────────────────────────────────
-            { name: 'Bar',       chip: 'Rhythm',    description: 'A unit of music divided by bar lines. Most ballet music is in 3/4 or 4/4 time.',                                 keyPoints: ['Content coming soon.'] },
-            { name: 'Beat',      chip: 'Rhythm',    description: 'The underlying pulse of the music. Every count in a combination maps to a beat.',                                 keyPoints: ['Content coming soon.'] },
-            { name: 'Count',     chip: 'Rhythm',    description: 'A numbered position within a bar. Counting gives movement its structure and timing.',                             keyPoints: ['Content coming soon.'] },
-            { name: 'Downbeat',  chip: 'Rhythm',    description: 'The first and strongest beat of a bar. In 4/4, this is beat 1; in 3/4 (waltz), also beat 1.',                   keyPoints: ['Content coming soon.'] },
-            { name: 'Upbeat',    chip: 'Rhythm',    description: 'The beat or beats immediately before the downbeat. Preparations and entrances often happen on the upbeat.',       keyPoints: ['Content coming soon.'] },
-            { name: 'Tempo',     chip: 'Rhythm',    description: 'The speed of the music, measured in beats per minute. It affects how movements feel and how much time each step takes.', keyPoints: ['Content coming soon.'] },
-            { name: 'Dynamics',  chip: 'Dynamics',  description: 'Variations in energy, force, and quality of movement. In music, dynamics refer to loudness; in dance, to how movement is performed.', keyPoints: ['Content coming soon.'] },
-            { name: 'Phrase',    chip: 'Phrasing',  description: 'A musical sentence — a group of notes that form a complete unit of expression, usually 4 or 8 bars in ballet.',   keyPoints: ['Content coming soon.'] },
+            { name: 'Bar',       chip: 'Rhythm',    description: 'A unit of music divided by bar lines. Most ballet music is in 3/4 or 4/4 time.',                                 keyPoints: ['A 3/4 bar has 3 beats; a 4/4 bar has 4.', 'Combinations are usually structured in even numbers of bars.', 'Listen for where the bar begins — it shapes where your weight falls.'] },
+            { name: 'Beat',      chip: 'Rhythm',    description: 'The underlying pulse of the music. Every count in a combination maps to a beat.',                                 keyPoints: ['The beat is steady; the melody moves above it.', 'Find it in the bass before you try to move to it.', 'Missing the beat usually means you were reacting rather than anticipating.'] },
+            { name: 'Count',     chip: 'Rhythm',    description: 'A numbered position within a bar. Counting gives movement its structure and timing.',                             keyPoints: ['Counting is a tool, not the goal — eventually you feel it.', 'In 3/4, counts are 1-2-3; in 4/4, 1-2-3-4.', 'Teachers often count from "and" to give you the upbeat prep.'] },
+            { name: 'Downbeat',  chip: 'Rhythm',    description: 'The first and strongest beat of a bar. In 4/4, this is beat 1; in 3/4 (waltz), also beat 1.',                   keyPoints: ['Arrivals and climaxes often land on the downbeat.', 'Feeling the downbeat helps you structure longer phrases.', 'Missing it repeatedly usually signals the music hasn\'t been fully internalised.'] },
+            { name: 'Upbeat',    chip: 'Rhythm',    description: 'The beat or beats immediately before the downbeat. Preparations and entrances often happen on the upbeat.',       keyPoints: ['The prep step before a pirouette is usually on the upbeat.', 'An upbeat feels like gathering energy before release.', 'Knowing where the upbeat is transforms your musical phrasing.'] },
+            { name: 'Tempo',     chip: 'Rhythm',    description: 'The speed of the music, measured in beats per minute. It affects how movements feel and how much time each step takes.', keyPoints: ['Slow tempos require more muscular control to sustain shape.', 'Fast tempos demand cleaner technique — there\'s no time to correct mid-movement.', 'Your teacher\'s tempo choice is information about what the exercise is training.'] },
+            { name: 'Dynamics',  chip: 'Dynamics',  description: 'Variations in energy, force, and quality of movement. In music, dynamics refer to loudness; in dance, to how movement is performed.', keyPoints: ['A sharp dynamic has a clear endpoint; a sustained one has gradual change.', 'Dynamics prevent all movement from looking the same.', 'Match your dynamic to the music\'s — soft passages call for lighter movement.'] },
+            { name: 'Phrase',    chip: 'Phrasing',  description: 'A musical sentence — a group of notes that form a complete unit of expression, usually 4 or 8 bars in ballet.',   keyPoints: ['Every phrase has a beginning, a peak, and an end.', 'Treat each phrase as a complete thought, not just a sequence of steps.', 'The end of a phrase is where to breathe, settle, or prepare.'] },
         ]
     },
     {
@@ -1031,16 +931,16 @@ const DATA = {
                 name: 'Spotting',
                 type: 'pointer',
                 question: 'How do I spot properly in turns?',
-                insight: 'Content coming soon.',
-                whatToTry: ['Content coming soon.'],
+                insight: 'Spotting is the practice of fixing your gaze on a single point and whipping your head around quickly to return to it during turns. The head leads the body — it should arrive at the spot before the body completes the rotation. Inconsistent spotting is usually caused by the eyes losing focus before the head has committed to the whip.',
+                whatToTry: ['Pick a mark at eye level — slightly above is better than below.', 'Keep your chin level; don\'t drop or tip the head as you spot.', 'Practise the head action independently: stand still, spot to one side, whip to return.', 'Delay the head as long as possible before the whip — the contrast is what makes spotting effective.'],
                 inspiration: null
             },
             {
                 name: 'Turnout',
                 type: 'pointer',
                 question: 'How do I improve my turnout without straining?',
-                insight: 'Content coming soon.',
-                whatToTry: ['Content coming soon.'],
+                insight: 'Turnout comes from the hip socket, not the feet. Forcing rotation below the hip — by twisting at the knee or rolling the ankle — creates long-term strain and teaches the body incorrect alignment. Your working turnout is how much you can maintain without compensation, which is often less than your maximum passive turnout.',
+                whatToTry: ['Stand in first and check: are your knees over your toes? If not, bring the feet in.', 'Strengthen the external rotators with exercises like clam shells and attitude rotations.', 'Work at 75% of your maximum turnout and focus on maintaining it — this builds more usable range than forcing the full amount.', 'Ask a teacher to check your pelvis: a tucked or anteriorly tilted pelvis blocks turnout regardless of hip flexibility.'],
                 inspiration: null
             }
         ]
