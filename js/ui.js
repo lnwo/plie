@@ -374,7 +374,7 @@ function renderSessionLogger() {
         // Session field — inline, no label
         '<div class="session-name-field">' +
         '<div class="session-name-input-row" id="session-combobox">' +
-        '<input type="text" class="session-name-input" id="session-name-input" placeholder="Session name…" value="' + sessionInputValue.replace(/"/g, '&quot;') + '" autocomplete="off" oninput="handleSessionNameInput(this.value)" onfocus="showSessionDropdown()" />' +
+        '<input type="text" class="session-name-input" id="session-name-input" placeholder="Session name…" value="' + sessionInputValue.replace(/"/g, '&quot;') + '" autocomplete="off" oninput="handleSessionNameInput(this.value)" onblur="handleSessionNameBlur(this.value)" onfocus="showSessionDropdown()" />' +
         ((s.sessionName || s.templateId) ? '<button class="session-name-clear" onmousedown="clearSessionName()">' + ICONS.get('x', 14) + '</button>' : '') +
         '</div>' +
         '<div id="session-day-suggestions"></div>' +
@@ -506,11 +506,16 @@ function handleSessionNameInput(value) {
     // Hide metadata row (was from a template) when user types free text
     const metaRow = document.getElementById('session-metadata');
     if (metaRow) metaRow.style.display = 'none';
-    // Show/hide class type section based on whether a name has been typed
+}
+
+function handleSessionNameBlur(value) {
+    if (!appState.currentSession) return;
     const classTypeSection = document.getElementById('class-type-section');
-    if (classTypeSection) {
-        classTypeSection.style.display = value.trim() ? '' : 'none';
-    }
+    if (!classTypeSection) return;
+    // Show class type only when a free-text name is committed and no template is linked
+    const hasName = value.trim().length > 0;
+    const hasTemplate = !!appState.currentSession.templateId;
+    classTypeSection.style.display = (hasName && !hasTemplate) ? '' : 'none';
 }
 
 function renderDaySuggestions() {
@@ -550,13 +555,23 @@ function renderSessionComboboxDropdown(query) {
                 <span class="session-combobox-row-name">${t.name}</span>
                 <span class="session-combobox-row-meta">${[t.location, t.days?.join(', ')].filter(Boolean).join(' · ')}</span>
             </div>
-            <button class="session-combobox-row-delete"
-                    onmousedown="event.stopPropagation(); deleteSessionTemplate(${t.id});"
-                    title="Remove saved session">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                    <line x1="2" y1="2" x2="10" y2="10"/><line x1="10" y1="2" x2="2" y2="10"/>
-                </svg>
-            </button>
+            <div class="session-combobox-row-actions">
+                <button class="session-combobox-row-action"
+                        onmousedown="event.stopPropagation(); editSessionTemplate(${t.id});"
+                        title="Edit saved session">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                </button>
+                <button class="session-combobox-row-action session-combobox-row-action--delete"
+                        onmousedown="event.stopPropagation(); deleteSessionTemplate(${t.id});"
+                        title="Remove saved session">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                    </svg>
+                </button>
+            </div>
         </div>
     `).join('');
 
@@ -906,11 +921,11 @@ function expandBlock(blockId) {
 function renderAddTrigger() {
     if (appState.currentSession?._addMenuOpen) {
         return '<div class="add-block-menu">' +
+            '<div class="add-block-menu-header">+ add</div>' +
             '<button class="add-block-menu-item" onmousedown="addBlock(true, \'correction\')">correction</button>' +
             '<button class="add-block-menu-item" onmousedown="addBlock(true, \'observation\')">observation</button>' +
             '<button class="add-block-menu-item" onmousedown="addBlock(true, \'note\')">note</button>' +
             '<button class="add-block-menu-item" onmousedown="addBlock(true, \'goal\')">goal</button>' +
-            '<button class="add-block-menu-item add-block-menu-item--disabled" disabled>photo or video</button>' +
             '</div>';
     }
     return '<button class="add-block-trigger" onmousedown="openAddMenu()">+ add</button>';
@@ -961,42 +976,40 @@ function renderBlockHtml(block, index) {
         return t;
     };
 
-    // ── Collapsed state — card with preview, tap to expand ──
+    // ── Collapsed state — type label + star row, then skill + quote preview ──
     if (!isExpanded) {
-        const firstLine = resolveBlockText().split('\n')[0].trim();
+        const blockText = resolveBlockText();
+        const firstLine = blockText.split('\n')[0].trim();
         const linkedSkill = block.topicId?.startsWith('skill:')
             ? DATA.skills.find(sk => sk.id === block.topicId.replace('skill:', ''))
             : null;
         const skillName = linkedSkill?.french || null;
 
-        let previewHtml;
-        if (blockType === 'note') {
-            previewHtml = firstLine
-                ? '<span class="session-block-preview-text">' + escapeHtml(firstLine) + '</span>'
-                : '<span class="session-block-preview-empty">tap to edit</span>';
-        } else if (blockType === 'goal') {
-            const goalTypeLabel = block.goalType
-                ? (block.goalType === 'skill' ? 'a skill' : block.goalType === 'habit' ? 'a habit' : 'a feeling')
-                : null;
-            previewHtml = (firstLine ? '<span class="session-block-preview-bold">' + escapeHtml(firstLine) + '</span>' : '') +
-                (goalTypeLabel ? '<span class="session-block-preview-text">' + goalTypeLabel + '</span>' : '') +
-                (!firstLine && !goalTypeLabel ? '<span class="session-block-preview-empty">tap to edit</span>' : '');
+        // Build preview body — no placeholder copy for empty blocks
+        let bodyHtml = '';
+        if (blockType === 'note' || blockType === 'goal') {
+            if (firstLine) {
+                bodyHtml = '<div class="session-block-preview-line session-block-preview-line--italic">' + escapeHtml(firstLine) + '</div>';
+            }
         } else {
             // correction / observation
-            previewHtml = (skillName ? '<span class="session-block-preview-bold">' + escapeHtml(skillName) + '</span>' : '') +
-                (firstLine ? '<span class="session-block-preview-text">' + escapeHtml(firstLine) + '</span>' : '') +
-                (!skillName && !firstLine ? '<span class="session-block-preview-empty">tap to edit</span>' : '');
+            if (skillName) {
+                bodyHtml += '<div class="session-block-preview-line session-block-preview-line--bold">' + escapeHtml(skillName) + '</div>';
+            }
+            if (firstLine) {
+                bodyHtml += '<div class="session-block-preview-line session-block-preview-line--italic">\u201c' + escapeHtml(firstLine) + '\u201d</div>';
+            }
         }
 
         const starSvg = '<svg class="star-icon" width="16" height="16" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
         return '<div class="swipe-row" data-block-id="' + block.id + '">' +
             '<div class="swipe-action-left swipe-action-remove">' + ICONS.get('x', 16) + 'remove</div>' +
             '<div class="session-block session-block--collapsed" id="block-' + block.id + '" onmousedown="expandBlock(' + block.id + ')">' +
-                '<div class="session-block-header">' +
+                '<div class="session-block-collapse-header">' +
+                    '<span class="session-block-type-inline">' + blockType + '</span>' +
                     '<button class="block-star-btn ' + (block.isHighlight ? 'active' : '') + '" onmousedown="event.stopPropagation(); toggleBlockHighlight(' + block.id + ')" aria-label="Highlight">' + starSvg + '</button>' +
-                    '<div class="session-block-collapsed-preview">' + previewHtml + '</div>' +
-                    '<button class="block-remove-btn" onmousedown="event.stopPropagation()" onclick="removeBlock(' + block.id + ')" aria-label="Remove">' + ICONS.get('x', 14) + '</button>' +
                 '</div>' +
+                (bodyHtml ? '<div class="session-block-collapse-body">' + bodyHtml + '</div>' : '') +
             '</div>' +
         '</div>';
     }
@@ -4523,6 +4536,14 @@ function deleteSkillNote(noteId, skillId) {
     storage.save('skillNotes', appState.skillNotes);
     const sectionEl = document.getElementById(`skill-notes-section-${skillId}`);
     if (sectionEl) renderSkillNotesSectionInPlace(skillId, sectionEl);
+}
+
+function editSessionTemplate(templateId) {
+    // Close dropdown, open the new session form pre-populated with this template's data
+    const dropdown = document.getElementById('session-combobox-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+    appState._editingTemplateId = templateId;
+    openNewSessionForm();
 }
 
 function deleteSessionTemplate(templateId) {
