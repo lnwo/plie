@@ -6551,7 +6551,7 @@ function _openCorrectionCreator(text, skillId) {
         overlay.addEventListener('mousedown', e => { if (e.target === overlay) _closeCorrectionCreator(); });
     }
     overlay.innerHTML = `
-        <div class="session-sheet">
+        <div class="session-logger-sheet" style="max-height: 60vh;">
             <div class="session-sheet-handle"></div>
             <div class="session-logger-header">
                 <span class="session-logger-title">save as correction</span>
