@@ -2318,7 +2318,7 @@ function showBarreScreen() {
     if (focusedSkills.length > 0) {
         activeSkillsHtml = `
             <div class="barre-section-header">
-                <span class="barre-section-label">corrections in focus</span>
+                <span class="barre-section-label">in focus</span>
                 <div style="display:flex;align-items:center;gap:var(--sp-md);">
                     <span class="barre-section-count">${focusedSkills.length}</span>
                     ${focusedSkills.length > 3 ? '<button class="barre-see-all-btn" onclick="showFocusSkillsSheet()">see all →</button>' : ''}
