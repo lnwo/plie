@@ -5391,9 +5391,7 @@ function showBarreTimelineSheet() {
                 </button>
             </div>
             <div style="padding: 0 var(--sp-lg); overflow-y: auto; flex: 1;">
-                ${entries.length > 0
-                    ? renderGroupedTimelineHtml(entries, firstEntryText)
-                    : '<p class="learn-empty" style="padding: var(--sp-lg) 0;">No activity yet.</p>'}
+                ${renderGroupedTimelineHtml(entries, firstEntryText)}
                 <div style="height: 40px;"></div>
             </div>
         </div>
