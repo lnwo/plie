@@ -3130,10 +3130,17 @@ function calcGoalExpiry(goal) {
 function formatExpiryDate(dt) {
     if (!dt || isNaN(dt.getTime())) return null;
     const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dtStart   = new Date(dt.getFullYear(),  dt.getMonth(),  dt.getDate());
+    const diffDays  = Math.round((dtStart - todayStart) / 86400000);
+    if (diffDays === 0)  return 'Expires today';
+    if (diffDays === 1)  return 'Expires tomorrow';
+    if (diffDays === -1) return 'Expired yesterday';
     const opts = dt.getFullYear() === now.getFullYear()
         ? { day: 'numeric', month: 'short' }
         : { day: 'numeric', month: 'short', year: 'numeric' };
-    return dt.toLocaleDateString('en-GB', opts);
+    const dateStr = dt.toLocaleDateString('en-GB', opts);
+    return diffDays < 0 ? `Expired ${dateStr}` : `Expires ${dateStr}`;
 }
 
 function renderGoalCard(goal, completed) {
@@ -3208,7 +3215,7 @@ function renderGoalCard(goal, completed) {
                                 if (!expStr) return '';
                                 const daysLeft = exp ? Math.ceil((exp - new Date()) / 86400000) : null;
                                 const nearClass = daysLeft !== null && daysLeft <= 3 && daysLeft >= 0 ? ' goal-expiry-near' : '';
-                                return ` <span class="goal-card-expiry${nearClass}">· Expires ${expStr}</span>`;
+                                return ` <span class="goal-card-expiry${nearClass}">· ${expStr}</span>`;
                             })()}
                         </div>
                         ${!completed ? `<button class="goal-edit-btn" onmousedown="openGoalEditor(${goal.id})">edit</button>` : ''}
