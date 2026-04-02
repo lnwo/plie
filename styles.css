@@ -4194,8 +4194,89 @@ input.session-block-topic-input:focus {
 }
 .note-block--correction  { border-left: 2.5px solid var(--coral); }
 .note-block--observation { border-left: 2.5px solid var(--ink-6); }
+.note-block--note        { border-left: 2.5px solid var(--ink-6); }
+.note-block--goal        { border-left: 2.5px solid var(--ink-4); }
 .note-block--highlight   { border-left: 2.5px solid var(--gold); }
 .note-block--gold-bg     { background: var(--gold-wash); }
+
+/* Block type label — appears at top of every session detail card */
+.detail-block-type-label {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: var(--fs-caption);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--ink-5);
+    padding: 8px 12px 0;
+}
+
+/* Thin divider between type label and skill row — only shown when skill is present */
+.detail-block-divider {
+    height: 0.5px;
+    background: rgba(26,23,20,0.08);
+    margin: 6px 12px 0;
+}
+
+/* Goal card — title + type label column */
+.detail-goal-title-col {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.detail-goal-type-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    color: var(--ink-5);
+}
+
+/* Goal show-more content */
+.goal-detail-extra {
+    padding: 8px 12px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border-top: 0.5px solid rgba(26,23,20,0.07);
+}
+
+.goal-detail-body {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink-2);
+    line-height: 1.5;
+}
+
+.goal-detail-markers {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.goal-detail-marker {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink-2);
+}
+
+.goal-detail-marker-check {
+    color: var(--ink-5);
+    flex-shrink: 0;
+    width: 14px;
+}
+
+.goal-detail-meta-line {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink-3);
+}
+
+.goal-detail-meta-line--muted {
+    color: var(--ink-5);
+    font-size: var(--fs-caption);
+}
 
 .note-block-skill-row {
     display: flex;
@@ -4216,6 +4297,14 @@ input.session-block-topic-input:focus {
     color: var(--ink);
     flex: 1;
     line-height: 1.3;
+}
+
+/* Goal card: title is DM Sans 600, not EB Garamond italic */
+.note-block--goal .note-block-skill-name {
+    font-family: 'DM Sans', sans-serif;
+    font-style: normal;
+    font-weight: 600;
+    font-size: var(--fs-small);
 }
 
 .note-block-skill-right {
