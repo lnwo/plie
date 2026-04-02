@@ -704,7 +704,7 @@ function renderNewSessionForm() {
     container.innerHTML = `
         <div class="new-session-form">
             <div class="new-session-form-header">
-                <span class="new-session-form-title">${appState._editingTemplateId ? 'Edit session' : 'New session'}</span>
+                <span class="new-session-form-title">${d._editingId ? 'Edit session' : 'New session'}</span>
                 <button class="new-session-cancel" onclick="cancelNewSession()">← back</button>
             </div>
 
@@ -755,7 +755,7 @@ function renderNewSessionForm() {
             </div>
 
             <button class="btn-large" onclick="saveNewTemplate()" style="margin-top: var(--sp-md);">
-                ${isRecurring ? 'save recurring session' : 'add session'}
+                ${d._editingId ? 'save changes' : (isRecurring ? 'save recurring session' : 'add session')}
             </button>
         </div>
     `;
@@ -814,7 +814,8 @@ function saveNewTemplate() {
     }
 
     const isRecurring = d.days?.length > 0;
-    const editingId = appState._editingTemplateId || null;
+    // editingId stored on draft itself so it can't be lost if state is re-read
+    const editingId = d._editingId || appState._editingTemplateId || null;
 
     const template = {
         id:        editingId || Date.now(),
@@ -4551,14 +4552,14 @@ function editSessionTemplate(templateId) {
     if (!template) return;
     const dropdown = document.getElementById('session-combobox-dropdown');
     if (dropdown) dropdown.style.display = 'none';
-    appState._editingTemplateId = templateId;
     appState._addingNewTemplate = true;
-    // Pre-populate draft from existing template data
+    appState._editingTemplateId = templateId;
     appState._draftTemplate = {
-        name:      template.name,
-        location:  template.location || '',
-        classType: template.classType || null,
-        days:      [...(template.days || [])],
+        _editingId: templateId,
+        name:       template.name,
+        location:   template.location || '',
+        classType:  template.classType || null,
+        days:       [...(template.days || [])],
     };
     renderNewSessionForm();
 }
