@@ -5235,9 +5235,20 @@ function showBarreTimelineSheet() {
 
     const entries = buildTimelineEntries();
     const level = appState.level || 'not-assessed';
-    const firstEntryText = (level === 'not-assessed' || !appState.level)
-        ? 'Joined pli\u00e9'
-        : `Completed placement quiz \u2014 ${(DATA.levelLabels[level] || 'BEGINNER').charAt(0) + (DATA.levelLabels[level] || 'BEGINNER').slice(1).toLowerCase()}`;
+    let firstEntryText = 'Joined pli\u00e9';
+    if (level && level !== 'not-assessed') {
+        const levelName = (DATA.levelLabels[level] || 'Beginner').charAt(0).toUpperCase()
+            + (DATA.levelLabels[level] || 'Beginner').slice(1).toLowerCase();
+        const latestOrientAssessment = (appState.assessments || [])
+            .filter(a => a.persona)
+            .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0))[0];
+        const selfSelected = latestOrientAssessment
+            && !Object.values(latestOrientAssessment.answers || {}).some(
+                v => v !== undefined && (!Array.isArray(v) || v.length > 0));
+        firstEntryText = selfSelected
+            ? `set own level \u00b7 ${levelName}`
+            : `orientation quiz \u00b7 ${levelName}`;
+    }
 
     const sheet = document.createElement('div');
     sheet.id = 'barre-timeline-sheet';

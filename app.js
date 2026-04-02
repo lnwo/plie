@@ -897,11 +897,16 @@ function confirmOrientationLevel(personaKey) {
         appState.assessments.push(assessment);
         storage.save('assessments', appState.assessments);
 
+        const _oa = appState._orientationAnswers || {};
+        const _fromQuiz = Object.values(_oa).some(v =>
+            v !== undefined && (!Array.isArray(v) || v.length > 0));
         appendTimelineEntry({
             type:     'assessment',
             objectId: assessment.id,
-            title:    `Completed orientation`,
-            body:     persona.name,
+            title:    _fromQuiz
+                ? `orientation quiz · ${persona.name}`
+                : `set own level · ${persona.name}`,
+            body:     null,
             date:     assessment.date,
         });
         appState._assessmentWritten = true;
