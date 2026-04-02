@@ -3190,14 +3190,14 @@ h1, h2, .screen-heading {
     width: 100%;
     padding: var(--sp-sm) 0;
     font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
-    font-weight: 500;
-    color: var(--ink-4);
+    font-size: var(--fs-body);
+    font-weight: 400;
+    color: var(--ink-5);
     cursor: pointer;
     transition: color 0.15s ease;
 }
 
-.add-block-trigger:hover { color: var(--ink-2); }
+.add-block-trigger:hover { color: var(--ink-3); }
 
 .add-block-menu {
     display: flex;
@@ -3239,8 +3239,8 @@ h1, h2, .screen-heading {
 }
 
 /* Expanded — lives on sheet surface, no card */
-.session-block--expanded {
-    background: none;
+.session-block.session-block--expanded {
+    background: transparent;
     border: none;
     border-radius: 0;
 }
@@ -3321,6 +3321,17 @@ h1, h2, .screen-heading {
 
 .session-block-textarea::placeholder, .session-block-title-input::placeholder, textarea::placeholder, input::placeholder {
     color: var(--ink-4);
+}
+
+/* Session name input — overrides global input[type="text"] rule above */
+input.session-name-input {
+    background: var(--surface-warm);
+    border-radius: 8px;
+}
+
+input.session-name-input:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(196, 144, 12, 0.12);
 }
 
 /* Block type label */

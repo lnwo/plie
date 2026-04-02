@@ -314,149 +314,111 @@ function renderSessionLogger() {
     const templates = appState.sessionTemplates;
     const isNoteMode = s._mode === 'note';
 
-    // Session dropdown options
-    const savedOptions = templates.map(t => `
-        <option value="template:${t.id}" ${s.templateId === t.id ? 'selected' : ''}>
-            ${t.name}${t.location ? ' · ' + t.location : ''}
-        </option>
-    `).join('');
-
     // Determine predicted class type from selected template
     const activeTemplate = templates.find(t => t.id === s.templateId);
     const predictedType = activeTemplate?.classType || null;
 
     // Class type carousel — primary chips + More button
-    const primaryChips = CLASS_TYPES_PRIMARY.map(ct => `
-        <div class="class-type-carousel-item">
-            <button class="class-type-chip ${s.classType === ct.id ? 'selected' : ''} ${predictedType === ct.id && !s.classType ? 'predicted' : ''}"
-                    onclick="selectClassType('${ct.id}')">
-                <span class="class-type-chip-label">${ct.label}</span>
-                ${ct.sub ? `<span class="class-type-chip-sub">${ct.sub}</span>` : ''}
-            </button>
-        </div>
-    `).join('');
+    const primaryChips = CLASS_TYPES_PRIMARY.map(ct =>
+        '<div class="class-type-carousel-item">' +
+        '<button class="class-type-chip ' + (s.classType === ct.id ? 'selected' : '') + ' ' + (predictedType === ct.id && !s.classType ? 'predicted' : '') + '" onclick="selectClassType('' + ct.id + '')">' +
+        '<span class="class-type-chip-label">' + ct.label + '</span>' +
+        (ct.sub ? '<span class="class-type-chip-sub">' + ct.sub + '</span>' : '') +
+        '</button></div>'
+    ).join('');
 
     // If a secondary type is selected, show it in the carousel too
     const selectedSecondary = s.classType ? CLASS_TYPES_SECONDARY.find(ct => ct.id === s.classType) : null;
-    const selectedSecondaryChip = selectedSecondary ? `
-        <div class="class-type-carousel-item">
-            <button class="class-type-chip selected" onclick="selectClassType('${selectedSecondary.id}')">
-                <span class="class-type-chip-label">${selectedSecondary.label}</span>
-                ${selectedSecondary.sub ? `<span class="class-type-chip-sub">${selectedSecondary.sub}</span>` : ''}
-            </button>
-        </div>
-    ` : '';
+    const selectedSecondaryChip = selectedSecondary ?
+        '<div class="class-type-carousel-item">' +
+        '<button class="class-type-chip selected" onclick="selectClassType('' + selectedSecondary.id + '')">' +
+        '<span class="class-type-chip-label">' + selectedSecondary.label + '</span>' +
+        (selectedSecondary.sub ? '<span class="class-type-chip-sub">' + selectedSecondary.sub + '</span>' : '') +
+        '</button></div>' : '';
 
-    // Notes blocks HTML
+    // Blocks HTML
     const blocksHtml = s.blocks.map((block, i) => renderBlockHtml(block, i)).join('');
 
-    // Session combobox — show selected template name or free text
+    // Session name input value
     const sessionInputValue = s.templateId
         ? (templates.find(t => t.id === s.templateId)?.name || '')
         : (s.sessionName || '');
 
-    const templatePreviewHtml = activeTemplate
-        ? `<div class="session-template-preview"><span class="template-preview-text">${renderTemplatePreview(s.templateId)}</span></div>`
-        : '';
+    // Metadata row (location · days) shown when a template is selected
+    const metadataParts = [activeTemplate?.location, activeTemplate?.days?.join(', ')].filter(Boolean);
+    const sessionMetadataHtml = metadataParts.length
+        ? '<div class="session-metadata-row" id="session-metadata">' + metadataParts.join(' · ') + '</div>'
+        : '<div class="session-metadata-row" id="session-metadata" style="display:none;"></div>';
 
-    const sessionAndClassFieldsHtml = isNoteMode ? '' : `
-        <div class="session-field">
-            <label class="session-field-label">Session <span class="session-field-optional">optional</span></label>
-            <div class="session-combobox" id="session-combobox">
-                <input
-                    type="text"
-                    class="session-input session-combobox-input"
-                    id="session-name-input"
-                    placeholder="Name this session or choose a saved one…"
-                    value="${sessionInputValue}"
-                    autocomplete="off"
-                    oninput="handleSessionNameInput(this.value)"
-                    onfocus="showSessionDropdown()"
-                />
-                <div class="session-combobox-dropdown" id="session-combobox-dropdown" style="display:none;"></div>
-            </div>
-            ${templatePreviewHtml}
-        </div>
-        <div id="session-day-suggestions"></div>
-        <div id="new-session-form-container"></div>
-        <div class="session-field">
-            <label class="session-field-label">Class type <span class="session-field-optional">optional</span></label>
-            <div class="class-type-carousel">
-                ${primaryChips}
-                ${selectedSecondaryChip}
-                <div class="class-type-carousel-item">
-                    <button class="class-type-chip class-type-more" onclick="toggleMoreClassTypes()">
-                        <span class="class-type-chip-label">More…</span>
-                        <span class="class-type-chip-sub">see all types</span>
-                    </button>
-                </div>
-            </div>
-            <div id="more-class-types-panel" style="display:none;"></div>
-        </div>
-    `;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isToday = s.date === todayStr;
 
-    overlay.innerHTML = `
-        <div class="session-logger-sheet">
-            <div class="session-sheet-handle"></div>
+    const sessionBodyHtml = isNoteMode ?
+        '<div class="session-field" style="padding-top: var(--sp-sm);">' +
+        '<div contenteditable="true" id="note-editor" class="note-editor" spellcheck="true">' + escapeHtml(s.generalNotes || '') + '</div>' +
+        '</div>'
+        :
+        // Date row — no label, full weekday + date
+        '<div class="session-date-picker" style="margin-bottom: var(--sp-md);">' +
+        '<button class="date-nav-btn" onmousedown="stepSessionDate(-1)" aria-label="Previous day">' +
+        '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="10 4 6 8 10 12"/></svg>' +
+        '</button>' +
+        '<div class="date-display" onmousedown="toggleDateCalendar()">' + formatSessionDateDisplay(s.date) + '</div>' +
+        '<button class="date-nav-btn' + (isToday ? ' date-nav-disabled' : '') + '" onmousedown="stepSessionDate(1)" aria-label="Next day" ' + (isToday ? 'disabled' : '') + '>' +
+        '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 4 10 8 6 12"/></svg>' +
+        '</button>' +
+        '</div>' +
 
-            <div class="session-logger-header">
-                <div>
-                    <div class="session-logger-eyebrow">${isNoteMode ? 'Quick note' : 'New session'}</div>
-                    <h2 class="session-logger-title">${isNoteMode ? 'Add a note' : 'Log a class'}</h2>
-                </div>
-                <button class="session-close-btn" onclick="closeSessionLogger()" aria-label="Close">
-                    ${ICONS.get('x', 18)}
-                </button>
-            </div>
+        // Session field — inline, no label
+        '<div class="session-name-field">' +
+        '<div class="session-name-input-row" id="session-combobox">' +
+        '<input type="text" class="session-name-input" id="session-name-input" placeholder="Session name…" value="' + sessionInputValue.replace(/"/g, '&quot;') + '" autocomplete="off" oninput="handleSessionNameInput(this.value)" onfocus="showSessionDropdown()" />' +
+        ((s.sessionName || s.templateId) ? '<button class="session-name-clear" onmousedown="clearSessionName()">' + ICONS.get('x', 14) + '</button>' : '') +
+        '</div>' +
+        '<div id="session-day-suggestions"></div>' +
+        '<div class="session-combobox-dropdown" id="session-combobox-dropdown" style="display:none;"></div>' +
+        sessionMetadataHtml +
+        '</div>' +
 
-            <div class="session-logger-body" id="session-logger-body">
+        '<div id="new-session-form-container"></div>' +
 
-                ${isNoteMode ? `
-                <div class="session-field" style="padding-top: var(--sp-sm);">
-                    <div contenteditable="true"
-                         id="note-editor"
-                         class="note-editor"
-                         spellcheck="true">${escapeHtml(s.generalNotes || '')}</div>
-                </div>
-                ` : `
-                <!-- Date -->
-                <div class="session-field">
-                    <label class="session-field-label">Date</label>
-                    <div class="session-date-picker">
-                        <button class="date-nav-btn" onmousedown="stepSessionDate(-1)" aria-label="Previous day">
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="10 4 6 8 10 12"/></svg>
-                        </button>
-                        <div class="date-display" onmousedown="toggleDateCalendar()">${formatSessionDateDisplay(s.date)}</div>
-                        <button class="date-nav-btn${s.date === new Date().toISOString().split('T')[0] ? ' date-nav-disabled' : ''}" onmousedown="stepSessionDate(1)" aria-label="Next day" ${s.date === new Date().toISOString().split('T')[0] ? 'disabled' : ''}>
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 4 10 8 6 12"/></svg>
-                        </button>
-                    </div>
-                </div>
+        // Class type — only when no saved template selected
+        '<div id="class-type-section"' + (s.templateId ? ' style="display:none;"' : '') + '>' +
+        '<div class="class-type-carousel">' + primaryChips + selectedSecondaryChip +
+        '<div class="class-type-carousel-item">' +
+        '<button class="class-type-chip class-type-more" onclick="toggleMoreClassTypes()">' +
+        '<span class="class-type-chip-label">More…</span>' +
+        '<span class="class-type-chip-sub">see all types</span>' +
+        '</button></div>' +
+        '</div>' +
+        '<div id="more-class-types-panel" style="display:none;"></div>' +
+        '</div>' +
 
-                ${sessionAndClassFieldsHtml}
+        // Blocks — no section label
+        '<div id="session-blocks-container">' + blocksHtml + '</div>' +
 
-                <!-- Notes & corrections blocks -->
-                <div class="session-field" style="margin-bottom: var(--sp-sm);">
-                    <label class="session-field-label">Notes &amp; corrections</label>
-                </div>
+        // + add trigger
+        '<div id="add-block-trigger-container">' + renderAddTrigger() + '</div>';
 
-                <div id="session-blocks-container">
-                    ${blocksHtml}
-                </div>
-
-                <button class="add-block-btn" onclick="addBlock()">+ add notes &amp; corrections</button>
-                `}
-
-                <div style="height: var(--sp-3xl);"></div>
-
-            </div>
-
-            <div class="session-logger-footer">
-                <button class="session-discard-btn" onmousedown="closeSessionLogger()">discard</button>
-                <button class="btn-large session-save-btn" onmousedown="saveSession()">${isNoteMode ? 'save note' : 'save session'}</button>
-            </div>
-        </div>
-    `;
+    overlay.innerHTML =
+        '<div class="session-logger-sheet">' +
+        '<div class="session-sheet-handle"></div>' +
+        '<div class="session-logger-header">' +
+        '<div>' +
+        '<div class="session-logger-eyebrow">' + (isNoteMode ? 'Quick note' : 'New session') + '</div>' +
+        '<h2 class="session-logger-title">' + (isNoteMode ? 'Add a note' : 'Log a class') + '</h2>' +
+        '</div>' +
+        '<button class="session-close-btn" onclick="closeSessionLogger()" aria-label="Close">' + ICONS.get('x', 18) + '</button>' +
+        '</div>' +
+        '<div class="session-logger-body" id="session-logger-body">' +
+        sessionBodyHtml +
+        '<div style="height: var(--sp-3xl);"></div>' +
+        '</div>' +
+        '<div class="session-logger-footer">' +
+        '<button class="session-discard-btn" onmousedown="closeSessionLogger()">discard</button>' +
+        '<button class="btn-large session-save-btn" onmousedown="saveSession()">' + (isNoteMode ? 'save note' : 'save session') + '</button>' +
+        '</div>' +
+        '</div>';
 
     // Re-attach swipe listeners to new handle
     attachSheetSwipe();
@@ -468,7 +430,6 @@ function renderSessionLogger() {
     // Show day-of-week suggestions if no session selected yet
     renderDaySuggestions();
 }
-
 // ── Swipe-to-dismiss (re-attachable after re-render) ──
 function attachSheetSwipe() {
     const overlay = document.getElementById('session-logger-overlay');
@@ -632,15 +593,6 @@ function openNewSessionForm() {
         days: []
     };
     renderNewSessionForm();
-}
-
-function renderTemplatePreview(templateId) {
-    const t = appState.sessionTemplates.find(t => t.id === templateId);
-    if (!t) return '';
-    const parts = [];
-    if (t.location) parts.push(t.location);
-    if (t.days?.length) parts.push(t.days.join(', '));
-    return parts.join(' · ');
 }
 
 // ── Class type ──
@@ -976,25 +928,6 @@ function renderBlockHtml(block, index) {
     const blockText = resolveBlockText();
     const blockTypeLabelHtml = '<div class="block-type-label">' + blockType + '</div>';
 
-    // Notes section (collapsible)
-    const notesHtml = `
-        <div class="block-notes-area">
-            ${block.notesOpen || block.notes ? `
-                <textarea class="session-block-textarea session-block-capped"
-                          placeholder="Notes — context, rehearsal, how it felt…"
-                          oninput="updateBlockField(${block.id}, 'notes', this.value); autoResizeCapped(this);"
-                          >${block.notes || ''}</textarea>
-                <button class="block-notes-toggle block-notes-toggle-open"
-                        onmousedown="toggleBlockNotes(${block.id})">hide notes</button>
-            ` : `
-                <button class="block-notes-toggle"
-                        onmousedown="toggleBlockNotes(${block.id})">
-                    ${block.notes ? `${ICONS.get('edit', 12)} notes` : '+ add notes'}
-                </button>
-            `}
-        </div>
-    `;
-
     // Build contenteditable bullet lines from existing text
     const bulletLines = blockText ? blockText.split('\n') : [];
     const bulletDivsHtml = bulletLines.length
@@ -1044,7 +977,6 @@ function renderBlockHtml(block, index) {
                              oninput="updateBlockBullets(${block.id}, this)"
                              >${bulletDivsHtml}</div>
 
-                        ${notesHtml}
                     </div>
                 </div>
             </div>
