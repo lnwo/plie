@@ -122,6 +122,8 @@ function openSessionLogger(mode) {
         blocks:          [],
         _predicted:      false,
         _mode:           mode || 'session',
+        _expandedBlockId: null,
+        _addMenuOpen:    false,
     };
 
     // Auto-create first block and focus its title (not needed for note mode)
@@ -477,6 +479,22 @@ function updateSessionDate(value) {
 
 // ── Session combobox ──
 
+function clearSessionName() {
+    if (!appState.currentSession) return;
+    appState.currentSession.sessionName = null;
+    appState.currentSession.templateId = null;
+    // Hide metadata row and class type without full re-render
+    const metaRow = document.getElementById('session-metadata');
+    if (metaRow) metaRow.style.display = 'none';
+    const classTypeSection = document.getElementById('class-type-section');
+    if (classTypeSection) classTypeSection.style.display = 'none';
+    // Clear the input and hide the × button via re-render of the name row
+    const clearBtn = document.querySelector('.session-name-clear');
+    if (clearBtn) clearBtn.remove();
+    const input = document.getElementById('session-name-input');
+    if (input) { input.value = ''; input.focus(); }
+}
+
 function handleSessionNameInput(value) {
     // Update free-text name on session, clear any template link
     appState.currentSession.sessionName = value;
@@ -485,6 +503,9 @@ function handleSessionNameInput(value) {
     if (sugg) sugg.innerHTML = '';
     renderSessionComboboxDropdown(value);
     checkSessionTitleForSkills(value);
+    // Hide metadata row (was from a template) when user types free text
+    const metaRow = document.getElementById('session-metadata');
+    if (metaRow) metaRow.style.display = 'none';
     // Show/hide class type section based on whether a name has been typed
     const classTypeSection = document.getElementById('class-type-section');
     if (classTypeSection) {
@@ -831,6 +852,8 @@ function addBlock(focusTitle = false, type = 'correction') {
         isHighlight: false,
     };
     appState.currentSession.blocks.push(block);
+    appState.currentSession._expandedBlockId = block.id;
+    appState.currentSession._addMenuOpen = false;
     sortBlocks();
     renderBlocksOnly();
     if (focusTitle) {
@@ -982,10 +1005,10 @@ function renderBlockHtml(block, index) {
     const blockText = resolveBlockText();
     const blockTypeLabelHtml = '<div class="block-type-label">' + blockType + '</div>';
 
-    // Note type: plain contenteditable, bold first line, no dash prefix
-    // All other types: dash-prefixed bullet lines
+    // Note/goal: plain contenteditable, no dash prefix (goal fields come in T73)
+    // Correction/observation: dash-prefixed bullet lines
     let entryHtml;
-    if (blockType === 'note') {
+    if (blockType === 'note' || blockType === 'goal') {
         entryHtml = `<div class="block-bullet-entry block-bullet-entry--note"
                          contenteditable="true"
                          data-block-id="${block.id}"

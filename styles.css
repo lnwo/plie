@@ -2614,7 +2614,6 @@ h1, h2, .screen-heading {
     padding: var(--sp-md) var(--sp-lg);
     padding-bottom: max(var(--sp-lg), env(safe-area-inset-bottom));
     border-top: 1px solid var(--ink-6);
-    background: var(--background);
     flex-shrink: 0;
 }
 
@@ -3645,9 +3644,16 @@ input.session-block-topic-input:focus {
     color: var(--ink-4);
 }
 
-/* Note block — no dash prefix, no indent, bold first line */
+/* Note/goal block — no dash prefix, no indent, bold first line */
 .block-bullet-entry--note {
     min-height: 44px;
+}
+
+/* Placeholder when element has no children yet (before normalizeBulletEntry runs) */
+.block-bullet-entry--note:empty::before {
+    content: "Write something…";
+    color: var(--ink-4);
+    pointer-events: none;
 }
 
 .block-bullet-entry--note > div {
