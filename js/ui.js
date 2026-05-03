@@ -91,14 +91,12 @@ const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 // Block topic options — General categories + all skills (keyed by slug)
 function getBlockTopics() {
     const categories = [
-        { id: 'general',      label: 'General',    group: 'General'   },
-        { id: 'musicality',   label: 'Musicality', group: 'General'   },
-        { id: 'barre',        label: 'Barre',       group: 'Category'  },
-        { id: 'centre',       label: 'Centre',      group: 'Category'  },
-        { id: 'turns',        label: 'Turns',       group: 'Category'  },
-        { id: 'allegro',      label: 'Allegro',     group: 'Category'  },
-        { id: 'pointe',       label: 'Pointe',      group: 'Category'  },
-        { id: 'flexibility',  label: 'Flexibility', group: 'Category'  },
+        { id: 'general',   label: 'General',   group: 'General'  },
+        { id: 'technique', label: 'Technique', group: 'Category' },
+        { id: 'movement',  label: 'Movement',  group: 'Category' },
+        { id: 'artistry',  label: 'Artistry',  group: 'Category' },
+        { id: 'the-body',  label: 'The Body',  group: 'Category' },
+        { id: 'pointe',    label: 'Pointe',    group: 'Category' },
     ];
     const skills = appState.skills.map(s => ({
         id:    'skill:' + s.id,   // e.g. 'skill:pirouette'
@@ -113,7 +111,8 @@ function openSessionLogger(mode) {
     const today = new Date().toISOString().split('T')[0];
 
     appState.currentSession = {
-        id:              Date.now(),
+        id:              generateId(),
+        userId:          null,
         date:            today,
         templateId:      null,
         sessionName:     null,
@@ -529,7 +528,7 @@ function renderDaySuggestions() {
     const rows = matches.map((t, i) => {
         const meta = [t.location, t.days?.join(', ')].filter(Boolean).join(' · ');
         const last = i === matches.length - 1;
-        return `<div class="session-day-suggestion-row${last ? ' session-day-suggestion-row--last' : ''}" onmousedown="selectSessionTemplate(${t.id})"><div class="session-combobox-row-info"><span class="session-combobox-row-name">${t.name}</span>${meta ? `<span class="session-combobox-row-meta">${meta}</span>` : ''}</div></div>`;
+        return `<div class="session-day-suggestion-row${last ? ' session-day-suggestion-row--last' : ''}" onmousedown="selectSessionTemplate('${t.id}')"><div class="session-combobox-row-info"><span class="session-combobox-row-name">${t.name}</span>${meta ? `<span class="session-combobox-row-meta">${meta}</span>` : ''}</div></div>`;
     }).join('');
     container.innerHTML = rows;
 }
@@ -550,14 +549,14 @@ function renderSessionComboboxDropdown(query) {
         : templates;
 
     const matchRows = matches.map(t => `
-        <div class="session-combobox-row" onmousedown="selectSessionTemplate(${t.id})">
+        <div class="session-combobox-row" onmousedown="selectSessionTemplate('${t.id}')">
             <div class="session-combobox-row-info">
                 <span class="session-combobox-row-name">${t.name}</span>
                 <span class="session-combobox-row-meta">${[t.location, t.days?.join(', ')].filter(Boolean).join(' · ')}</span>
             </div>
             <div class="session-combobox-row-actions">
                 <button class="session-combobox-row-action"
-                        onmousedown="event.stopPropagation(); editSessionTemplate(${t.id});"
+                        onmousedown="event.stopPropagation(); editSessionTemplate('${t.id}');"
                         title="Edit saved session">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -565,7 +564,7 @@ function renderSessionComboboxDropdown(query) {
                     </svg>
                 </button>
                 <button class="session-combobox-row-action session-combobox-row-action--delete"
-                        onmousedown="event.stopPropagation(); deleteSessionTemplate(${t.id});"
+                        onmousedown="event.stopPropagation(); deleteSessionTemplate('${t.id}');"
                         title="Remove saved session">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
@@ -818,7 +817,7 @@ function saveNewTemplate() {
     const editingId = d._editingId || appState._editingTemplateId || null;
 
     const template = {
-        id:        editingId || Date.now(),
+        id:        editingId || generateId(),
         name:      d.name.trim(),
         location:  d.location?.trim() || null,
         classType: d.classType || null,
@@ -866,14 +865,15 @@ const BLOCK_MODES = ['correction', 'praise', 'reflection'];
 
 function addBlock(focusTitle = false, type = 'correction') {
     const block = {
-        id:          Date.now(),
+        id:          generateId(),
         topicId:     'general',
         title:       '',
         text:        '',
         notes:       '',
         notesOpen:   false,
-        blockType:   type,
-        isHighlight: false,
+        blockType:         type,
+        isHighlight:       false,
+        previousBlockType: null,
     };
     if (type === 'goal') {
         block._goalDraft = {
@@ -946,8 +946,8 @@ function renderAddTrigger() {
         return '<div class="add-block-menu">' +
             '<div class="add-block-menu-header">+ add</div>' +
             '<button class="add-block-menu-item" onmousedown="addBlock(true, \'correction\')">correction</button>' +
-            '<button class="add-block-menu-item" onmousedown="addBlock(true, \'observation\')">observation</button>' +
             '<button class="add-block-menu-item" onmousedown="addBlock(true, \'note\')">note</button>' +
+            '<button class="add-block-menu-item" onmousedown="addBlock(true, \'intention\')">intention</button>' +
             '<button class="add-block-menu-item" onmousedown="addBlock(true, \'goal\')">goal</button>' +
             '</div>';
     }
@@ -970,7 +970,7 @@ function renderBlocksOnly() {
     if (triggerContainer) triggerContainer.innerHTML = renderAddTrigger();
     // Attach swipe-to-remove on each block
     container.querySelectorAll('.swipe-row[data-block-id]').forEach(row => {
-        const blockId = parseInt(row.dataset.blockId);
+        const blockId = row.dataset.blockId;
         attachSwipe(row, {
             onLeft: () => {
                 const idx = getBlockIndexById(blockId);
@@ -1151,7 +1151,7 @@ function renderBlockHtml(block, index) {
                     <div class="session-block-fields">
                         ${entryHtml}
                     </div>
-                    ${(blockType === 'correction' || blockType === 'observation') ? `
+                    ${blockType === 'correction' ? `
                     <div class="block-tag-row">
                         <button class="block-tag-chip${block.bodyTag ? ' active' : ''}"
                                 onmousedown="toggleBlockBodyTag(${block.id})">Body</button>
@@ -1232,7 +1232,7 @@ function renderInlineGoalFormHtml(block) {
 
     if (d.goalType === 'skill') {
         const selectedSkill = d.skillId ? (appState.skills || []).find(s => s.id === d.skillId) : null;
-        const _catLabels = { general: 'General', musicality: 'Musicality', barre: 'Barre', centre: 'Centre', turns: 'Turns', allegro: 'Allegro', pointe: 'Pointe', flexibility: 'Flexibility' };
+        const _catLabels = { general: 'General', technique: 'Technique', movement: 'Movement', artistry: 'Artistry', 'the-body': 'The Body', pointe: 'Pointe' };
         const selectedSkillLabel = selectedSkill ? selectedSkill.french : (d.dimensionId ? (_catLabels[d.dimensionId] || '') : '');
         const markersHtml = (d.progressMarkers || []).map((m, i) => `
             <div class="goal-marker-row">
@@ -1410,7 +1410,7 @@ function adjustBlockGoalHowOftenNum(blockId, delta) {
 function addBlockGoalMarker(blockId) {
     const block = getBlockById(blockId);
     if (!block?._goalDraft) return;
-    block._goalDraft.progressMarkers.push({ id: Date.now(), text: '', done: false });
+    block._goalDraft.progressMarkers.push({ id: generateId(), text: '', done: false });
     renderBlocksOnly();
     requestAnimationFrame(() => {
         const list = document.getElementById(`inline-goal-markers-${blockId}`);
@@ -1745,12 +1745,15 @@ function toggleBlockHighlight(blockId) {
     const block = getBlockById(blockId);
     if (!block) return;
     block.isHighlight = !block.isHighlight;
+    if (block.isHighlight) {
+        block.previousBlockType = block.blockType || 'correction';
+    } else {
+        block.previousBlockType = null;
+    }
     const blockEl = document.getElementById(`block-${blockId}`);
     if (!blockEl) return;
     const btn = blockEl.querySelector('.block-star-btn');
-    if (btn) {
-        btn.classList.toggle('active', block.isHighlight);
-    }
+    if (btn) btn.classList.toggle('active', block.isHighlight);
 }
 
 function toggleBlockNotes(blockId) {
@@ -1965,16 +1968,16 @@ function openSessionEditor(sessionId) {
 
 // ── Timeline helper — all writes go through here ──
 function appendTimelineEntry({ type, objectId = null, title, body = null, date }) {
-    const now = Date.now();
     appState.timeline = appState.timeline || [];
     appState.timeline.unshift({
-        id:       now,
+        id:        generateId(),
+        userId:    null,
         type,
         objectId,
         title,
         body,
-        date:     date || new Date().toISOString().split('T')[0],
-        createdAt: now,
+        date:      date || new Date().toISOString().split('T')[0],
+        createdAt: Date.now(),
     });
     storage.save('timeline', appState.timeline);
 }
@@ -1987,7 +1990,7 @@ function saveSession() {
     // Flush all block-bullet-entry contenteditables — captures text that oninput
     // may not have committed (e.g. paste, IME, or tapping Save immediately).
     document.querySelectorAll('.block-bullet-entry[data-block-id]').forEach(el => {
-        const blockId = parseInt(el.dataset.blockId, 10);
+        const blockId = el.dataset.blockId;
         const block = getBlockById(blockId);
         if (!block) return;
         const text = (el.innerText || '').replace(/\n+$/, '');
@@ -1999,7 +2002,7 @@ function saveSession() {
     document.querySelectorAll('.correction-bullet-new .correction-bullet-input').forEach(el => {
         const text = el.innerText?.trim();
         if (!text) return;
-        const blockId = parseInt(el.dataset.block, 10);
+        const blockId = el.dataset.block;
         const block = getBlockById(blockId);
         if (!block) return;
         if (!Array.isArray(block.corrections)) block.corrections = [];
@@ -2015,12 +2018,11 @@ function saveSession() {
     }
 
     const now = Date.now();
-    let seq = 0; // monotonic sequence within this save — guarantees unique IDs
-    const nextId = () => now + (++seq);
 
     // 1. Persist the Session object (no blocks — those become SessionSkills + Corrections)
     const session = {
         id:              s.id,
+        userId:          null,
         date:            s.date,
         savedAt:         now,
         templateId:      s.templateId      || null,
@@ -2070,7 +2072,8 @@ function saveSession() {
             || block.reflectionText?.trim()
             || '';
 
-        const resolvedType = block.blockType || block.source || (block.mode === 'correction' ? 'correction' : null) || 'correction';
+        const rawType = block.blockType || block.source || (block.mode === 'correction' ? 'correction' : null) || 'correction';
+        const resolvedType = rawType === 'observation' ? 'note' : rawType;
         const isCorrection = resolvedType === 'correction';
 
         // Save all non-empty lines as Correction objects regardless of source —
@@ -2079,13 +2082,15 @@ function saveSession() {
             const lines = blockText.split('\n').map(l => l.trim()).filter(Boolean);
             lines.forEach(text => {
                 const correction = {
-                    id:          nextId(),
-                    skillId:     skillId || null,
+                    id:               generateId(),
+                    userId:           null,
+                    skillId:          skillId || null,
                     text,
-                    createdAt:   now,
-                    sessionId:   session.id,
-                    isHighlight: !!block.isHighlight,
-                    bodyTag:     !!block.bodyTag,
+                    createdAt:        now,
+                    sessionId:        session.id,
+                    isHighlight:      !!block.isHighlight,
+                    bodyTag:          !!block.bodyTag,
+                    previousBlockType: block.previousBlockType || null,
                 };
                 appState.corrections.push(correction);
                 blockCorrectionIds.push(correction.id);
@@ -2095,9 +2100,10 @@ function saveSession() {
 
             // Skill-linked observation blocks also write to skillNotes so they appear
             // in "my notes" on the skill detail page.
-            if (isSkill && skillId && resolvedType === 'observation') {
+            if (isSkill && skillId && resolvedType === 'note') {
                 pendingSkillNotes.push({
-                    id:          nextId(),
+                    id:          generateId(),
+                    userId:      null,
                     skillId:     skillId,
                     text:        blockText,
                     date:        session.date,
@@ -2113,16 +2119,18 @@ function saveSession() {
         // not just skill-linked blocks, so general notes appear in session detail.
         if (blockText || block.notes?.trim()) {
             const sessionSkill = {
-                id:            nextId(),
+                id:            generateId(),
+                userId:        null,
                 sessionId:     session.id,
                 skillId:       skillId || null,
                 notes:         block.notes?.trim() || null,
                 correctionIds: blockCorrectionIds,
                 tracked:       true,
                 blockTitle:    block.title?.trim() || null,
-                source:        resolvedType,
-                isHighlight:   !!block.isHighlight,
-                bodyTag:       !!block.bodyTag,
+                blockType:         resolvedType,
+                isHighlight:       !!block.isHighlight,
+                bodyTag:           !!block.bodyTag,
+                previousBlockType: block.previousBlockType || null,
             };
             appState.sessionSkills.push(sessionSkill);
 
@@ -2173,10 +2181,11 @@ function saveSession() {
             const d = b._goalDraft;
             const progressMarkers = (d.progressMarkers || [])
                 .filter(m => m.text?.trim())
-                .map(m => ({ id: nextId(), text: m.text.trim(), done: false }));
-            const goalId = nextId();
+                .map(m => ({ id: generateId(), text: m.text.trim(), done: false }));
+            const goalId = generateId();
             appState.goals.unshift({
                 id:               goalId,
+                userId:           null,
                 title:            d.title.trim(),
                 body:             d.body?.trim() || null,
                 createdAt:        sessionDateTs,
@@ -2198,13 +2207,14 @@ function saveSession() {
             });
             // SessionSkill record links this goal to the session for session detail display
             appState.sessionSkills.push({
-                id:            nextId(),
+                id:            generateId(),
+                userId:        null,
                 sessionId:     session.id,
                 skillId:       null,
                 notes:         null,
                 correctionIds: [],
                 tracked:       true,
-                source:        'goal',
+                blockType:     'goal',
                 goalId:        goalId,
                 isHighlight:   !!b.isHighlight,
                 bodyTag:       false,
@@ -2287,7 +2297,7 @@ function saveSession() {
 
 function isPromptSuppressed(type) {
     try {
-        const dismissed = JSON.parse(localStorage.getItem('plie:prompts-dismissed') || '{}');
+        const dismissed = storage.load('promptsDismissed') || {};
         const ts = dismissed[type];
         return ts && Date.now() - ts < 7 * 24 * 60 * 60 * 1000;
     } catch { return false; }
@@ -2295,9 +2305,9 @@ function isPromptSuppressed(type) {
 
 function suppressPrompt(type) {
     try {
-        const dismissed = JSON.parse(localStorage.getItem('plie:prompts-dismissed') || '{}');
+        const dismissed = storage.load('promptsDismissed') || {};
         dismissed[type] = Date.now();
-        localStorage.setItem('plie:prompts-dismissed', JSON.stringify(dismissed));
+        storage.save('promptsDismissed', dismissed);
     } catch {}
 }
 
@@ -2342,7 +2352,7 @@ function evaluatePostSavePrompt(skillsWithCorrections) {
             showContextualPrompt({
                 body: `your ${skill?.french || g.title} goal expires soon. still working on it?`,
                 primaryLabel: 'view goal',
-                primaryFn: `openGoalEditor(${g.id})`,
+                primaryFn: `openGoalEditor('${g.id}')`,
                 suppressKey: 'expiring-goal'
             });
             return;
@@ -2375,7 +2385,7 @@ function evaluatePostSavePrompt(skillsWithCorrections) {
             showContextualPrompt({
                 body: `you completed your ${skill?.french || g.title} goal. anything to note?`,
                 primaryLabel: 'add a note',
-                primaryFn: `openGoalEditor(${g.id})`,
+                primaryFn: `openGoalEditor('${g.id}')`,
                 suppressKey: 'completed-goal'
             });
             return;
@@ -2546,7 +2556,7 @@ function editTimelineNote(noteId) {
                 </div>
             </div>
             <div class="session-logger-footer">
-                <button class="btn-large session-save-btn" onmousedown="saveTimelineNoteEdit(${noteId})">save</button>
+                <button class="btn-large session-save-btn" onmousedown="saveTimelineNoteEdit('${noteId}')">save</button>
             </div>
         </div>
     `;
@@ -2585,7 +2595,8 @@ function saveReflection() {
 
     appState.skillNotes = appState.skillNotes || [];
     appState.skillNotes.push({
-        id:           Date.now(),
+        id:           generateId(),
+        userId:       null,
         skillId:      null,          // session-level reflection, not skill-specific
         text,
         date:         new Date().toISOString().split('T')[0],
@@ -3202,14 +3213,11 @@ const GOAL_CATEGORIES = [
 ];
 
 const DIMENSION_OPTIONS = [
-    { id: 'barre',       label: 'Barre' },
-    { id: 'centre',      label: 'Centre' },
-    { id: 'turns',       label: 'Turns' },
-    { id: 'allegro',     label: 'Allegro' },
-    { id: 'flexibility', label: 'Flexibility' },
-    { id: 'pointe',      label: 'Pointe' },
-    { id: 'musicality',  label: 'Musicality' },
-    { id: 'knowledge',   label: 'Knowledge' },
+    { id: 'technique', label: 'Technique' },
+    { id: 'movement',  label: 'Movement'  },
+    { id: 'artistry',  label: 'Artistry'  },
+    { id: 'the-body', label: 'The Body'  },
+    { id: 'pointe',    label: 'Pointe'    },
 ];
 
 function showGoalsScreen() {
@@ -3630,7 +3638,7 @@ function renderGoalCard(goal, completed) {
     const linkedSkill = goal.skillId
         ? (appState.skills || []).find(s => s.id === goal.skillId)
         : null;
-    const _catLabels = { general: 'General', musicality: 'Musicality', barre: 'Barre', centre: 'Centre', turns: 'Turns', allegro: 'Allegro', pointe: 'Pointe', flexibility: 'Flexibility' };
+    const _catLabels = { general: 'General', technique: 'Technique', movement: 'Movement', artistry: 'Artistry', 'the-body': 'The Body', pointe: 'Pointe' };
     const linkedCategory = !linkedSkill && goal.dimensionId ? (_catLabels[goal.dimensionId] || null) : null;
 
     const tagsHtml = [
@@ -3667,8 +3675,8 @@ function renderGoalCard(goal, completed) {
     return `
         <div class="swipe-row" data-goal-id="${goal.id}">
             <div class="swipe-action-left goal-swipe-left">
-                <button class="goal-swipe-btn goal-swipe-pause" onmousedown="pauseGoal(${goal.id})">pause</button>
-                <button class="goal-swipe-btn goal-swipe-letgo" onmousedown="letGoGoal(${goal.id})">let it go</button>
+                <button class="goal-swipe-btn goal-swipe-pause" onmousedown="pauseGoal('${goal.id}')">pause</button>
+                <button class="goal-swipe-btn goal-swipe-letgo" onmousedown="letGoGoal('${goal.id}')">let it go</button>
             </div>
             ${!completed ? `
             <div class="swipe-action-right swipe-action-complete">
@@ -3697,7 +3705,7 @@ function renderGoalCard(goal, completed) {
                                 return ` <span class="goal-card-expiry${nearClass}">· ${expStr}</span>`;
                             })()}
                         </div>
-                        ${!completed ? `<button class="goal-edit-btn" onmousedown="openGoalEditor(${goal.id})">edit</button>` : ''}
+                        ${!completed ? `<button class="goal-edit-btn" onmousedown="openGoalEditor('${goal.id}')">edit</button>` : ''}
                     </div>
                 </div>
             </div>
@@ -3793,7 +3801,7 @@ function openGoalCreatorWithSuggestion(title, dimensionId, skillId, rationale, m
 }
 
 function openGoalEditor(goalId) {
-    const goal = appState.goals.find(g => g.id === Number(goalId));
+    const goal = appState.goals.find(g => g.id === goalId);
     if (!goal) return;
     const markers = (goal.progressMarkers || goal.milestones || []).map(m => ({ ...m }));
     appState._goalDraft = {
@@ -3931,7 +3939,7 @@ function renderGoalCreator() {
 
     function skillFormHtml() {
         const selectedSkill = d.skillId ? (appState.skills || []).find(s => s.id === d.skillId) : null;
-        const _topicCatLabels = { general: 'General', musicality: 'Musicality', barre: 'Barre', centre: 'Centre', turns: 'Turns', allegro: 'Allegro', pointe: 'Pointe', flexibility: 'Flexibility' };
+        const _topicCatLabels = { general: 'General', technique: 'Technique', movement: 'Movement', artistry: 'Artistry', 'the-body': 'The Body', pointe: 'Pointe' };
         const selectedSkillLabel = selectedSkill ? selectedSkill.french : (d.dimensionId ? (_topicCatLabels[d.dimensionId] || '') : '');
 
         const markersHtml = (d.progressMarkers || []).map((m, i) => `
@@ -4166,7 +4174,7 @@ function renderGoalCreator() {
     else if (d.goalType === 'intention') bodyHtml = intentionFormHtml();
     else if (d.goalType === 'habit') bodyHtml = habitFormHtml();
     if (bodyHtml && d._editId) {
-        bodyHtml += `<div style="margin-top: var(--sp-xl); text-align: center;"><button class="goal-delete-btn" onmousedown="deleteGoal(${d._editId})">delete goal</button></div>`;
+        bodyHtml += `<div style="margin-top: var(--sp-xl); text-align: center;"><button class="goal-delete-btn" onmousedown="deleteGoal('${d._editId}')">delete goal</button></div>`;
     }
 
     let footerHtml;
@@ -4466,7 +4474,7 @@ function clearGoalSkill() {
 function addProgressMarker() {
     const d = appState._goalDraft;
     if (!d) return;
-    d.progressMarkers.push({ id: Date.now(), text: '', done: false });
+    d.progressMarkers.push({ id: generateId(), text: '', done: false });
     renderGoalCreator();
     requestAnimationFrame(() => {
         const inputs = document.querySelectorAll('.goal-marker-input');
@@ -4586,7 +4594,7 @@ function commitGoalCategory(cat) {
 
 function addMilestoneDraft() {
     if (!appState._goalDraft) return;
-    appState._goalDraft.milestones.push({ id: Date.now(), text: '', done: false });
+    appState._goalDraft.milestones.push({ id: generateId(), text: '', done: false });
     renderMilestoneDraftList();
     const list = document.getElementById('goal-milestones-list');
     if (list) {
@@ -4669,7 +4677,7 @@ function searchGoalCorrections(query) {
                 const skill = DATA.skills.find(s => s.id === c.skillId);
                 const date = formatTimelineDate(new Date(c.createdAt).toISOString().split('T')[0]);
                 return `
-                    <div class="goal-correction-suggestion" onmousedown="linkCorrectionToGoal(${c.id})">
+                    <div class="goal-correction-suggestion" onmousedown="linkCorrectionToGoal('${c.id}')">
                         <div class="goal-correction-suggestion-text">${c.text}</div>
                         <div class="goal-correction-suggestion-meta">${[skill?.french, date].filter(Boolean).join(' · ')}</div>
                     </div>`;
@@ -4759,7 +4767,8 @@ function saveGoal() {
     const existingGoal = isEdit ? appState.goals.find(g => g.id === d._editId) : null;
 
     const goal = {
-        id:               isEdit ? d._editId : Date.now(),
+        id:               isEdit ? d._editId : generateId(),
+        userId:           null,
         title:            d.title.trim(),
         body:             d.body?.trim()  || null,
         createdAt:        existingGoal?.createdAt || Date.now(),
@@ -4769,7 +4778,7 @@ function saveGoal() {
         category:         d.category      || null,
         correctionIds:    d.correctionIds || [],
         milestones:       (d.milestones || []).filter(m => m.text?.trim()).map(m => ({
-            id:   m.id || Date.now(),
+            id:   m.id || generateId(),
             text: m.text.trim(),
             done: m.done || false,
         })),
@@ -4780,7 +4789,7 @@ function saveGoal() {
         goalType:         d.goalType         || null,
         commitmentPeriod: d.commitmentPeriod || null,
         progressMarkers:  (d.progressMarkers || []).filter(m => m.text.trim()).map(m => ({
-            id:   m.id || Date.now(),
+            id:   m.id || generateId(),
             text: m.text.trim(),
             done: m.done || false,
         })),
@@ -4821,7 +4830,7 @@ function saveGoal() {
 }
 
 function toggleMilestone(goalId, milestoneIndex) {
-    const goal = appState.goals.find(g => g.id === Number(goalId));
+    const goal = appState.goals.find(g => g.id === goalId);
     const markers = goal && (goal.progressMarkers || goal.milestones);
     if (!goal || !markers || !markers[milestoneIndex]) return;
     const milestone = markers[milestoneIndex];
@@ -4842,7 +4851,7 @@ function toggleMilestone(goalId, milestoneIndex) {
 }
 
 function markGoalComplete(goalId) {
-    const goal = appState.goals.find(g => g.id === Number(goalId));
+    const goal = appState.goals.find(g => g.id === goalId);
     if (!goal || goal.status === 'completed') return;
     goal.status = 'completed';
     goal.completedAt = Date.now();
@@ -4862,7 +4871,7 @@ function markGoalComplete(goalId) {
         showContextualPrompt({
             body: 'goal completed. anything to note?',
             primaryLabel: 'add a note',
-            primaryFn: `openGoalReflectionSheet(${goal.id})`,
+            primaryFn: `openGoalReflectionSheet('${goal.id}')`,
             suppressKey: `goal-reflection-${goal.id}`,
         });
     }, 2800);
@@ -4888,7 +4897,7 @@ function showGoalCompleteMessage(title) {
 
 // Open the goal reflection in view mode (Image 4) — full-screen note detail
 function showGoalReflectionDetail(goalId) {
-    const goal = appState.goals.find(g => g.id === Number(goalId));
+    const goal = appState.goals.find(g => g.id === goalId);
     if (!goal) return;
     if (goal.reflectionSessionId) {
         showNoteDetail(goal.reflectionSessionId);
@@ -4900,7 +4909,7 @@ function showGoalReflectionDetail(goalId) {
 
 // Open the goal reflection editor (Image 5) — session logger note mode
 function openGoalReflectionSheet(goalId) {
-    const goal = appState.goals.find(g => g.id === Number(goalId));
+    const goal = appState.goals.find(g => g.id === goalId);
     if (!goal) return;
 
     // If an existing reflection session exists, edit it via the standard note editor
@@ -4910,7 +4919,7 @@ function openGoalReflectionSheet(goalId) {
     }
 
     const placeholders = ["what shifted?", "what's still there?", "what would you do differently?"];
-    const placeholder = placeholders[Number(goalId) % 3];
+    const placeholder = placeholders[goalId ? goalId.charCodeAt(0) % 3 : 0];
 
     // Open session logger in note mode, with reflection linkage
     let overlay = document.getElementById('session-logger-overlay');
@@ -4922,13 +4931,13 @@ function openGoalReflectionSheet(goalId) {
         overlay.addEventListener('mousedown', e => { if (e.target === overlay) closeSessionLogger(); });
     }
     appState.currentSession = {
-        id:                Date.now(),
+        id:                generateId(),
         date:              new Date().toISOString().split('T')[0],
         generalNotes:      '',
         blocks:            [],
         _mode:             'note',
         _isEdit:           false,
-        _reflectionGoalId: Number(goalId),
+        _reflectionGoalId: goalId,
         _placeholder:      placeholder,
     };
     renderSessionLogger();
@@ -4939,7 +4948,7 @@ function openGoalReflectionSheet(goalId) {
 }
 
 function reopenGoal(goalId) {
-    const goal = appState.goals.find(g => g.id === Number(goalId));
+    const goal = appState.goals.find(g => g.id === goalId);
     if (!goal) return;
     goal.status = 'active';
     goal.completedAt = null;
@@ -4949,7 +4958,7 @@ function reopenGoal(goalId) {
 }
 
 function pauseGoal(goalId) {
-    const goal = appState.goals.find(g => g.id === Number(goalId));
+    const goal = appState.goals.find(g => g.id === goalId);
     if (!goal) return;
     goal.status   = 'paused';
     goal.pausedAt = Date.now();
@@ -4971,7 +4980,7 @@ function pauseGoal(goalId) {
 }
 
 function letGoGoal(goalId) {
-    const goal = appState.goals.find(g => g.id === Number(goalId));
+    const goal = appState.goals.find(g => g.id === goalId);
     if (!goal) return;
     goal.status  = 'letgo';
     goal.letGoAt = Date.now();
@@ -4993,7 +5002,7 @@ function letGoGoal(goalId) {
 }
 
 function deleteGoal(goalId) {
-    appState.goals = appState.goals.filter(g => g.id !== Number(goalId));
+    appState.goals = appState.goals.filter(g => g.id !== goalId);
     storage.save('goals', appState.goals);
     closeGoalCreator();
     if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
@@ -5552,7 +5561,8 @@ function saveLearnLine(btn) {
     } else {
         // save as correction
         const correction = {
-            id:          Date.now(),
+            id:          generateId(),
+            userId:      null,
             skillId:     skillId || null,
             text:        text,
             createdAt:   Date.now(),
@@ -5707,14 +5717,19 @@ function renderProfileMySkills() {
 
     if (activeIds.size === 0) { el.innerHTML = ''; return; }
 
-    // Determine last-worked-on date per skill
-    function lastWorkedOn(skillId) {
+    // Determine last-noted date per skill (excludes choreography blocks)
+    // Determine last-noted date per skill (excludes choreography blocks)
+    function lastNoted(skillId) {
+        const nonChoreSSs = (appState.sessionSkills || [])
+            .filter(ss => ss.skillId === skillId
+                       && ss.blockType !== 'choreography'
+                       && ss.source    !== 'choreography');
         const sessIds = new Set(
-            (appState.corrections || [])
-                .filter(c => c.skillId === skillId)
-                .map(c => c.sessionId)
-                .filter(Boolean)
+            nonChoreSSs.map(ss => ss.sessionId).filter(Boolean)
         );
+        (appState.corrections || [])
+            .filter(cc => cc.skillId === skillId && cc.sessionId)
+            .forEach(cc => sessIds.add(cc.sessionId));
         const sessDates = (appState.sessions || [])
             .filter(s => sessIds.has(s.id))
             .map(s => s.date);
@@ -5726,12 +5741,12 @@ function renderProfileMySkills() {
     }
 
     const skills = [...activeIds]
-        .map(id => ({ ref: DATA.skills.find(s => s.id === id), lastDate: lastWorkedOn(id) }))
+        .map(id => ({ ref: DATA.skills.find(s => s.id === id), lastDate: lastNoted(id) }))
         .filter(s => s.ref)
         .sort((a, b) => (b.lastDate || '').localeCompare(a.lastDate || ''));
 
     const itemsHtml = skills.map(({ ref, lastDate }) => {
-        const cat = (DATA.skillCategories || {})[ref.id] || ref.category || '';
+        const cat = DATA.categoryNames[ref.categoryId] || '';
         const dateLabel = lastDate ? formatTimelineDate(lastDate) : '';
         return `
         <div class="profile-skill-item" onclick="showSkillDetail('${escapeHtml(ref.id)}', 'profile')">
@@ -5811,8 +5826,8 @@ function renderTimelineEntry(entry) {
                 <div class="timeline-title ${isReflection ? 'timeline-reflection-text' : 'timeline-praise-text'}">${isReflection ? `"${entry.text}"` : entry.text}</div>
                 ${skillRef ? `<div class="timeline-subtitle">${skillRef.french}</div>` : ''}
                 <div class="timeline-note-actions">
-                    <button class="timeline-note-btn" onmousedown="editTimelineNote(${entry.id})">edit</button>
-                    <button class="timeline-note-btn timeline-note-btn-delete" onmousedown="deleteTimelineNote(${entry.id})">delete</button>
+                    <button class="timeline-note-btn" onmousedown="editTimelineNote('${entry.id}')">edit</button>
+                    <button class="timeline-note-btn timeline-note-btn-delete" onmousedown="deleteTimelineNote('${entry.id}')">delete</button>
                 </div>
             </div>
             ${dateHtml}
@@ -5827,9 +5842,9 @@ function renderTimelineEntry(entry) {
                 ? `<div class="timeline-milestone-reflection">${escapeHtml(goal.reflection)}</div>`
                 : '';
             const cardTapFn = hasReflection
-                ? `showGoalReflectionDetail(${goal.id})`
-                : `openGoalReflectionSheet(${goal.id})`;
-            const editFn = `openGoalReflectionSheet(${goal.id})`;
+                ? `showGoalReflectionDetail('${goal.id}')`
+                : `openGoalReflectionSheet('${goal.id}')`;
+            const editFn = `openGoalReflectionSheet('${goal.id}')`;
             const actionLabel = hasReflection ? 'edit' : 'add note';
             const tapHint = hasReflection
                 ? `<div class="timeline-tap-hint">tap to review \u2192</div>`
@@ -5858,7 +5873,7 @@ function renderTimelineEntry(entry) {
     const typeLabel  = typeLabels[typeKey] || '';
     const hasHighlight = entry.type === 'session' && entry.objectId &&
         appState.sessionSkills.some(ss => ss.sessionId === entry.objectId && ss.isHighlight);
-    const tapAction  = isNote ? `showNoteDetail(${entry.objectId})` : `showSessionDetail(${entry.objectId})`;
+    const tapAction  = isNote ? `showNoteDetail('${entry.objectId}')` : `showSessionDetail('${entry.objectId}')`;
     return `
     <div class="timeline-item timeline-item-${typeKey} ${isTappable ? 'timeline-item-tappable' : ''}"
          ${isTappable ? `onclick="${tapAction}"` : ''}>
@@ -6097,7 +6112,7 @@ function openNoteEditor(sessionId) {
 }
 
 function renderDetailBlockHtml(sessionSkill) {
-    const source = sessionSkill.source || sessionSkill.mode || 'correction';
+    const source = sessionSkill.blockType || sessionSkill.source || sessionSkill.mode || 'correction';
 
     // Goal blocks — dedicated renderer
     if (source === 'goal') {
@@ -6116,21 +6131,20 @@ function renderDetailBlockHtml(sessionSkill) {
     if (!skill && !sessionSkill.notes && !hasCorrections) return '';
 
     // Block type label
-    const TYPE_DISPLAY = { correction: 'correction', observation: 'observation', note: 'note' };
+    const TYPE_DISPLAY = { correction: 'correction', note: 'note', intention: 'intention', highlight: 'highlight', choreography: 'choreography', goal: 'goal', observation: 'note' };
     const typeLabel = TYPE_DISPLAY[source] || 'correction';
     const typeLabelHtml = `<div class="detail-block-type-label">${typeLabel}</div>`;
 
     // Left border: highlight overrides everything; otherwise by type
-    const borderClass = isHighlight    ? 'note-block--highlight'
-                      : source === 'observation' ? 'note-block--observation'
-                      : source === 'note'        ? 'note-block--note'
+    const borderClass = isHighlight         ? 'note-block--highlight'
+                      : source === 'note'     ? 'note-block--note'
                       : 'note-block--correction';
 
     // Divider between type label and skill row — only when skill is present
     const dividerHtml = skill ? `<div class="detail-block-divider"></div>` : '';
 
     // Skill / star row
-    const starBtn = `<button class="note-block-star${isHighlight ? ' active' : ''}" onmousedown="toggleDetailBlockHighlight(${sessionSkill.id})">${isHighlight ? ICONS.get('star-fill', 14) : ICONS.get('star', 14)}</button>`;
+    const starBtn = `<button class="note-block-star${isHighlight ? ' active' : ''}" onmousedown="toggleDetailBlockHighlight('${sessionSkill.id}')">${isHighlight ? ICONS.get('star-fill', 14) : ICONS.get('star', 14)}</button>`;
     const bodyTagHtml = sessionSkill.bodyTag ? `<span class="note-block-body-tag">Body</span>` : '';
     let skillRowHtml = '';
     if (skill) {
@@ -6353,7 +6367,7 @@ function showSkillDetail(skillId, returnTo) {
                 <div class="skill-note-entry">
                     <div class="skill-note-header">
                         <div class="skill-note-date">${formatTimelineDate(n.date)}</div>
-                        <button class="skill-note-delete" onclick="deleteSkillNote(${n.id}, '${skillId}')">×</button>
+                        <button class="skill-note-delete" onclick="deleteSkillNote('${n.id}', '${skillId}')">×</button>
                     </div>
                     <div class="skill-note-text">${renderClampedHtml(nl2br(n.text), 'sn-' + n.id)}</div>
                 </div>
@@ -6386,7 +6400,7 @@ function showSkillDetail(skillId, returnTo) {
 
     // ── Sessions this skill appeared in ──
     const skillSessionSkills = appState.sessionSkills
-        .filter(ss => ss.skillId === skillId)
+        .filter(ss => ss.skillId === skillId && ss.blockType !== 'choreography' && ss.source !== 'choreography')
         .sort((a, b) => {
             const sa = appState.sessions.find(s => s.id === a.sessionId);
             const sb = appState.sessions.find(s => s.id === b.sessionId);
@@ -6403,7 +6417,7 @@ function showSkillDetail(skillId, returnTo) {
         <div class="skill-progression-summary">
             <div class="skill-progression-stat">
                 <div class="skill-progression-value">${lastSession ? formatTimelineDate(lastSession.date) : '—'}</div>
-                <div class="skill-progression-label">last worked on</div>
+                <div class="skill-progression-label">last noted</div>
             </div>
             <div class="skill-progression-stat">
                 <div class="skill-progression-value">${allCorrections.length}</div>
@@ -6469,7 +6483,7 @@ function showSkillDetail(skillId, returnTo) {
 
             <!-- Hero — scrolls away, triggers collapsed header -->
             <div class="skill-detail-hero" id="skill-hero-${skillId}">
-                <div class="skill-detail-category">${refSkill.category}</div>
+                <div class="skill-detail-category">${DATA.categoryNames[refSkill.categoryId] || ''}</div>
                 <h1 class="skill-detail-title">${refSkill.french}</h1>
                 <div class="skill-know-meta-row">
                     <span class="skill-detail-phonetic">${refSkill.phonetic}</span>
@@ -6478,7 +6492,7 @@ function showSkillDetail(skillId, returnTo) {
                 </div>
                 <div class="skill-detail-meta-row">
                     ${sessionCount > 0 ? `<span class="skill-detail-session-count">worked on ${sessionCount} time${sessionCount !== 1 ? 's' : ''}</span>` : ''}
-                    ${lastSession ? `<span class="skill-detail-last-worked">last: ${formatTimelineDate(lastSession.date)}</span>` : ''}
+                    ${lastSession ? `<span class="skill-detail-last-noted">last: ${formatTimelineDate(lastSession.date)}</span>` : ''}
                 </div>
                 <button class="skill-know-personal-btn" style="margin-top: var(--sp-sm);"
                         onclick="showSkillKnowledgePage('${skillId}', '${screenId}')">
@@ -6589,7 +6603,7 @@ function buildSkillHighlightsHtml(skillId) {
             <div class="note-block note-block--highlight note-block--gold-bg" id="hl-${item.type}-${item.id}">
                 <div class="note-block-highlight-row">
                     <button class="note-block-star active"
-                            onmousedown="toggleSkillHighlightItem('${item.type}', ${item.id}, '${skillId}')">${ICONS.get('star-fill', 14)}</button>
+                            onmousedown="toggleSkillHighlightItem('${item.type}', '${item.id}', '${skillId}')">${ICONS.get('star-fill', 14)}</button>
                     <span class="note-block-highlight-label">${dateStr}</span>
                 </div>
                 ${bodyHtml}${bulletsHtml}
@@ -6668,7 +6682,7 @@ function renderSkillCorrectionsGrouped(corrections) {
             ? appState.sessions.find(s => s.id === group.sessionId)
             : null;
         const sessionLink = session
-            ? `<button class="skill-corr-source" onmousedown="showSessionDetail(${group.sessionId})">${session.sessionName || 'Session'} →</button>`
+            ? `<button class="skill-corr-source" onmousedown="showSessionDetail('${group.sessionId}')">${session.sessionName || 'Session'} →</button>`
             : '';
         const itemsHtml = items.map(c => `
             <div class="skill-corr-item${c.isRecurring ? ' is-recurring' : ''}">
@@ -6711,7 +6725,7 @@ function expandSkillNotes(skillId) {
         <div class="skill-note-entry">
             <div class="skill-note-header">
                 <div class="skill-note-date">${formatTimelineDate(n.date)}</div>
-                <button class="skill-note-delete" onclick="deleteSkillNote(${n.id}, '${skillId}')">×</button>
+                <button class="skill-note-delete" onclick="deleteSkillNote('${n.id}', '${skillId}')">×</button>
             </div>
             <div class="skill-note-text">${renderClampedHtml(nl2br(n.text), 'sn-' + n.id)}</div>
         </div>
@@ -6735,7 +6749,8 @@ function saveSkillNote(skillId) {
 
     appState.skillNotes = appState.skillNotes || [];
     appState.skillNotes.push({
-        id:        Date.now(),
+        id:        generateId(),
+        userId:    null,
         skillId,
         text,
         date:      new Date().toISOString().split('T')[0],
@@ -6833,7 +6848,7 @@ function renderSkillNotesSectionInPlace(skillId, sectionEl) {
                 <div class="skill-note-entry">
                     <div class="skill-note-header">
                         <div class="skill-note-date">${formatTimelineDate(n.date)}</div>
-                        <button class="skill-note-delete" onclick="deleteSkillNote(${n.id}, '${skillId}')">×</button>
+                        <button class="skill-note-delete" onclick="deleteSkillNote('${n.id}', '${skillId}')">×</button>
                     </div>
                     <div class="skill-note-text">${renderClampedHtml(nl2br(n.text), 'sn-' + n.id)}</div>
                 </div>
@@ -6882,7 +6897,7 @@ function renderLearnNotesSectionInPlace(sectionId, itemName, sectionEl) {
                 <div class="skill-note-entry">
                     <div class="skill-note-header">
                         <div class="skill-note-date">${formatTimelineDate(n.date)}</div>
-                        <button type="button" class="skill-note-delete" onclick="deleteLearnNote(${n.id}, '${sectionId}', '${itemName.replace(/'/g, "\\'")}')">×</button>
+                        <button type="button" class="skill-note-delete" onclick="deleteLearnNote('${n.id}', '${sectionId}', '${itemName.replace(/'/g, "\\'")}')">×</button>
                     </div>
                     <div class="skill-note-text">${renderClampedHtml(nl2br(n.text), 'ln-' + n.id)}</div>
                 </div>
@@ -6917,7 +6932,8 @@ function saveLearnNote(sectionId, itemName) {
 
     appState.learnNotes = appState.learnNotes || [];
     appState.learnNotes.push({
-        id:        Date.now(),
+        id:        generateId(),
+        userId:    null,
         sectionId,
         itemName,
         text,
@@ -6970,7 +6986,7 @@ function expandLearnNotes(sectionId, itemName) {
         <div class="skill-note-entry">
             <div class="skill-note-header">
                 <div class="skill-note-date">${formatTimelineDate(n.date)}</div>
-                <button class="skill-note-delete" onmousedown="deleteLearnNote(${n.id}, '${sectionId}', '${itemName.replace(/'/g, "\\'")}')">×</button>
+                <button class="skill-note-delete" onmousedown="deleteLearnNote('${n.id}', '${sectionId}', '${itemName.replace(/'/g, "\\'")}')">×</button>
             </div>
             <div class="skill-note-text">${renderClampedHtml(nl2br(n.text), 'ln-' + n.id)}</div>
         </div>
@@ -7406,9 +7422,9 @@ function updateSkillLibResults() {
 
     const userSkills = appState.skills;
     let filtered = DATA.skills.filter(ref => {
-        if (appState.hidePointe && ref.dimensionId === 'pointe') return false;
+        if (appState.hidePointe && ref.dimensionIds && ref.dimensionIds.includes('pointe')) return false;
         // Filter by dimension if set
-        if (_skillLibDimFilter && ref.dimension !== _skillLibDimFilter) {
+        if (_skillLibDimFilter && DATA.categoryNames[ref.categoryId] !== _skillLibDimFilter) {
             return false;
         }
         if (_skillLibTab === 'my') {
@@ -7431,11 +7447,11 @@ function updateSkillLibResults() {
 
     const categories = {};
     filtered.forEach(ref => {
-        if (!categories[ref.category]) categories[ref.category] = [];
-        categories[ref.category].push(ref);
+        if (!categories[ref.categoryId]) categories[ref.categoryId] = [];
+        categories[ref.categoryId].push(ref);
     });
 
-    const categoryOrder = ['Barre Work', 'Centre Work', 'Turns', 'Jumps', 'Allegro', 'Pointe'];
+    const categoryOrder = ['barre', 'centre', 'turns', 'allegro', 'artistry', 'body-and-technique'];
     const sortedCategories = Object.keys(categories).sort((a, b) => {
         const ai = categoryOrder.indexOf(a);
         const bi = categoryOrder.indexOf(b);
@@ -7455,7 +7471,7 @@ function updateSkillLibResults() {
 
     body.innerHTML = sortedCategories.map(cat => `
         <div class="skill-lib-category">
-            <h2 class="skill-lib-category-title">${cat}</h2>
+            <h2 class="skill-lib-category-title">${DATA.categoryNames[cat] || cat}</h2>
             <div class="skill-lib-cards">
                 ${categories[cat].map(ref => renderSkillLibCard(ref, q)).join('')}
             </div>
@@ -7487,7 +7503,7 @@ function renderSkillLibCard(ref, query) {
                 ${correctionCount > 0 ? `<span class="skill-lib-inline-count"><span class="skill-lib-indicator-count">${correctionCount}</span></span>` : ''}
             </div>
             <div class="glossary-term-meta">
-                <span class="glossary-term-category">${ref.category || ''}</span>
+                <span class="glossary-term-category">${DATA.categoryNames[ref.categoryId] || ''}</span>
                 ${isFlagged ? `<span class="skill-lib-indicator" title="In focus">${ICONS.get('flag', 10)}</span>` : ''}
                 ${hasNotes ? `<span class="skill-lib-indicator" title="Has notes">${ICONS.get('edit', 10)}</span>` : ''}
                 <!-- TODO: decide whether to reinstate skill level badge (difficulty-badge) permanently -->
@@ -8035,7 +8051,7 @@ function showSkillKnowledgePage(skillId, returnTo) {
 
             <!-- Hero -->
             <div class="skill-detail-hero">
-                <div class="skill-detail-category">${ref.category}</div>
+                <div class="skill-detail-category">${DATA.categoryNames[ref.categoryId] || ''}</div>
                 <h1 class="skill-detail-title">${ref.french}</h1>
                 <div class="skill-know-meta-row">
                     <span class="skill-detail-phonetic">${ref.phonetic}</span>

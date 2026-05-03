@@ -78,7 +78,7 @@ State is set in Profile settings. Set quietly, no fanfare. The app shifts on nex
 |---|---|---|
 | Assessment / placement quiz | Orientation conversation | Removes authoritative weight. Self-guided, not evaluated. |
 | Placement result / level | Starting point / your level | Self-selected orientation, not an earned rank. Recedes once set. |
-| Correction / Praise / Reflection | Note (with block type) | Neutral container. Block type (Correction / Observation / Note / Goal) set at creation. |
+| Correction / Praise / Reflection | Note (with block type) | Neutral container. Block type (Correction · Note · Goal · Intention · Highlight · Choreography) set at creation. |
 | Milestone | (no named concept) | Lives inside a goal as unnamed progress markers. |
 | Focus area | Dimensions | "Focus area" referred to what is now called Dimensions. Dissolved as a named surface-level concept. The "focus" tab inside the dimension detail sheet is a different, separate concept. |
 | Signal lines | (removed) | Removed from Profile dimension cards entirely. |
@@ -97,13 +97,28 @@ A note is the core unit of capture. It replaces the Correction / Praise / Reflec
 
 | Field | Description |
 |---|---|
-| **Block type** | Set at creation: Correction / Observation / Note / Goal. Shown as small-caps label above the block. Not changeable after creation. |
+| **Block type** | Set at creation: Correction · Note · Goal · Intention · Highlight · Choreography. Shown as small-caps label above the block. Not changeable after creation. Observation is retired — migrated to Note on app open. |
 | **Content** | Free text. No length constraint. Contenteditable div with live `—` dash prefix per line via CSS. |
 | **Highlight ★** | Boolean. Surfaces the note in skill view and timeline. |
 | **Linked skill** | Optional. Central to long-term findability. Multiple choice from skill library. Always overridable. |
 | **Linked session** | Automatic when logged within a session. Corrections can also be logged standalone via FAB. |
 
 Header row order: `[★] [topic input] [×]` — always this order, never rearranged.
+
+### Block type enum — final
+
+| Block type | Use |
+|---|---|
+| `correction` | A correction received in class, from video review, or self-identified |
+| `note` | A general observation, reflection, or note (replaces retired Observation type) |
+| `goal` | An inline goal created within the session |
+| `intention` | A focus intention for the session or a specific exercise |
+| `highlight` | A notable moment worth surfacing — positively remarkable |
+| `choreography` | Choreographic notes, phrase structure, or staging detail |
+
+Observation (`'observation'`) is retired. Any stored observation blocks are migrated to `'note'` on app open. Never use `'observation'` in new code.
+
+`previousBlockType` — string, nullable. Set on a block when it is promoted to Highlight via the star gesture. Stores the original type so it can be restored if the user un-highlights. Null on all other blocks and on blocks created directly as Highlight.
 
 **Why this replaces the three-mode system:** Correction / Praise / Reflection conflated source, valence, and origin into one toggle. A correction can be positive. A reflection can record something that went badly. The new model separates these concerns and gives her a blank container she fills on her terms.
 
@@ -644,7 +659,7 @@ If following the framework leads to an answer that feels obviously wrong, the fe
 ## 17. Open Threads
 
 **1. Source field labels — CLOSED**
-Correction · Observation. Two chips, no label, both optional. May revisit label after user testing.
+Block type label shown as small-caps above each block (Correction · Note · Intention · Goal · Highlight · Choreography). Observation retired and migrated to Note (PLI-002).
 
 **2. Dimension naming — CLOSED**
 "Focus area" referred to what is now called Dimensions — dissolved as a named surface-level concept. The "focus" tab inside the dimension detail sheet is a different, separate concept and is not affected by this decision.
@@ -671,10 +686,10 @@ She should be able to export her data if she leaves the app. Format, scope, and 
 The ranking model for which card shows first when multiple are queued is not decided. See Section 13.
 
 **10. Notes tab in dimension detail — PINNED**
-Third tab in dimension detail sheet. Will surface observation blocks, standalone notes, and highlights from this dimension. Pending rest of detail sheet design before deciding exact scope.
+Third tab in dimension detail sheet. Will surface note and correction blocks, standalone notes, and highlights from this dimension. Pending rest of detail sheet design before deciding exact scope.
 
 **11. Training history grid colour — TBD**
-The density grid filled cells: gold family (#C4900C at varying opacities) vs slate decoration colour (#8FA0A8). Both options are valid. Decide during polish pass.
+The density grid filled cells: gold family (#B0842E at varying opacities) vs slate decoration colour (#8FA0A8). Both options are valid. Decide during polish pass.
 
 **12. Star indicator in training history grid — TBD**
 Small dot on cells containing highlighted/starred notes. Concept approved, implementation detail TBD.

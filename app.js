@@ -291,12 +291,9 @@ function renderDimensionChart(dims, container) {
         `;
         return;
     }
-    const techniqueOrder = ['barre', 'centre', 'allegro', 'turns', 'flexibility', 'pointe'];
-    const artOrder = ['musicality', 'knowledge'];
-    let html = '<div style="margin-bottom: var(--sp-sm);"><span style="font-size: var(--fs-caption); font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted);">Technique</span></div>';
-    html += techniqueOrder.map(key => renderDimensionBar(DATA.dimensionNames[key], dims[key], key === 'pointe')).join('');
-    html += '<div style="margin-top: var(--sp-md); margin-bottom: var(--sp-sm);"><span style="font-size: var(--fs-caption); font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted);">Artistry & knowledge</span></div>';
-    html += artOrder.map(key => renderDimensionBar(DATA.dimensionNames[key], dims[key], false)).join('');
+    const order = ['technique', 'movement', 'artistry', 'the-body', 'pointe'];
+    let html = '';
+    html += order.map(key => renderDimensionBar(DATA.dimensionNames[key], dims[key], key === 'pointe')).join('');
     container.innerHTML = html;
 }
 
@@ -884,7 +881,8 @@ function confirmOrientationLevel(personaKey) {
 
     if (!appState._assessmentWritten) {
         const assessment = {
-            id:          Date.now(),
+            id:          generateId(),
+            userId:      null,
             type:        'placement',
             date:        new Date().toISOString().split('T')[0],
             completedAt: Date.now(),
@@ -1152,17 +1150,29 @@ function calculateResults() {
     else if (flexSplit !== null) flexRaw = flexSplit;
     else if (flexLeg !== null) flexRaw = flexLeg;
 
+        const term  = rawScore('terminology');
+        const rep   = rawScore('repertoire');
+        const knowledgeRaw = (term !== null && rep !== null) ? (term + rep) / 2
+                           : (term !== null ? term : rep);
+
     const rawDimensions = {
-        barre: rawScore('barre'), centre: rawScore('centre'),
-        allegro: rawScore('allegro'), turns: rawScore('pirouette'),
-        flexibility: flexRaw, pointe: rawScore('pointe'),
-        musicality: rawScore('musicality'),
-        knowledge: (() => {
-            const term = rawScore('terminology');
-            const rep = rawScore('repertoire');
-            if (term !== null && rep !== null) return (term + rep) / 2;
-            return term !== null ? term : rep;
-        })()
+        technique:   (() => {
+            const b = rawScore('barre'), cc = rawScore('centre');
+            if (b !== null && cc !== null) return (b + cc) / 2;
+            return b !== null ? b : cc;
+        })(),
+        movement:    (() => {
+            const al = rawScore('allegro'), t = rawScore('pirouette');
+            if (al !== null && t !== null) return (al + t) / 2;
+            return al !== null ? al : t;
+        })(),
+        artistry:    (() => {
+            const m = rawScore('musicality');
+            if (m !== null && knowledgeRaw !== null) return (m + knowledgeRaw) / 2;
+            return m !== null ? m : knowledgeRaw;
+        })(),
+        'the-body':  flexRaw,
+        pointe:      rawScore('pointe'),
     };
 
     const dimensions = {};
@@ -1172,7 +1182,7 @@ function calculateResults() {
     appState.rawDimensions = rawDimensions;
 
     // Overall level from core technique dimensions
-    const coreKeys = ['barre', 'centre', 'allegro', 'turns', 'flexibility'];
+    const coreKeys = ['technique', 'movement', 'artistry', 'the-body'];
     const answeredRaw = coreKeys.map(k => rawDimensions[k]).filter(v => v !== null);
     const avg = answeredRaw.length > 0 ? answeredRaw.reduce((s, v) => s + v, 0) / answeredRaw.length : -1;
 
@@ -1196,7 +1206,8 @@ function calculateResults() {
 
     // Store assessment object
     const assessment = {
-        id:          Date.now(),
+        id:          generateId(),
+        userId:      null,
         type:        'placement',
         date:        new Date().toISOString().split('T')[0],
         completedAt: Date.now(),
@@ -1234,11 +1245,10 @@ function calculateResults() {
 
     // What to work on — specific suggestions per weak dimension
     const FOCUS_SUGGESTIONS = {
-        barre:       { label: 'Barre work',   tips: ['Focus on the quality of each exercise over speed', 'Work on maintaining turnout through the whole foot', 'Use the barre lightly — build balance away from it'] },
-        centre:      { label: 'Centre work',  tips: ['Spend extra time at the start of class setting your alignment', 'Slow adagio practice helps build centre balance', 'Work on port de bras to connect movement through the body'] },
-        allegro:     { label: 'Jumps',        tips: ['Strengthen your demi-plié — it drives every jump', 'Land through the foot: toes, ball, heel', 'Start with petit allegro and build speed gradually'] },
-        turns:       { label: 'Turns',        tips: ['Your preparation determines the turn — don\'t rush it', 'Spot a fixed point and whip the head', 'Practise the end position (landing) as much as the turn itself'] },
-        flexibility: { label: 'Flexibility',  tips: ['Consistent daily stretching matters more than intensity', 'Warm up fully before any deep stretching', 'Work on hip flexor and hamstring length for higher extensions'] },
+        technique:   { label: 'Technique', tips: ['Focus on placement and alignment at the barre', 'Work on port de bras to connect through the body', 'Slow adagio practice builds centre balance'] },
+        movement:    { label: 'Movement',  tips: ['Prepare fully before the turn', 'Strengthen your demi-plié — it drives every jump', 'Land through the foot: toes, ball, heel'] },
+        artistry:    { label: 'Artistry',  tips: ['Listen for the phrasing of the music, not just the counts', 'Use épaulement to bring the upper body into movement', 'Accent movements and breathe with the musical phrase'] },
+        'the-body':  { label: 'The Body',   tips: ['Consistent daily stretching matters more than intensity', 'Warm up fully before any deep stretching', 'Work on hip flexor and hamstring length for extensions'] },
     };
 
     const weakDims = answeredCoreDims
@@ -1323,6 +1333,20 @@ function skipToProfile() {
     if (learnLineSaves)    appState.learnLineSaves    = learnLineSaves;
     if (collapsedSections) appState.collapsedSections = collapsedSections;
 
+    // PLI-002: Migrate any stored observation blocks to note silently on app open.
+    let _migrationDirty = false;
+    (appState.sessionSkills || []).forEach(function(ss) {
+        if (ss.source   === 'observation') { ss.source   = 'note'; _migrationDirty = true; }
+        if (ss.blockType === 'observation') { ss.blockType = 'note'; _migrationDirty = true; }
+    });
+    (appState.corrections || []).forEach(function(cor) {
+        if (cor.source === 'observation') { cor.source = 'note'; _migrationDirty = true; }
+    });
+    if (_migrationDirty) {
+        storage.save('sessionSkills', appState.sessionSkills);
+        storage.save('corrections',   appState.corrections);
+    }
+
     // Load preferences
     const prefs = storage.load('preferences');
     if (prefs) {
@@ -1350,7 +1374,7 @@ function skipToProfile() {
     appState._assessmentWritten = placements.length > 0;
 
     // Seed mock data only if localStorage was genuinely empty (first install)
-    seedMockData();
+    if (DEV) seedMockData();
 })();
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1536,7 +1560,7 @@ const FOCUS_AREAS = [
         getStats: () => {
             const corrs = (appState.corrections || []).filter(c => {
                 const sk = DATA.skills.find(s => s.id === c.skillId);
-                return sk?.dimensionId === 'pointe';
+                return sk?.dimensionIds?.includes('pointe');
             });
             const sessions = getAreaLastSession(['pointe']);
             const goals = (appState.goals || []).filter(g => g.dimensionId === 'pointe' && !g.completedAt);
@@ -1547,14 +1571,14 @@ const FOCUS_AREAS = [
         id: 'artistry',
         name: 'Artistry',
         icon: ICONS.get('cat-artistry', 14),
-        getDims: () => ({ musicality: appState.dimensions?.musicality ?? null }),
+        getDims: () => ({ artistry: appState.dimensions?.artistry ?? null }),
         getStats: () => {
             const corrs = (appState.corrections || []).filter(c => {
                 const sk = DATA.skills.find(s => s.id === c.skillId);
-                return sk?.dimensionId === 'musicality';
+                return sk?.dimensionIds?.includes('artistry');
             });
-            const sessions = getAreaLastSession(['musicality']);
-            const goals = (appState.goals || []).filter(g => g.dimensionId === 'musicality' && !g.completedAt);
+            const sessions = getAreaLastSession(['artistry']);
+            const goals = (appState.goals || []).filter(g => g.dimensionId === 'artistry' && !g.completedAt);
             return { corrections: corrs.length, lastSession: sessions, goals: goals.length };
         },
     },
@@ -1563,19 +1587,19 @@ const FOCUS_AREAS = [
         name: 'The Body',
         icon: ICONS.get('cat-body', 14),
         subdims: [
-            { key: 'flexibility', label: 'Flexibility' },
+            { key: 'the-body', label: 'The Body' },
         ],
         getDims: () => ({
-            flexibility: appState.dimensions?.flexibility ?? null,
+            'the-body': appState.dimensions?.['the-body'] ?? null,
         }),
         getStats: () => {
             const corrs = (appState.corrections || []).filter(c => {
                 const sk = DATA.skills.find(s => s.id === c.skillId);
-                return sk?.dimensionId === 'flexibility';
+                return sk?.dimensionIds?.includes('the-body');
             });
-            const sessions = getAreaLastSession(['flexibility']);
+            const sessions = getAreaLastSession(['the-body']);
             const goals = (appState.goals || []).filter(g =>
-                ['flexibility'].includes(g.dimensionId) && !g.completedAt);
+                g.dimensionId === 'the-body' && !g.completedAt);
             return { corrections: corrs.length, lastSession: sessions, goals: goals.length };
         },
     },
@@ -1584,21 +1608,19 @@ const FOCUS_AREAS = [
         name: 'Movement',
         icon: ICONS.get('cat-movement', 14),
         subdims: [
-            { key: 'turns',   label: 'Turns'   },
-            { key: 'allegro', label: 'Allegro'  },
+            { key: 'movement', label: 'Movement' },
         ],
         getDims: () => ({
-            turns:   appState.dimensions?.turns   ?? null,
-            allegro: appState.dimensions?.allegro ?? null,
+            movement: appState.dimensions?.movement ?? null,
         }),
         getStats: () => {
             const corrs = (appState.corrections || []).filter(c => {
                 const sk = DATA.skills.find(s => s.id === c.skillId);
-                return ['turns','allegro'].includes(sk?.dimensionId);
+                return sk?.dimensionIds?.includes('movement');
             });
-            const sessions = getAreaLastSession(['turns','allegro']);
+            const sessions = getAreaLastSession(['movement']);
             const goals = (appState.goals || []).filter(g =>
-                ['turns','allegro'].includes(g.dimensionId) && !g.completedAt);
+                g.dimensionId === 'movement' && !g.completedAt);
             return { corrections: corrs.length, lastSession: sessions, goals: goals.length };
         },
     },
@@ -1607,17 +1629,16 @@ const FOCUS_AREAS = [
         name: 'Technique',
         icon: ICONS.get('cat-technique', 14),
         getDims: () => ({
-            barre:  appState.dimensions?.barre  ?? null,
-            centre: appState.dimensions?.centre ?? null,
+            technique: appState.dimensions?.technique ?? null,
         }),
         getStats: () => {
             const corrs = (appState.corrections || []).filter(c => {
                 const sk = DATA.skills.find(s => s.id === c.skillId);
-                return ['barre','centre'].includes(sk?.dimensionId);
+                return sk?.dimensionIds?.includes('technique');
             });
-            const sessions = getAreaLastSession(['barre','centre']);
+            const sessions = getAreaLastSession(['technique']);
             const goals = (appState.goals || []).filter(g =>
-                ['barre','centre'].includes(g.dimensionId) && !g.completedAt);
+                g.dimensionId === 'technique' && !g.completedAt);
             return { corrections: corrs.length, lastSession: sessions, goals: goals.length };
         },
     },
@@ -1626,7 +1647,7 @@ const FOCUS_AREAS = [
 function getAreaLastSession(dimIds) {
     // Find most recent session that had a skill from these dimensions
     const skillIds = DATA.skills
-        .filter(s => dimIds.includes(s.dimensionId))
+        .filter(s => s.dimensionIds && s.dimensionIds.some(d => dimIds.includes(d)))
         .map(s => s.id);
     const relevant = (appState.sessionSkills || [])
         .filter(ss => skillIds.includes(ss.skillId))
@@ -1797,7 +1818,7 @@ function renderFocusSheetContent(area) {
     // Build correction data for this area
     const areaDimIds = Object.keys(dims);
     const areaSkillIds = DATA.skills
-        .filter(s => areaDimIds.includes(s.dimensionId))
+        .filter(s => s.dimensionIds && s.dimensionIds.some(d => areaDimIds.includes(d)))
         .map(s => s.id);
     const areaCorrs = (appState.corrections || [])
         .filter(c => areaSkillIds.includes(c.skillId))
@@ -2434,7 +2455,7 @@ function exportReadableData() {
                     return;
                 }
                 const skill = ss.skillId ? skillName(ss.skillId) : null;
-                if (skill) lines.push(`  [${ss.source === 'observation' ? 'OBSERVATION' : 'CORRECTION'}] ${skill}`);
+                if (skill) lines.push(`  [${(ss.blockType || ss.source || 'correction').toUpperCase()}] ${skill}`);
                 const corrections = (ss.correctionIds || [])
                     .map(id => (appState.corrections || []).find(c => c.id === id))
                     .filter(Boolean);

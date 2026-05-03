@@ -73,13 +73,13 @@ js/ui.js      — All screen builders and render functions:
 ### Colour tokens
 ```
 --ink:   #1A1714   (primary text — never used as button fill)
---ink-2: #2D2520
---ink-3: #3D3530
---ink-4: #5C5149
---ink-5: #9A8E87   (muted / section labels)
---ink-6: #C8BFB8   (borders, disabled)
+--ink-2: #5C5149   (secondary text)
+--ink-3: #9A8E87   (muted text, labels, captions)
+--ink-4: #C8BFB8   (disabled, very muted)
+--ink-5: #9A8E87   (section labels, captions — alias of --ink-3)
+--ink-6: #C8BFB8   (borders, disabled — alias of --ink-4)
 
---gold:  #C4900C   (active nav, category labels, highlight star, key point dashes, input focus ONLY)
+--gold:  #B0842E   (active nav, category labels, highlight star, key point dashes, input focus ONLY)
          Note: --gold-mid renamed to --gold; old --gold (#8A5E0A) retired
 
 --brown-btn: #5A4030  (all primary buttons + FAB — unified; --btn-primary token removed)
@@ -132,7 +132,7 @@ js/ui.js      — All screen builders and render functions:
 - Session delete, skill note delete
 - Note blocks — contenteditable bullet entry with live — dash prefix, source chips, highlight star
 - Note block star moved left of topic input; title field removed (T22)
-- Session save — all block types create sessionSkills; corrections → correctionIds; observation → skillNotes; isHighlight saved on sessionSkill; edit flow cleans up stale skillNotes (T23)
+- Session save — all block types create sessionSkills; corrections → correctionIds; note blocks (skill-linked) → skillNotes; isHighlight saved on sessionSkill and corrections; previousBlockType tracked when highlight toggled; edit flow cleans up stale skillNotes (T23, PLI-002)
 - Recurring correction detection — ≥3 corrections for same skill across ≥2 sessions within 60 days sets isRecurring on all corrections for that skill (T27)
 - Barre "in focus" — All / Recurring filter tabs; Recurring shows empty state if no in-focus skills qualify (T28)
 - Highlights section on skill detail — shows highlighted sessionSkills and skillNotes with gold border, star to un-star; absent if empty (T26)
@@ -177,14 +177,13 @@ js/ui.js      — All screen builders and render functions:
 - Touch target offset on iOS overlays (partially addressed)
 - Duplicate timeline entries possible if saveSession called twice (guard: _isEdit)
 - highlightMatch regex — Node.js false positive, browser-valid
-- Observation blocks write a timeline entry via legacy praise path — should not
 - Goal swipe-left delete uses native confirm() dialog — should be in-app discard pattern
 - Goal pause/dismiss states unbuilt — swipe-left permanently deletes with no undo
 - Swipe to dismiss predictive hero not implemented
-- Source chip bug: observation blocks saving as correction — persists
+- Highlight toggled in session detail view does not sync to appState.currentSession.blocks — editing after highlighting from detail view loses the highlight change
 
 ### UPCOMING (decided, not yet built)
-- Session logger: modular block types (Correction / Observation / Note / Goal / Photo); opens with one Correction block; blocks collapse to white card when inactive
+- Session logger: modular block types (Correction · Note · Goal · Intention · Highlight · Choreography); opens with one Correction block; blocks collapse to white card when inactive. Photo deferred. Observation retired.
 - Corrections standalone: FAB "Add a correction" flow; session is context not parent
 - Goal block inline in logger: creates appState.goals[] object on session save; blank titles ignored
 - Duration picker: inline expanding list replacing pill chips in goal creator + goal block
@@ -252,15 +251,18 @@ collapsedSections: { inFocus?: boolean, savedLearning?: boolean }
 ### Goal object
 ```js
 {
-  id, title, body,
+  id,           // crypto.randomUUID() (PLI-003)
+  userId: null, // (PLI-003)
+  title, body,
   goalType: 'skill' | 'intention' | 'habit',
-  skillId, dimensionId,
-  progressMarkers: [{ text, done }],  // new — replaces milestones[]
-  milestones: [...],                  // legacy — read via progressMarkers || milestones
+  skillId,
+  dimensionId,  // one of 'technique'|'movement'|'artistry'|'the-body'|'pointe' (PLI-001)
+  progressMarkers: [{ id, text, done }],  // id = crypto.randomUUID()
+  milestones: [...],                      // legacy — read via progressMarkers || milestones
   commitmentPeriod: 'This week' | 'Two weeks' | 'This month' | 'Three months' | 'YYYY-MM-DD',
-  howOften: 'x3',                     // habit goals only
+  howOften: 'x3',                         // habit goals only
   correctionIds: [],
-  completed: boolean,
+  status: 'active' | 'completed' | 'paused' | 'letgo',
   createdAt, updatedAt
 }
 ```

@@ -1,62 +1,60 @@
 const DATA = {
     skills: [
-        { id: 'plie',           french: 'Plié',           phonetic: 'plee-AY',          english: 'Bend',              difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['plie', 'bend', 'demi-plie', 'grand plie']      },
-        { id: 'tendu',          french: 'Tendu',          phonetic: 'tahn-DEW',          english: 'Stretched',         difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['tendu', 'battement tendu']                     },
-        { id: 'degage',         french: 'Dégagé',         phonetic: 'day-ga-ZHAY',       english: 'Disengaged',        difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['degage', 'brushing', 'battement degage']       },
-        { id: 'rond-de-jambe',  french: 'Rond de jambe',  phonetic: 'rohn duh ZHAHMB',   english: 'Circle of the leg', difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['rond de jambe', 'circle', 'hip circle']        },
-        { id: 'frappe',         french: 'Frappé',         phonetic: 'fra-PAY',           english: 'Struck',            difficulty: 'improver',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['frappe', 'strike', 'battement frappe']         },
-        { id: 'fondu',          french: 'Fondu',          phonetic: 'fohn-DEW',          english: 'Melted',            difficulty: 'improver',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['fondu', 'melt', 'battement fondu']             },
-        { id: 'developpe',      french: 'Développé',      phonetic: 'dayv-law-PAY',      english: 'Developed',         difficulty: 'improver',     category: 'Centre Work',  dimensionId: 'centre',  aliases: ['developpe', 'unfold', 'unfolding']             },
-        { id: 'grand-battement',french: 'Grand battement',phonetic: 'grahn bat-MAHN',    english: 'Large beating',     difficulty: 'improver',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['grand battement', 'high kick', 'battement']   },
-        { id: 'pirouette',      french: 'Pirouette',      phonetic: 'peer-oo-WET',       english: 'Whirl',             difficulty: 'intermediate', category: 'Turns',        dimensionId: 'turns',   aliases: ['pirouette', 'turn', 'spin', 'rotation']       },
-        { id: 'arabesque',      french: 'Arabesque',      phonetic: 'a-ra-BESK',         english: 'Arabian',           difficulty: 'intermediate', category: 'Centre Work',  dimensionId: 'centre',  aliases: ['arabesque', 'balance', 'leg extension']       },
-        { id: 'attitude',       french: 'Attitude',       phonetic: 'a-tee-TEWD',        english: 'Attitude',          difficulty: 'intermediate', category: 'Centre Work',  dimensionId: 'centre',  aliases: ['attitude', 'bent leg arabesque']               },
-        { id: 'pas-de-bourree', french: 'Pas de bourrée', phonetic: 'pah duh boo-RAY',   english: 'Step of bourrée',   difficulty: 'intermediate', category: 'Centre Work',  dimensionId: 'centre',  aliases: ['pas de bourree', 'pas de bourée', 'bourree']  },
-        { id: 'fouette',        french: 'Fouetté',        phonetic: 'fweh-TAY',          english: 'Whipped',           difficulty: 'advanced',     category: 'Turns',        dimensionId: 'turns',   aliases: ['fouette', 'whip', 'fouette turns', 'fouettés'] },
-        { id: 'grand-jete',     french: 'Grand jeté',     phonetic: 'grahn zhuh-TAY',    english: 'Large throw',       difficulty: 'advanced',     category: 'Jumps',        dimensionId: 'allegro', aliases: ['grand jete', 'split jump', 'leap']            },
-        { id: 'manege',         french: 'Manège',         phonetic: 'ma-NEZH',           english: 'Riding school',     difficulty: 'advanced',     category: 'Centre Work',  dimensionId: 'centre',  aliases: ['manege', 'travelling turns', 'en manege']     },
-        { id: 'chaine', french: 'Chaînés', phonetic: 'sheh-NAY', english: 'Chains', difficulty: 'beginner', category: 'Turns', dimensionId: 'turns', aliases: ['chaines', 'chain turns'] },
-
-        { id: 'piqué-turn', french: 'Piqué turn', phonetic: 'pee-KAY', english: 'Pricked turn', difficulty: 'improver', category: 'Turns', dimensionId: 'turns', aliases: ['pique turn', 'step turn'] },
-
-        { id: 'soutenu', french: 'Soutenu', phonetic: 'soo-tuh-NEW', english: 'Sustained turn', difficulty: 'improver', category: 'Turns', dimensionId: 'turns', aliases: ['soutenu'] },
-
-        { id: 'detourne', french: 'Détourné', phonetic: 'day-toor-NAY', english: 'Turned away', difficulty: 'improver', category: 'Turns', dimensionId: 'turns', aliases: ['detourne'] },
-
-        { id: 'renverse', french: 'Renversé', phonetic: 'rahn-vehr-SAY', english: 'Overturned', difficulty: 'intermediate', category: 'Turns', dimensionId: 'turns', aliases: ['renverse'] },
-
-        { id: 'tour-en-lair', french: 'Tour en l’air', phonetic: 'toor ahn LAIR', english: 'Turn in the air', difficulty: 'advanced', category: 'Turns', dimensionId: 'turns', aliases: ['tour en lair'] },
-
-        { id: 'italian-fouette', french: 'Fouetté à l’italienne', phonetic: 'fweh-TAY', english: 'Italian fouetté', difficulty: 'advanced', category: 'Turns', dimensionId: 'turns', aliases: ['italian fouette'] },
-        { id: 'saute', french: 'Sauté', phonetic: 'soh-TAY', english: 'Jumped', difficulty: 'beginner', category: 'Allegro', dimensionId: 'allegro', aliases: ['saute', 'jump'] },
-
-        { id: 'changement', french: 'Changement', phonetic: 'shahnzh-MAHN', english: 'Change', difficulty: 'beginner', category: 'Allegro', dimensionId: 'allegro', aliases: ['changement'] },
-
-        { id: 'echappe', french: 'Échappé', phonetic: 'ay-sha-PAY', english: 'Escaped', difficulty: 'beginner', category: 'Allegro', dimensionId: 'allegro', aliases: ['echappe'] },
-
-        { id: 'temps-leve', french: 'Temps levé', phonetic: 'tahn luh-VAY', english: 'Raised time', difficulty: 'improver', category: 'Allegro', dimensionId: 'allegro', aliases: ['temps leve'] },
-
-        { id: 'cabriole', french: 'Cabriole', phonetic: 'ka-bree-OL', english: 'Caper', difficulty: 'advanced', category: 'Allegro', dimensionId: 'allegro', aliases: ['cabriole'] },
-
-        { id: 'entrechat', french: 'Entrechat', phonetic: 'ahn-truh-SHA', english: 'Beaten jump', difficulty: 'intermediate', category: 'Allegro', dimensionId: 'allegro', aliases: ['entrechat', 'beats'] },
-
-        { id: 'brise', french: 'Brisé', phonetic: 'bree-ZAY', english: 'Broken', difficulty: 'advanced', category: 'Allegro', dimensionId: 'allegro', aliases: ['brise'] },
-
-        { id: 'grand-sissonne', french: 'Grand sissonne', phonetic: 'grahn see-SAWN', english: 'Large sissonne', difficulty: 'intermediate', category: 'Allegro', dimensionId: 'allegro', aliases: ['grand sissonne'] },
-        { id: 'releve-pointe', french: 'Relevé en pointe', phonetic: 'ruh-luh-VAY', english: 'Rise to pointe', difficulty: 'improver', category: 'Pointe Work', dimensionId: 'pointe', aliases: ['releve pointe'] },
-
-        { id: 'echappe-pointe', french: 'Échappé en pointe', phonetic: 'ay-sha-PAY', english: 'Escape on pointe', difficulty: 'improver', category: 'Pointe Work', dimensionId: 'pointe', aliases: ['echappe pointe'] },
-
-        { id: 'bourree-pointe', french: 'Bourrée', phonetic: 'boo-RAY', english: 'Tiny steps', difficulty: 'improver', category: 'Pointe Work', dimensionId: 'pointe', aliases: ['bourree pointe'] },
-
-        { id: 'piqué-pointe', french: 'Piqué en pointe', phonetic: 'pee-KAY', english: 'Step onto pointe', difficulty: 'intermediate', category: 'Pointe Work', dimensionId: 'pointe', aliases: ['pique pointe'] },
-        { id: 'releve',         french: 'Relevé',         phonetic: 'ruh-luh-VAY',       english: 'Raised',            difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['releve', 'rise', 'elevate']                   },
-        { id: 'eleve',          french: 'Élevé',          phonetic: 'ay-luh-VAY',        english: 'Lifted',            difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['eleve', 'straight rise']                      },
-        { id: 'retire',         french: 'Retiré',         phonetic: 'ruh-tee-RAY',       english: 'Withdrawn',         difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['retire', 'passé position']                    },
-        { id: 'passe',          french: 'Passé',          phonetic: 'pa-SAY',            english: 'Passed',            difficulty: 'beginner',     category: 'Centre Work',  dimensionId: 'centre',  aliases: ['passe', 'retire']                             },
-        { id: 'coupe',          french: 'Coupé',          phonetic: 'koo-PAY',           english: 'Cut',               difficulty: 'beginner',     category: 'Barre Work',   dimensionId: 'barre',   aliases: ['coupe', 'cut step']                           },
-        { id: 'balance',        french: 'Balancé',        phonetic: 'ba-lahn-SAY',       english: 'Rocking step',      difficulty: 'beginner',     category: 'Centre Work',  dimensionId: 'centre',  aliases: ['balance', 'waltz step']                       },
-        { id: 'port-de-bras',   french: 'Port de bras',   phonetic: 'por duh BRAH',      english: 'Carriage of arms',  difficulty: 'beginner',     category: 'Centre Work',  dimensionId: 'centre',  aliases: ['port de bras', 'arm movement']                },
+        // Barre Work
+        { id: 'plie', french: 'Plié', phonetic: 'plee-AY', english: 'Bend', difficulty: 'beginner', categoryId: 'barre', dimensionIds: ['technique'], aliases: ['plie', 'bend', 'demi-plie', 'grand plie'] },
+        { id: 'tendu', french: 'Tendu', phonetic: 'tahn-DEW', english: 'Stretched', difficulty: 'beginner', categoryId: 'barre', dimensionIds: ['technique'], aliases: ['tendu', 'battement tendu'] },
+        { id: 'degage', french: 'Dégagé', phonetic: 'day-ga-ZHAY', english: 'Disengaged', difficulty: 'beginner', categoryId: 'barre', dimensionIds: ['technique'], aliases: ['degage', 'brushing', 'battement degage'] },
+        { id: 'rond-de-jambe', french: 'Rond de jambe', phonetic: 'rohn duh ZHAHMB', english: 'Circle of the leg', difficulty: 'beginner', categoryId: 'barre', dimensionIds: ['technique'], aliases: ['rond de jambe', 'circle', 'hip circle'] },
+        { id: 'frappe', french: 'Frappé', phonetic: 'fra-PAY', english: 'Struck', difficulty: 'improver', categoryId: 'barre', dimensionIds: ['technique'], aliases: ['frappe', 'strike', 'battement frappe'] },
+        { id: 'fondu', french: 'Fondu', phonetic: 'fohn-DEW', english: 'Melted', difficulty: 'improver', categoryId: 'barre', dimensionIds: ['technique'], aliases: ['fondu', 'melt', 'battement fondu'] },
+        { id: 'grand-battement', french: 'Grand battement', phonetic: 'grahn bat-MAHN', english: 'Large beating', difficulty: 'improver', categoryId: 'barre', dimensionIds: ['technique'], aliases: ['grand battement', 'high kick', 'battement'] },
+        { id: 'releve', french: 'Relevé', phonetic: 'ruh-luh-VAY', english: 'Raised', difficulty: 'beginner', categoryId: 'barre', dimensionIds: ['technique'], aliases: ['releve', 'rise', 'elevate'] },
+        { id: 'eleve', french: 'Élevé', phonetic: 'ay-luh-VAY', english: 'Lifted', difficulty: 'beginner', categoryId: 'barre', dimensionIds: ['technique'], aliases: ['eleve', 'straight rise'] },
+        { id: 'retire', french: 'Retiré', phonetic: 'ruh-tee-RAY', english: 'Withdrawn', difficulty: 'beginner', categoryId: 'barre', dimensionIds: ['technique'], aliases: ['retire', 'passé position'] },
+        { id: 'coupe', french: 'Coupé', phonetic: 'koo-PAY', english: 'Cut', difficulty: 'beginner', categoryId: 'barre', dimensionIds: ['technique'], aliases: ['coupe', 'cut step'] },
+        // Centre Work
+        { id: 'developpe', french: 'Développé', phonetic: 'dayv-law-PAY', english: 'Developed', difficulty: 'improver', categoryId: 'centre', dimensionIds: ['technique', 'movement'], aliases: ['developpe', 'unfold', 'unfolding'] },
+        { id: 'arabesque', french: 'Arabesque', phonetic: 'a-ra-BESK', english: 'Arabian', difficulty: 'intermediate', categoryId: 'centre', dimensionIds: ['technique', 'movement'], aliases: ['arabesque', 'balance', 'leg extension'] },
+        { id: 'attitude', french: 'Attitude', phonetic: 'a-tee-TEWD', english: 'Attitude', difficulty: 'intermediate', categoryId: 'centre', dimensionIds: ['technique', 'movement'], aliases: ['attitude', 'bent leg arabesque'] },
+        { id: 'pas-de-bourree', french: 'Pas de bourrée', phonetic: 'pah duh boo-RAY', english: 'Step of bourrée', difficulty: 'intermediate', categoryId: 'centre', dimensionIds: ['technique', 'movement'], aliases: ['pas de bourree', 'pas de bourée', 'bourree'] },
+        { id: 'manege', french: 'Manège', phonetic: 'ma-NEZH', english: 'Riding school', difficulty: 'advanced', categoryId: 'centre', dimensionIds: ['technique', 'movement'], aliases: ['manege', 'travelling turns', 'en manege'] },
+        { id: 'passe', french: 'Passé', phonetic: 'pa-SAY', english: 'Passed', difficulty: 'beginner', categoryId: 'centre', dimensionIds: ['technique', 'movement'], aliases: ['passe', 'retire'] },
+        { id: 'balance', french: 'Balancé', phonetic: 'ba-lahn-SAY', english: 'Rocking step', difficulty: 'beginner', categoryId: 'centre', dimensionIds: ['technique', 'movement'], aliases: ['balance', 'waltz step'] },
+        { id: 'port-de-bras', french: 'Port de bras', phonetic: 'por duh BRAH', english: 'Carriage of arms', difficulty: 'beginner', categoryId: 'centre', dimensionIds: ['technique', 'movement'], aliases: ['port de bras', 'arm movement'] },
+        { id: 'epaulement', french: 'Épaulement', phonetic: 'ay-pol-MAHN', english: 'Shouldering', difficulty: 'intermediate', categoryId: 'centre', dimensionIds: ['technique', 'artistry'], aliases: ['epaulement', 'shoulder placement'] },
+        { id: 'promenade', french: 'Promenade', phonetic: 'prom-uh-NAHD', english: 'Walk', difficulty: 'intermediate', categoryId: 'centre', dimensionIds: ['technique', 'movement', 'the-body'], aliases: ['promenade', 'en promenade'] },
+        // Turns
+        { id: 'pirouette', french: 'Pirouette', phonetic: 'peer-oo-WET', english: 'Whirl', difficulty: 'intermediate', categoryId: 'turns', dimensionIds: ['technique', 'movement'], aliases: ['pirouette', 'turn', 'spin', 'rotation'] },
+        { id: 'fouette', french: 'Fouetté', phonetic: 'fweh-TAY', english: 'Whipped', difficulty: 'advanced', categoryId: 'turns', dimensionIds: ['technique', 'movement'], aliases: ['fouette', 'whip', 'fouette turns', 'fouettés'] },
+        { id: 'chaine', french: 'Chaînés', phonetic: 'sheh-NAY', english: 'Chains', difficulty: 'beginner', categoryId: 'turns', dimensionIds: ['technique', 'movement'], aliases: ['chaines', 'chain turns'] },
+        { id: 'piqué-turn', french: 'Piqué turn', phonetic: 'pee-KAY', english: 'Pricked turn', difficulty: 'improver', categoryId: 'turns', dimensionIds: ['technique', 'movement'], aliases: ['pique turn', 'step turn'] },
+        { id: 'soutenu', french: 'Soutenu', phonetic: 'soo-tuh-NEW', english: 'Sustained turn', difficulty: 'improver', categoryId: 'turns', dimensionIds: ['technique', 'movement'], aliases: ['soutenu'] },
+        { id: 'detourne', french: 'Détourné', phonetic: 'day-toor-NAY', english: 'Turned away', difficulty: 'improver', categoryId: 'turns', dimensionIds: ['technique', 'movement'], aliases: ['detourne'] },
+        { id: 'renverse', french: 'Renversé', phonetic: 'rahn-vehr-SAY', english: 'Overturned', difficulty: 'intermediate', categoryId: 'turns', dimensionIds: ['technique', 'movement'], aliases: ['renverse'] },
+        { id: 'tour-en-lair', french: 'Tour en l’air', phonetic: 'toor ahn LAIR', english: 'Turn in the air', difficulty: 'advanced', categoryId: 'turns', dimensionIds: ['technique', 'movement'], aliases: ['tour en lair'] },
+        { id: 'italian-fouette', french: 'Fouetté à l’italienne', phonetic: 'fweh-TAY', english: 'Italian fouetté', difficulty: 'advanced', categoryId: 'turns', dimensionIds: ['technique', 'movement'], aliases: ['italian fouette'] },
+        // Allegro
+        { id: 'saute', french: 'Sauté', phonetic: 'soh-TAY', english: 'Jumped', difficulty: 'beginner', categoryId: 'allegro', dimensionIds: ['technique', 'movement'], aliases: ['saute', 'jump'] },
+        { id: 'changement', french: 'Changement', phonetic: 'shahnzh-MAHN', english: 'Change', difficulty: 'beginner', categoryId: 'allegro', dimensionIds: ['technique', 'movement'], aliases: ['changement'] },
+        { id: 'echappe', french: 'Échappé', phonetic: 'ay-sha-PAY', english: 'Escaped', difficulty: 'beginner', categoryId: 'allegro', dimensionIds: ['technique', 'movement'], aliases: ['echappe'] },
+        { id: 'temps-leve', french: 'Temps levé', phonetic: 'tahn luh-VAY', english: 'Raised time', difficulty: 'improver', categoryId: 'allegro', dimensionIds: ['technique', 'movement'], aliases: ['temps leve'] },
+        { id: 'entrechat', french: 'Entrechat', phonetic: 'ahn-truh-SHA', english: 'Beaten jump', difficulty: 'intermediate', categoryId: 'allegro', dimensionIds: ['technique', 'movement'], aliases: ['entrechat', 'beats'] },
+        { id: 'grand-sissonne', french: 'Grand sissonne', phonetic: 'grahn see-SAWN', english: 'Large sissonne', difficulty: 'intermediate', categoryId: 'allegro', dimensionIds: ['technique', 'movement'], aliases: ['grand sissonne'] },
+        { id: 'grand-jete', french: 'Grand jeté', phonetic: 'grahn zhuh-TAY', english: 'Large throw', difficulty: 'advanced', categoryId: 'allegro', dimensionIds: ['technique', 'movement'], aliases: ['grand jete', 'split jump', 'leap'] },
+        { id: 'cabriole', french: 'Cabriole', phonetic: 'ka-bree-OL', english: 'Caper', difficulty: 'advanced', categoryId: 'allegro', dimensionIds: ['technique', 'movement'], aliases: ['cabriole'] },
+        { id: 'brise', french: 'Brisé', phonetic: 'bree-ZAY', english: 'Broken', difficulty: 'advanced', categoryId: 'allegro', dimensionIds: ['technique', 'movement'], aliases: ['brise'] },
+        { id: 'pas-de-chat', french: 'Pas de chat', phonetic: 'pah duh SHA', english: 'Step of the cat', difficulty: 'improver', categoryId: 'allegro', dimensionIds: ['technique', 'movement'], aliases: ['pas de chat'] },
+        { id: 'petit-sissonne', french: 'Petit sissonne', phonetic: 'puh-TEE see-SAWN', english: 'Small sissonne', difficulty: 'improver', categoryId: 'allegro', dimensionIds: ['technique', 'movement'], aliases: ['petit sissonne'] },
+        { id: 'ballonne', french: 'Ballonné', phonetic: 'ba-lawn-AY', english: 'Bounced', difficulty: 'improver', categoryId: 'allegro', dimensionIds: ['technique', 'movement'], aliases: ['ballonne'] },
+        // Artistry
+        { id: 'dynamics', french: 'Dynamics', phonetic: 'dy-NAM-iks', english: 'Dynamics', difficulty: 'intermediate', categoryId: 'artistry', dimensionIds: ['artistry'], aliases: ['dynamics', 'musical dynamics'] },
+        { id: 'projection', french: 'Projection', phonetic: 'pro-JEK-shun', english: 'Projection', difficulty: 'intermediate', categoryId: 'artistry', dimensionIds: ['artistry'], aliases: ['projection', 'stage projection'] },
+        { id: 'gaze-focus', french: 'Gaze / focus', phonetic: 'GAYZ FOH-kus', english: 'Gaze and focus', difficulty: 'beginner', categoryId: 'artistry', dimensionIds: ['artistry', 'technique'], aliases: ['gaze', 'focus', 'eye focus', 'regard'] },
+        // Body & Technique (Pointe)
+        { id: 'releve-pointe', french: 'Relevé en pointe', phonetic: 'ruh-luh-VAY', english: 'Rise to pointe', difficulty: 'improver', categoryId: 'body-and-technique', dimensionIds: ['pointe', 'technique'], aliases: ['releve pointe'] },
+        { id: 'echappe-pointe', french: 'Échappé en pointe', phonetic: 'ay-sha-PAY', english: 'Escape on pointe', difficulty: 'improver', categoryId: 'body-and-technique', dimensionIds: ['pointe', 'technique'], aliases: ['echappe pointe'] },
+        { id: 'bourree-pointe', french: 'Bourrée', phonetic: 'boo-RAY', english: 'Tiny steps', difficulty: 'improver', categoryId: 'body-and-technique', dimensionIds: ['pointe', 'technique'], aliases: ['bourree pointe'] },
+        { id: 'piqué-pointe', french: 'Piqué en pointe', phonetic: 'pee-KAY', english: 'Step onto pointe', difficulty: 'intermediate', categoryId: 'body-and-technique', dimensionIds: ['pointe', 'technique'], aliases: ['pique pointe'] },
     ],
 
     folders: {
@@ -308,19 +306,30 @@ const DATA = {
         'advanced':          'FIREBIRD',
     },
 
+    categoryNames: {
+        'barre':              'Barre Work',
+        'centre':             'Centre Work',
+        'turns':              'Turns',
+        'allegro':            'Allegro',
+        'artistry':           'Artistry',
+        'body-and-technique': 'Body & Technique',
+    },
+
     dimensionNames: {
-        barre: 'Barre', centre: 'Centre', allegro: 'Allegro',
-        turns: 'Turns', flexibility: 'Flexibility', pointe: 'Pointe',
-        musicality: 'Musicality', knowledge: 'Knowledge'
+        technique:  'Technique',
+        movement:   'Movement',
+        artistry:   'Artistry',
+        'the-body': 'The Body',
+        pointe:     'Pointe',
     },
 
     skillCategories: [
-        { id: 'barre', icon: 'cat-barre', name: 'Barre work', count: '15 skills', onclick: "openFolder('barre')" },
-        { id: 'centre', icon: 'cat-centre', name: 'Centre work', count: '12 skills', onclick: "alert('Coming soon')" },
-        { id: 'turns', icon: 'cat-turns', name: 'Turns', count: '8 skills', onclick: "alert('Coming soon')" },
-        { id: 'allegro', icon: 'cat-allegro', name: 'Allegro', count: '14 skills', onclick: "alert('Coming soon')" },
-        { id: 'pointe', icon: 'cat-pointe', name: 'Pointe work', count: '10 skills', onclick: "alert('Coming soon')" },
-        { id: 'flexibility', icon: 'cat-flexibility', name: 'Flexibility & strength', count: '12 exercises', onclick: "alert('Coming soon')" }
+        { id: 'barre', icon: 'cat-barre', name: 'Barre work', count: '11 skills', onclick: "openFolder('barre')" },
+        { id: 'centre', icon: 'cat-centre', name: 'Centre work', count: '10 skills', onclick: "alert('Coming soon')" },
+        { id: 'turns', icon: 'cat-turns', name: 'Turns', count: '9 skills', onclick: "alert('Coming soon')" },
+        { id: 'allegro', icon: 'cat-allegro', name: 'Allegro', count: '12 skills', onclick: "alert('Coming soon')" },
+        { id: 'artistry', icon: 'cat-artistry', name: 'Artistry', count: '3 skills', onclick: "alert('Coming soon')" },
+        { id: 'body-and-technique', icon: 'cat-pointe', name: 'Body & Technique', count: '4 skills', onclick: "alert('Coming soon')" },
     ],
 
     assessments: [
@@ -337,7 +346,7 @@ const DATA = {
         name: 'Skill library',
         desc: 'The movements that make up ballet training, from foundational barre work to the most demanding allegro.',
         icon: 'cat-barre',
-        chips: ['All', 'Barre', 'Centre', 'Turns', 'Allegro', 'Pointe'],
+        chips: ['All', 'Barre', 'Centre', 'Turns', 'Allegro', 'Artistry', 'Body & Technique'],
         action: 'showLearnSkillLibrary()',
         items: [] // populated from DATA.skills
     },

@@ -1,3 +1,5 @@
+const DEV = false; // flip to true locally for development
+
 const STORAGE_KEYS = {
     skills:             'plie:skills',
     corrections:        'plie:corrections',
@@ -16,6 +18,7 @@ const STORAGE_KEYS = {
     currentScreen:      'plie:currentScreen',
     learnBookmarks:     'plie:learnBookmarks',
     learnLineSaves:     'plie:learnLineSaves',
+    promptsDismissed:   'plie:prompts-dismissed',
 };
 
 const storage = {
@@ -60,6 +63,10 @@ const storage = {
    This means new skills added to DATA.skills in future app versions
    appear correctly with default state even for existing users.
    ═══════════════════════════════════════════════════════════════ */
+
+function generateId() {
+    return crypto.randomUUID();
+}
 
 function initSkills() {
     // Build runtime skill objects from reference data, with default user state.
@@ -164,6 +171,7 @@ function seedMockData() {
     appState.sessions = [
         {
             id:              1741824000000,
+            userId:          null,
             date:            '2026-03-12',
             savedAt:         1741824060000,
             templateId:      null,
@@ -174,6 +182,7 @@ function seedMockData() {
         },
         {
             id:              1741651200000,
+            userId:          null,
             date:            '2026-03-10',
             savedAt:         1741651260000,
             templateId:      null,
@@ -188,6 +197,7 @@ function seedMockData() {
     appState.corrections = [
         {
             id:          1741824001000,
+            userId:      null,
             skillId:     'pirouette',
             text:        'Spot earlier — the head should initiate the turn, not follow it.',
             createdAt:   1741824001000,
@@ -198,6 +208,7 @@ function seedMockData() {
         },
         {
             id:          1741824002000,
+            userId:      null,
             skillId:     'pirouette',
             text:        'Pull up through the supporting leg before initiating the turn.',
             createdAt:   1741824002000,
@@ -208,6 +219,7 @@ function seedMockData() {
         },
         {
             id:          1741651201000,
+            userId:      null,
             skillId:     'arabesque',
             text:        'Don\'t tilt the pelvis — the height comes from the hip flexor, not the lower back.',
             createdAt:   1741651201000,
@@ -222,6 +234,7 @@ function seedMockData() {
     appState.sessionSkills = [
         {
             id:            1741824010000,
+            userId:        null,
             sessionId:     1741824000000,
             skillId:       'pirouette',
             notes:         'Single turns feeling more stable. Tried a double — lost it about 70% of the time.',
@@ -233,6 +246,7 @@ function seedMockData() {
         },
         {
             id:            1741651210000,
+            userId:        null,
             sessionId:     1741651200000,
             skillId:       'arabesque',
             notes:         'Working on getting the leg higher without losing the line through the back.',
@@ -254,6 +268,7 @@ function seedMockData() {
     appState.timeline = [
         {
             id:       1741824060001,
+            userId:   null,
             type:     'session',
             objectId: 1741824000000,
             title:    'Wednesday RAD class',
@@ -263,6 +278,7 @@ function seedMockData() {
         },
         {
             id:       1741651260001,
+            userId:   null,
             type:     'session',
             objectId: 1741651200000,
             title:    'Monday open class',

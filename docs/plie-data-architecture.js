@@ -1,89 +1,130 @@
 /**
- * PLIÉ — DATA ARCHITECTURE v2.2
+ * PLIÉ — DATA ARCHITECTURE v3.0
  *
- * Changes from v2.1:
- * - appState: hidePointe, profilePicture, displayName added
- * - STORAGE_KEYS: plie:preferences added
- * - FOCUS_AREAS runtime constant documented
- * - File structure updated to reflect modular JS split
+ * Changes from v2.2:
+ * - Skill: dimensionId (String) → dimensionIds (Array); category → categoryId
+ * - Correction: id/sessionId → String; userId added; isPinned, isResolved,
+ *   derivedFromCorrectionId, previousBlockType added; 'praise' removed from source union
+ * - Session: id → String; userId added
+ * - SessionBlock: retired — replaced by SessionSkill with blockType field
+ * - SessionTemplate: id → String
+ * - SessionSkill: id/sessionId → String; userId added; mode → blockType;
+ *   isPinned, previousBlockType added
+ * - SkillNote: id → String; userId added
+ * - Goal: fully updated — goalType, progressMarkers, status, howOften, etc.
+ * - Assessment: id → String
+ * - TimelineEntry: id/objectId → String
+ * - STORAGE_KEYS: updated to current full set
+ * - Block type enum documented
+ * - Dimension model updated to current five
  */
+
+// ─── BLOCK TYPE ENUM ─────────────────────────────────────────────
+// Final set — use exactly these strings. Never 'observation' in new code.
+// 'observation' is retired: any observation blocks in localStorage are
+// migrated silently to 'note' on app open.
+//
+//   'correction' | 'note' | 'goal' | 'intention' | 'highlight' | 'choreography'
 
 // ─── SKILL ───────────────────────────────────────────────────────
 const Skill = {
-  id: String, french: String, phonetic: String, english: String,
-  difficulty: String, category: String, dimensionId: String,
+  id: String,
+  french: String, phonetic: String, english: String,
+  difficulty: String,
+  categoryId: String,     // 'barre'|'centre'|'turns'|'allegro'|'artistry'|'body-and-technique'
+  dimensionIds: Array,    // ['technique'|'movement'|'artistry'|'the-body'|'pointe']
   aliases: Array,
-  // Runtime only (merged from persisted sparse state):
+  // Runtime only (merged from persisted sparse state — never written to storage directly):
   tracked: Boolean, flagged: Boolean, phoneticVisible: Boolean,
-  // Deferred — not yet built:
-  // contributingDimensions: Array,
 };
 
 // ─── CORRECTION ──────────────────────────────────────────────────
 const Correction = {
-  id: Number,
+  id: String,             // crypto.randomUUID()
+  userId: null,
   skillId: String,
   text: String,
   createdAt: Number,
-  sessionId: Number,
-  source: String,      // 'teacher' | 'praise' | 'self' | 'video-review'
-  type: String,        // 'praise' | 'technical' | 'artistic' | null
-  isRecurring: Boolean,
+  sessionId: String,
+  source: String,         // 'teacher' | 'self' | 'video-review'
+  type: String,           // 'technical' | 'artistic' | null
+  isRecurring: Boolean,   // derived state — recalculated on every save, never set manually
+  isPinned: Boolean,
+  isResolved: Boolean,
+  derivedFromCorrectionId: String,  // null if original
+  previousBlockType: String,        // null if not converted from another block type
 };
 
 // ─── SESSION ─────────────────────────────────────────────────────
 const Session = {
-  id: Number, date: String, savedAt: Number,
-  templateId: Number, sessionName: String,
-  sessionLocation: String, classType: String, notes: String,
-};
-
-// ─── SESSION BLOCK — in-memory only ─────────────────────────────
-const SessionBlock = {
-  id: Number,
-  topicId: String,     // 'general' | category | 'skill:pirouette'
-  title: String,
-  notes: String, notesOpen: Boolean,
-  mode: String,        // 'correction' | 'praise' | 'reflection'
-  corrections: Array,
-  reflectionText: String,
+  id: String,             // crypto.randomUUID()
+  userId: null,
+  date: String,
+  savedAt: Number,
+  templateId: String,
+  sessionName: String,
+  sessionLocation: String,
+  classType: String,
+  notes: String,
 };
 
 // ─── SESSION TEMPLATE ────────────────────────────────────────────
 const SessionTemplate = {
-  id: Number, name: String, location: String,
+  id: String,             // crypto.randomUUID()
+  name: String, location: String,
   classType: String, days: Array,
 };
 
 // ─── SESSION SKILL ────────────────────────────────────────────────
+// Represents one block within a session (was "SessionBlock" in-memory + "SessionSkill" persisted).
 const SessionSkill = {
-  id: Number, sessionId: Number, skillId: String,
-  notes: String, correctionIds: Array,
-  tracked: Boolean, blockTitle: String, mode: String,
+  id: String,             // crypto.randomUUID()
+  userId: null,
+  sessionId: String,
+  skillId: String,        // null for general/unlinked blocks
+  notes: String,
+  correctionIds: Array,
+  tracked: Boolean,
+  blockTitle: String,
+  blockType: String,      // see block type enum above
+  isHighlight: Boolean,
+  isPinned: Boolean,
+  previousBlockType: String,  // null if block type has never changed
 };
 
 // ─── SKILL NOTE ───────────────────────────────────────────────────
 const SkillNote = {
-  id: Number,
-  skillId: String,     // FK → Skill.id | null (null = session-level reflection)
+  id: String,             // crypto.randomUUID()
+  userId: null,
+  skillId: String,        // FK → Skill.id | null (null = session-level)
   text: String, date: String, createdAt: Number,
   isReflection: Boolean,
 };
 
 // ─── GOAL ────────────────────────────────────────────────────────
 const Goal = {
-  id: Number, title: String, body: String,
-  createdAt: Number, dueDate: String,
-  skillId: String, dimensionId: String,
-  category: String,
+  id: String,             // crypto.randomUUID()
+  userId: null,
+  title: String,
+  body: String,
+  goalType: String,       // 'skill' | 'intention' | 'habit'
+  skillId: String,
+  dimensionId: String,
+  progressMarkers: Array, // [{ text: String, done: Boolean }] — replaces milestones[]
+  milestones: Array,      // legacy — always read via progressMarkers || milestones
+  commitmentPeriod: String, // 'This week'|'Two weeks'|'This month'|'Three months'|'YYYY-MM-DD'
+  howOften: String,       // habit goals only
   correctionIds: Array,
-  milestones: Array,   // [{id, text, done}]
-  completedAt: Number,
+  completed: Boolean,
+  status: String,         // 'active' | 'completed' | 'paused' | 'letgo'
+  createdAt: Number,
+  updatedAt: Number,
 };
 
 // ─── ASSESSMENT ───────────────────────────────────────────────────
 const Assessment = {
-  id: Number, type: String, date: String, completedAt: Number,
+  id: String,             // crypto.randomUUID()
+  type: String, date: String, completedAt: Number,
   answers: Object,
   dimensions: Object,
   level: String, levelLabel: String, levelDescription: String,
@@ -91,9 +132,10 @@ const Assessment = {
 
 // ─── TIMELINE ENTRY ───────────────────────────────────────────────
 const TimelineEntry = {
-  id: Number,
-  type: String,    // 'session' | 'assessment' | 'milestone' | 'manual'
-  objectId: Number,
+  id: String,             // crypto.randomUUID()
+  userId: null,
+  type: String,           // 'session' | 'assessment' | 'milestone' | 'manual'
+  objectId: String,
   title: String, body: String, date: String, createdAt: Number,
 };
 
@@ -110,46 +152,61 @@ const STORAGE_KEYS = {
   skillNotes:         'plie:skillNotes',
   onboardingComplete: 'plie:onboardingComplete',
   hasVisitedLearn:    'plie:hasVisitedLearn',
-  preferences:        'plie:preferences',  // { hidePointe, profilePicture, displayName }
+  preferences:        'plie:preferences',    // { hidePointe, profilePicture, displayName, trainingState }
+  learnBookmarks:     'plie:learnBookmarks', // [{ pageType, itemId, createdAt }]
+  learnLineSaves:     'plie:learnLineSaves',    // tap-to-save state for learn key points
+  promptsDismissed:   'plie:prompts-dismissed', // { [type]: timestamp } — prompt suppression
+  // Note: 'collapsedSections' has no plie: prefix — { inFocus, savedLearning }
 };
 
-// ─── APP STATE ADDITIONS (v5.0) ───────────────────────────────────
-// These fields added to appState alongside existing fields:
+// ─── APP STATE (selected fields) ─────────────────────────────────
 //
-//   hidePointe:     Boolean  — hides pointe from profile, skills, goals, assess
-//   profilePicture: String   — data URL (uploaded) or default key e.g. 'default-bun'
-//   displayName:    String   — optional display name shown on status card
+//   hidePointe:          Boolean  — hides pointe from profile, skills, goals
+//   profilePicture:      String   — data URL or default key e.g. 'default-bun'
+//   displayName:         String   — optional, shown on status card
+//   trainingState:       String   — 'active' | 'resting' | 'recovering'
+//   learnBookmarks:      Array    — [{ pageType, itemId, createdAt }]
+//   learnLineSaves:      Array    — [{ lineText, saveType, objectId, pageType, itemId }]
+//   collapsedSections:   Object   — { inFocus?: Boolean, savedLearning?: Boolean }
+//   _goalDraft:          Object   — in-progress goal creator state
+//   _snapshot:           Object   — copy of goal state at edit start
+//   _isEdit:             Boolean  — true when editing an existing session
+//   _skillLibDimFilter:  String   — active category filter in skill library (category display label, null = none)
+//   _exploreAllDoneShown: Boolean — whether "explored everything" acknowledgement shown
 
-// ─── FOCUS AREAS (runtime constant, not persisted) ────────────────
-// Each area has: id, name, icon, optIn?, subdims?, getDims(), getStats()
-// Rendered back→front: pointe · artistry · body · movement · technique
+// ─── DIMENSION MODEL (runtime constant) ───────────────────────────
+// Five dimensions. Always-present: technique, movement, artistry, the-body.
+// Opt-in: pointe (hidden when appState.hidePointe === true).
+// Knowledge and Musicality are retired as dimensions — their orientation
+// scores now contribute to 'artistry' in calculateResults().
+// Musicality remains as a taggable skill in the library.
 //
-// Areas and their sub-dimensions:
-//   technique  — (single)              — barre + centre questions averaged
-//   movement   — turns, allegro        — pirouette + allegro questions
-//   body       — flexibility, strength, turnout — existing + new questions
-//   artistry   — (single)              — musicality question
-//   pointe     — (single, opt-in)      — pointe question
+//   'technique' | 'movement' | 'artistry' | 'the-body' | 'pointe'
+
+// ─── SKILL STATE PERSISTENCE (sparse model) ───────────────────────
+// Only non-default entries are saved under 'plie:skills'.
+// Full skill objects from data.js are never written to storage — only overrides.
+//
+//   Persisted: [{ id: String, tracked: Boolean, flagged: Boolean }]
+//
+//   persistSkillState()   — writes the sparse array after any tracked/flagged change
+//   loadUserSkillState()  — merges sparse state onto runtime skills at startup
+
+// ─── RELATIONSHIPS ────────────────────────────────────────────────
+/*
+  Skill       (1) ──── (many) Correction    via Correction.skillId
+  Session     (1) ──── (many) Correction    via Correction.sessionId
+  Session     (1) ──── (many) SessionSkill  via SessionSkill.sessionId
+  Skill       (1) ──── (many) SessionSkill  via SessionSkill.skillId
+  SessionSkill ───── (many)   Correction    via SessionSkill.correctionIds[]
+  Goal        (0..1) ─ (1)    Skill         via Goal.skillId
+  Goal        ──────── (many) Correction    via Goal.correctionIds[]
+  Skill       (1) ──── (many) SkillNote     via SkillNote.skillId
+  Session     (1) ──── (1)    TimelineEntry via TimelineEntry.objectId
+*/
 
 // ─── NORMALISATION ────────────────────────────────────────────────
 // normaliseStr() strips accents + lowercases for matching.
 //   function normaliseStr(str) {
-//     return (str||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+//     return (str||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 //   }
-
-// ─── RELATIONSHIPS ────────────────────────────────────────────────
-/*
-  Skill     (1) ──── (many) Correction     via Correction.skillId
-  Session   (1) ──── (many) Correction     via Correction.sessionId
-  Session   (1) ──── (many) SessionSkill   via SessionSkill.sessionId
-  Skill     (1) ──── (many) SessionSkill   via SessionSkill.skillId
-  SessionSkill ────  (many) Correction     via SessionSkill.correctionIds[]
-  Goal      (0..1) ─ (1)    Skill          via Goal.skillId
-  Goal      ──────── (many) Correction     via Goal.correctionIds[]
-  Skill     (1) ──── (many) SkillNote      via SkillNote.skillId
-  Session   (1) ──── (1)    TimelineEntry  via TimelineEntry.objectId
-
-  Skill state persistence (sparse):
-    Persisted: [{id, tracked, flagged}] — only non-default entries
-    loadUserSkillState() merges onto runtime skills at startup
-*/

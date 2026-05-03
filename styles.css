@@ -5090,7 +5090,7 @@ input.session-block-topic-input:focus {
 }
 
 .skill-detail-session-count,
-.skill-detail-last-worked {
+.skill-detail-last-noted {
     font-size: var(--fs-caption);
     color: var(--ink-3);
 }

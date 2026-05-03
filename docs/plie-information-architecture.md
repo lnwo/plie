@@ -134,7 +134,8 @@ Session Logger
   │     Practice / More… → Add new…
   │     Practice: logger simplifies — no saved session, no location, date + title + notes only
   └── Modular blocks 📋 (upcoming redesign)
-        Block types: Correction / Observation / Note / Goal / Photo (deferred)
+        Block types: Correction · Note · Goal · Intention · Highlight · Choreography
+        Observation retired — migrated to Note on app open. Photo deferred.
         Opens with one blank Correction block
         Inactive blocks collapse to white card (type label + topic only)
         Block type label: small-caps DM Sans 600, --ink-5. Set at creation.
