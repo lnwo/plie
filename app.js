@@ -2629,11 +2629,15 @@ function togglePointeSetting(value) {
 function editDisplayName() {
     const current = appState.displayName || '';
     const name = window.prompt('Display name (optional):', current);
-    if (name === null) return; // cancelled
+    if (name === null) return;
     appState.displayName = name.trim() || null;
+    if (appState.displayName && !appState.avatarColor) {
+        appState.avatarColor = assignAvatarColor();
+    }
     savePreferences();
     renderSettings();
-    renderProfileStatus();
+    const profileEl = document.getElementById('profileStatus');
+    if (profileEl) renderProfileStatus();
 }
 
 /* ═══════════════════════════════════════════════════════════════
