@@ -3913,6 +3913,78 @@ input.session-block-topic-input:focus {
     border-color: var(--ink);
 }
 
+/* ── Correction reuse section (PLI-011) ───────────────────────────────────── */
+
+.corr-reuse-section {
+    padding: var(--sp-xs) 0 0;
+}
+
+.corr-reuse-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.corr-reuse-label {
+    font: 600 11px/1 'DM Sans', sans-serif;
+    color: var(--ink-4);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.corr-reuse-dismiss {
+    font: 400 14px/1 'DM Sans', sans-serif;
+    color: var(--ink-4);
+    background: none;
+    border: none;
+    padding: 0 2px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.corr-reuse-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.corr-reuse-item {
+    padding: var(--sp-xs) 0;
+    cursor: pointer;
+    border-radius: var(--r-sm);
+    transition: background 0.15s;
+}
+
+.corr-reuse-item:active {
+    background: var(--surface-warm);
+}
+
+.corr-reuse-item.open {
+    background: var(--surface-warm);
+}
+
+.corr-reuse-item-text {
+    font: 400 12px/1.4 'DM Sans', sans-serif;
+    color: var(--ink-3);
+    display: block;
+}
+
+.corr-reuse-expand {
+    display: none;
+    padding: var(--sp-xs) 0 var(--sp-xs) var(--sp-sm);
+}
+
+.corr-reuse-item.open .corr-reuse-expand {
+    display: block;
+}
+
+.corr-reuse-action {
+    font: 600 12px/1 'DM Sans', sans-serif;
+    color: var(--gold);
+    cursor: pointer;
+}
+
 /* Collapsed block preview — bold segment (skill name, goal title, first line) */
 .session-block-preview-bold {
     font-family: 'DM Sans', sans-serif;

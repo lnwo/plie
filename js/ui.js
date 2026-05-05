@@ -354,6 +354,105 @@ function renderSkillSlotHtml(block) {
     </div>`;
 }
 
+function renderCorrectionReuseSection(block) {
+    if (block.blockType !== 'correction') return '';
+    if (!block.topicId?.startsWith('skill:')) return '';
+    if (block._corrSectionDismissed) return '';
+    const skillId = block.topicId.replace('skill:', '');
+    const recurringForSkill = (appState.corrections || []).filter(
+        c => c.skillId === skillId && c.isRecurring
+    );
+    if (!recurringForSkill.length) return '';
+
+    // Sort by newest first, dedupe by first 30 normalised chars, take 3
+    const sorted = [...recurringForSkill].sort((a, b) => b.createdAt - a.createdAt);
+    const seen = new Set();
+    const deduped = [];
+    for (const c of sorted) {
+        const key = normaliseStr(c.text).slice(0, 30);
+        if (!seen.has(key)) { seen.add(key); deduped.push(c); }
+        if (deduped.length === 3) break;
+    }
+    if (!deduped.length) return '';
+
+    const bid = block.id;
+    const itemsHtml = deduped.map(c => `
+        <li class="corr-reuse-item" data-correction-id="${c.id}"
+            onmousedown="toggleCorrReuseItem(this,'${bid}','${c.id}')"
+            ontouchend="event.preventDefault();toggleCorrReuseItem(this,'${bid}','${c.id}')">
+            <span class="corr-reuse-item-text">${escapeHtml(c.text)}</span>
+            <div class="corr-reuse-expand">
+                <span class="corr-reuse-action"
+                      id="corr-reuse-action-${c.id}"
+                      onmousedown="event.stopPropagation();useCorrReuse('${bid}','${c.id}')"
+                      ontouchend="event.stopPropagation();event.preventDefault();useCorrReuse('${bid}','${c.id}')">use this correction →</span>
+            </div>
+        </li>`).join('');
+
+    return `<div class="corr-reuse-section" id="corr-reuse-section-${bid}">
+        <div class="corr-reuse-header">
+            <span class="corr-reuse-label">previous corrections</span>
+            <button class="corr-reuse-dismiss"
+                    onmousedown="dismissCorrReuseSection('${bid}')"
+                    ontouchend="event.preventDefault();dismissCorrReuseSection('${bid}')">×</button>
+        </div>
+        <ul class="corr-reuse-list">${itemsHtml}</ul>
+    </div>`;
+}
+
+function toggleCorrReuseItem(el, blockId, correctionId) {
+    const section = document.getElementById('corr-reuse-section-' + blockId);
+    if (!section) return;
+    section.querySelectorAll('.corr-reuse-item.open').forEach(item => {
+        if (item !== el) {
+            item.classList.remove('open');
+            item.querySelector('.corr-reuse-expand')?.classList.remove('open');
+        }
+    });
+    const expand = el.querySelector('.corr-reuse-expand');
+    const isOpen = el.classList.contains('open');
+    el.classList.toggle('open', !isOpen);
+    if (expand) expand.classList.toggle('open', !isOpen);
+}
+
+function useCorrReuse(blockId, correctionId) {
+    const block = getBlockById(blockId);
+    const correction = (appState.corrections || []).find(c => c.id === correctionId);
+    if (!block || !correction) return;
+    const entry = document.querySelector(`#block-${blockId} .block-bullet-entry`);
+    if (!entry) return;
+
+    block._derivedFromCorrectionId = correctionId;
+    block._corrSectionDismissed    = true;
+
+    const existing = (entry.innerText || '').replace(/\n+$/, '').trim();
+    if (existing) {
+        // Append as a new <div> line — matches how the contenteditable structures bullets
+        const newLine = document.createElement('div');
+        newLine.textContent = correction.text;
+        entry.appendChild(newLine);
+    } else {
+        entry.textContent = correction.text;
+    }
+    // Sync block.text so saveSession reads the updated value on save
+    block.text = (entry.innerText || '').replace(/\n+$/, '');
+
+    const range = document.createRange();
+    const sel = window.getSelection();
+    range.selectNodeContents(entry);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    entry.focus();
+    document.getElementById('corr-reuse-section-' + blockId)?.remove();
+}
+
+function dismissCorrReuseSection(blockId) {
+    const block = getBlockById(blockId);
+    if (block) block._corrSectionDismissed = true;
+    document.getElementById('corr-reuse-section-' + blockId)?.remove();
+}
+
 function renderSkillSlotInPlace(blockId, focusSlot) {
     const block  = getBlockById(blockId);
     const oldEl  = document.getElementById(`skill-slot-${blockId}`);
@@ -477,8 +576,10 @@ function confirmSkillSlot(blockId, slot, topicId, label) {
     if (!block) return;
     _pickerHighlightIdx = -1;
     if (slot === 'primary') {
-        block.topicId      = topicId;
-        block._slotEditing = null;
+        block.topicId                    = topicId;
+        block._slotEditing               = null;
+        block._derivedFromCorrectionId   = null;
+        block._corrSectionDismissed      = false;
         sortBlocks();
         renderBlocksOnly();
         // No auto-focus: auto-focusing secondary immediately causes pending
@@ -1273,9 +1374,11 @@ function addBlock(focusTitle = false, type = 'correction') {
         text:              '',
         notes:             '',
         notesOpen:         false,
-        blockType:         type,
-        isHighlight:       false,
-        previousBlockType: null,
+        blockType:                type,
+        isHighlight:              false,
+        previousBlockType:        null,
+        _derivedFromCorrectionId: null,
+        _corrSectionDismissed:    false,
     };
     if (type === 'goal') {
         block._goalDraft = {
@@ -1541,6 +1644,7 @@ function renderBlockHtml(block, index) {
                         ${entryHtml}
                     </div>
                     ${renderSkillSlotHtml(block)}
+                    ${renderCorrectionReuseSection(block)}
                     ${blockType === 'correction' ? `
                     <div class="block-tag-row">
                         <button class="block-tag-chip${block.bodyTag ? ' active' : ''}"
@@ -2454,7 +2558,7 @@ function saveSession() {
                     isRecurring:             false,
                     isPinned:                false,
                     isResolved:              false,
-                    derivedFromCorrectionId: null,
+                    derivedFromCorrectionId: block._derivedFromCorrectionId || null,
                     isHighlight:             !!block.isHighlight,
                     bodyTag:                 !!block.bodyTag,
                     previousBlockType:       block.previousBlockType || null,
