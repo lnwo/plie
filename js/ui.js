@@ -6522,7 +6522,7 @@ function showSessionDetail(sessionId) {
                 <div class="session-detail-meta">${datePart}</div>
             </div>`;
         bodyHtml = `<div class="note-detail-body">${noteContentHtml}</div>`;
-        editAction = `openNoteEditor(${sessionId})`;
+        editAction = `openNoteEditor('${sessionId}')`;
     } else {
         const classTypeLabel = session.classType
             ? ALL_CLASS_TYPES.find(ct => ct.id === session.classType)?.label || session.classType
@@ -6560,7 +6560,7 @@ function showSessionDetail(sessionId) {
                     ${blocksHtml}
                 </div>
             </div>`;
-        editAction = `openSessionEditor(${sessionId})`;
+        editAction = `openSessionEditor('${sessionId}')`;
     }
 
     screen.innerHTML = `
