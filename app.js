@@ -2319,9 +2319,7 @@ function saveNameFromPrompt() {
     const name = input ? input.value.trim() : '';
     if (name) {
         appState.displayName = name;
-        if (!appState.avatarColor) {
-            appState.avatarColor = assignAvatarColor();
-        }
+        appState.avatarColor = assignAvatarColor();
     }
     appState.namePromptShown = true;
     savePreferences();
@@ -2647,7 +2645,7 @@ function saveDisplayName() {
     const input = document.getElementById('displayNameInput');
     if (!input) return;
     appState.displayName = input.value.trim() || null;
-    if (appState.displayName && !appState.avatarColor) {
+    if (appState.displayName) {
         appState.avatarColor = assignAvatarColor();
     }
     savePreferences();
