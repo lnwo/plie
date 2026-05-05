@@ -2409,14 +2409,17 @@ function renderSettings() {
             <div class="settings-section-label">Profile and Account</div>
             <div class="settings-row">
                 <div class="settings-row-label">Profile Picture</div>
-                <button class="settings-row-action" onmousedown="openPicPicker()">Change</button>
+                <div class="settings-row-actions">
+                    ${appState.profilePicture ? `<button class="settings-row-action settings-row-action--danger" onmousedown="removeProfilePicture()" ontouchend="event.preventDefault(); removeProfilePicture()">Remove</button>` : ''}
+                    <button class="settings-row-action" onmousedown="openPicPicker()" ontouchend="event.preventDefault(); openPicPicker()">Change</button>
+                </div>
             </div>
-            <div class="settings-row">
+            <div class="settings-row" id="display-name-row">
                 <div>
                     <div class="settings-row-label">Display Name</div>
                     ${appState.displayName ? `<div class="settings-row-sub">${appState.displayName}</div>` : ''}
                 </div>
-                <button class="settings-row-action" onclick="editDisplayName()">Edit</button>
+                <button class="settings-row-action" onmousedown="editDisplayName()" ontouchend="event.preventDefault(); editDisplayName()">Edit</button>
             </div>
             <div class="settings-row">
                 <div>
@@ -2627,10 +2630,23 @@ function togglePointeSetting(value) {
 }
 
 function editDisplayName() {
+    const row = document.getElementById('display-name-row');
+    if (!row) return;
     const current = appState.displayName || '';
-    const name = window.prompt('Display name (optional):', current);
-    if (name === null) return;
-    appState.displayName = name.trim() || null;
+    row.innerHTML = `
+        <div class="settings-name-edit">
+            <input class="settings-name-input" id="displayNameInput" type="text"
+                value="${escapeHtml(current)}" placeholder="Your name" maxlength="40" autocomplete="off">
+            <button class="settings-row-action" onclick="saveDisplayName()">Save</button>
+        </div>
+    `;
+    setTimeout(() => document.getElementById('displayNameInput')?.focus(), 50);
+}
+
+function saveDisplayName() {
+    const input = document.getElementById('displayNameInput');
+    if (!input) return;
+    appState.displayName = input.value.trim() || null;
     if (appState.displayName && !appState.avatarColor) {
         appState.avatarColor = assignAvatarColor();
     }
@@ -2643,6 +2659,14 @@ function editDisplayName() {
 /* ═══════════════════════════════════════════════════════════════
    PROFILE PICTURE PICKER
    ═══════════════════════════════════════════════════════════════ */
+function removeProfilePicture() {
+    appState.profilePicture = null;
+    savePreferences();
+    renderSettings();
+    const profileEl = document.getElementById('profileStatus');
+    if (profileEl) renderProfileStatus();
+}
+
 function openPicPicker() {
     renderPicPicker();
     document.getElementById('pic-picker-overlay')?.classList.add('open');

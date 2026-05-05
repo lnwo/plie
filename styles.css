@@ -7971,8 +7971,9 @@ button, a, input, select, textarea,
 .rhythm-ylabel {
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-caption);
+    font-weight: 600;
     text-transform: uppercase;
-    color: var(--ink-3);
+    color: var(--ink-2);
     text-align: right;
     line-height: 1;
 }
@@ -7991,8 +7992,9 @@ button, a, input, select, textarea,
 .rhythm-xlabel {
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-caption);
+    font-weight: 600;
     text-transform: uppercase;
-    color: var(--ink-3);
+    color: var(--ink-2);
     text-align: center;
     flex: 1;
 }
@@ -8674,6 +8676,35 @@ button, a, input, select, textarea,
     flex-shrink: 0;
     margin-left: var(--sp-sm);
 }
+.settings-row-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-md);
+    flex-shrink: 0;
+}
+.settings-row-action--danger {
+    color: var(--error);
+}
+.settings-name-edit {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-sm);
+    width: 100%;
+    padding: 4px 0;
+}
+.settings-name-input {
+    flex: 1;
+    background: var(--input-bg);
+    border: 1px solid var(--gold-soft);
+    border-radius: 8px;
+    padding: 6px var(--sp-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink);
+    outline: none;
+    min-width: 0;
+}
+.settings-name-input:focus { border-color: var(--gold); }
 .settings-row--stacked {
     flex-direction: column;
     align-items: flex-start;
