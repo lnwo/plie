@@ -1,6 +1,6 @@
 # Plié
 ## Product Decisions & Principles
-Last updated: 26 April 2026, 16:00
+Last updated: 3 May 2026
 
 *Working document. Update when decisions change. For visual and component spec, see plie-design-system.md. For screen structure and navigation, see plie-sitemap.md.*
 
@@ -855,3 +855,41 @@ All empty states follow a two-line typographic structure. The heading sets the c
 - Each empty state gives her one clear next action, never two competing ones.
 - Gaps are normal. Empty states never imply she should have done more.
 - Training state variants (resting, recovering) for dimension cards, goals tab, and skill cards on The Barre still to be written — follow principles above when building those surfaces.
+
+---
+
+## Conditions model
+
+### What a condition is
+
+A condition is any physical factor that affects how she trains — injuries, chronic issues, or structural body facts (hypermobility, knock-knees, scoliosis, etc.). All are stored using the same model. No separate surface is needed for structural traits vs. injuries; the distinction is surfaced through `status` and how she describes it.
+
+### Data model
+
+```javascript
+{
+  id: string,                // crypto.randomUUID()
+  userId: null,
+  name: string,
+  description: string,       // optional
+  startDate: string,         // YYYY-MM-DD
+  status: 'active' | 'inactive' | 'archived',
+  statusChangedDate: string, // YYYY-MM-DD — updated whenever status changes
+  linkedNoteIds: string[],   // populated by UI when wiring
+  linkedSessionIds: string[], // populated by UI when wiring
+}
+```
+
+Persisted under `plie:conditions`.
+
+### Status values
+
+| Status | Meaning |
+|---|---|
+| `'active'` | Currently affecting training |
+| `'inactive'` | Known but not currently relevant |
+| `'archived'` | Resolved or no longer tracked |
+
+### Timeline prompt
+
+When a condition transitions **to** `'active'` (from any other status, including new record creation) or **to** `'archived'`, a one-off prompt fires: "save this as a timeline event? yes / not now." If yes, a `TimelineEntry` is created with type `'condition-activated'` or `'condition-resolved'`. The prompt fires once per status-change event — it is not throttled by time like the post-session prompts. Transitions to `'inactive'` do not trigger a prompt.

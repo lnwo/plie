@@ -1314,6 +1314,11 @@ function skipToProfile() {
     const learnNotes       = storage.load('learnNotes');
     const learnBookmarks    = storage.load('learnBookmarks');
     const learnLineSaves    = storage.load('learnLineSaves');
+    const conditions        = storage.load('conditions');
+    const teachers          = storage.load('teachers');
+    const venues            = storage.load('venues');
+    const cities            = storage.load('cities');
+    const customSkills      = storage.load('customSkills');
     const collapsedSections = storage.load('collapsedSections');
 
     if (sessions)         appState.sessions         = sessions;
@@ -1331,6 +1336,11 @@ function skipToProfile() {
     if (learnNotes)       appState.learnNotes       = learnNotes;
     if (learnBookmarks)    appState.learnBookmarks    = learnBookmarks;
     if (learnLineSaves)    appState.learnLineSaves    = learnLineSaves;
+    if (conditions)        appState.conditions        = conditions;
+    if (teachers)          appState.teachers          = teachers;
+    if (venues)            appState.venues            = venues;
+    if (cities)            appState.cities            = cities;
+    if (customSkills)      appState.customSkills      = customSkills;
     if (collapsedSections) appState.collapsedSections = collapsedSections;
 
     // PLI-002: Migrate any stored observation blocks to note silently on app open.
@@ -2293,6 +2303,48 @@ function renderSettings() {
             </div>
         </div>
     `;
+}
+
+function saveEntity(type, name) {
+    const list = appState[type + 's'];
+    if (!list) return null;
+    const trimmed = name.trim();
+    if (!trimmed) return null;
+    const existing = list.find(e => e.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing;
+    const entity = { id: generateId(), userId: null, name: trimmed };
+    list.push(entity);
+    storage.save(type + 's', list);
+    return entity;
+}
+
+function deleteEntitySuggestion(type, id) {
+    const key = type + 's';
+    appState[key] = (appState[key] || []).filter(e => e.id !== id);
+    storage.save(key, appState[key]);
+}
+
+function saveCondition(conditionData, previousStatus = null) {
+    const isNew = !conditionData.id;
+    if (isNew) {
+        conditionData.id     = generateId();
+        conditionData.userId = null;
+    }
+    appState.conditions = appState.conditions || [];
+    if (isNew) {
+        appState.conditions.push(conditionData);
+    } else {
+        const idx = appState.conditions.findIndex(c => c.id === conditionData.id);
+        if (idx !== -1) appState.conditions[idx] = conditionData;
+    }
+    storage.save('conditions', appState.conditions);
+
+    const newStatus = conditionData.status;
+    if (newStatus === 'active' && previousStatus !== 'active') {
+        showConditionTimelinePrompt(conditionData, 'condition-activated');
+    } else if (newStatus === 'archived' && previousStatus !== 'archived') {
+        showConditionTimelinePrompt(conditionData, 'condition-resolved');
+    }
 }
 
 function setTrainingState(state) {

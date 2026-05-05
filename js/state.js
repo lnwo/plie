@@ -19,6 +19,11 @@ const STORAGE_KEYS = {
     learnBookmarks:     'plie:learnBookmarks',
     learnLineSaves:     'plie:learnLineSaves',
     promptsDismissed:   'plie:prompts-dismissed',
+    conditions:         'plie:conditions',
+    teachers:           'plie:teachers',
+    venues:             'plie:venues',
+    cities:             'plie:cities',
+    customSkills:       'plie:customSkills',
 };
 
 const storage = {
@@ -128,6 +133,11 @@ let appState = {
     learnNotes:       [],
     learnBookmarks:    [],
     learnLineSaves:    [],
+    conditions:        [],
+    teachers:          [],
+    venues:            [],
+    cities:            [],
+    customSkills:      [],
     collapsedSections: {},  // persisted: { inFocus: bool, savedLearning: bool }
 
     // Misc
@@ -196,37 +206,49 @@ function seedMockData() {
     // Corrections — standalone objects, linked to skills
     appState.corrections = [
         {
-            id:          1741824001000,
-            userId:      null,
-            skillId:     'pirouette',
-            text:        'Spot earlier — the head should initiate the turn, not follow it.',
-            createdAt:   1741824001000,
-            sessionId:   1741824000000,
-            source:      'teacher',
-            type:        'technical',
-            isRecurring: true,
+            id:                      1741824001000,
+            userId:                  null,
+            skillId:                 'pirouette',
+            text:                    'Spot earlier — the head should initiate the turn, not follow it.',
+            createdAt:               1741824001000,
+            sessionId:               1741824000000,
+            source:                  'teacher',
+            type:                    'technical',
+            isRecurring:             true,
+            isPinned:                false,
+            isResolved:              false,
+            derivedFromCorrectionId: null,
+            previousBlockType:       null,
         },
         {
-            id:          1741824002000,
-            userId:      null,
-            skillId:     'pirouette',
-            text:        'Pull up through the supporting leg before initiating the turn.',
-            createdAt:   1741824002000,
-            sessionId:   1741824000000,
-            source:      'teacher',
-            type:        'technical',
-            isRecurring: false,
+            id:                      1741824002000,
+            userId:                  null,
+            skillId:                 'pirouette',
+            text:                    'Pull up through the supporting leg before initiating the turn.',
+            createdAt:               1741824002000,
+            sessionId:               1741824000000,
+            source:                  'teacher',
+            type:                    'technical',
+            isRecurring:             false,
+            isPinned:                false,
+            isResolved:              false,
+            derivedFromCorrectionId: null,
+            previousBlockType:       null,
         },
         {
-            id:          1741651201000,
-            userId:      null,
-            skillId:     'arabesque',
-            text:        'Don\'t tilt the pelvis — the height comes from the hip flexor, not the lower back.',
-            createdAt:   1741651201000,
-            sessionId:   1741651200000,
-            source:      'teacher',
-            type:        'technical',
-            isRecurring: false,
+            id:                      1741651201000,
+            userId:                  null,
+            skillId:                 'arabesque',
+            text:                    'Don\'t tilt the pelvis — the height comes from the hip flexor, not the lower back.',
+            createdAt:               1741651201000,
+            sessionId:               1741651200000,
+            source:                  'teacher',
+            type:                    'technical',
+            isRecurring:             false,
+            isPinned:                false,
+            isResolved:              false,
+            derivedFromCorrectionId: null,
+            previousBlockType:       null,
         },
     ];
 
@@ -243,6 +265,7 @@ function seedMockData() {
             flagged:       false,
             blockTitle:    '',
             highlight:     false,
+            isPinned:      false,
         },
         {
             id:            1741651210000,
@@ -255,6 +278,7 @@ function seedMockData() {
             flagged:       false,
             blockTitle:    'Arabesque extension',
             isPraise:      true,
+            isPinned:      false,
         },
     ];
 
@@ -263,6 +287,33 @@ function seedMockData() {
         const skill = appState.skills.find(s => s.id === id);
         if (skill) skill.flagged = true;
     });
+
+    // Entities (suggestion lists — names stored as strings on sessions/blocks)
+    appState.teachers = [
+        { id: generateId(), userId: null, name: 'Miss Katya' },
+        { id: generateId(), userId: null, name: 'the Tuesday teacher' },
+    ];
+    appState.venues = [
+        { id: generateId(), userId: null, name: 'Central Ballet Studio' },
+    ];
+    appState.cities = [
+        { id: generateId(), userId: null, name: 'London' },
+    ];
+
+    // Conditions
+    appState.conditions = [
+        {
+            id:                generateId(),
+            userId:            null,
+            name:              'Left ankle tendinitis',
+            description:       'Recurring discomfort on relevé, worse after pointe work.',
+            startDate:         '2026-02-14',
+            status:            'active',
+            statusChangedDate: '2026-02-14',
+            linkedNoteIds:     [],
+            linkedSessionIds:  [],
+        },
+    ];
 
     // Timeline
     appState.timeline = [

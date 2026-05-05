@@ -99,12 +99,409 @@ function getBlockTopics() {
         { id: 'pointe',    label: 'Pointe',    group: 'Category' },
     ];
     const skills = appState.skills.map(s => ({
-        id:    'skill:' + s.id,   // e.g. 'skill:pirouette'
+        id:    'skill:' + s.id,
         label: s.french,
         sub:   s.english,
         group: 'Skills',
     }));
     return [...categories, ...skills];
+}
+
+// ── Skill Picker — shared dropdown component ─────────────────────────────
+// renderSkillPickerDropdown: fills a dropdown element.
+// All three picker callsites (block topic, inline goal, goal creator) use this.
+// Future callsites: PLI-010 correction reuse, PLI-012 choreography, PLI-005 conditions.
+//
+// topicId format (unchanged for backward compat):
+//   'skill:{id}'   — specific skill   (e.g. 'skill:pirouette')
+//   'general'      — no skill / general block
+//   dimension id   — only via includeDimensions:true (goal picker)
+//
+// opts: {
+//   includeGeneral:    bool   — show "General" at top (block topic, goal creator)
+//   includeDimensions: bool   — show dimensions section (goal picker only)
+//   hidePointe:        bool   — omit pointe skills (default: appState.hidePointe)
+//   currentTopicId:    string — highlight current selection
+// }
+
+let _skillPickerOnSelect = null;
+let _pickerHighlightIdx  = -1;
+
+function _onSkillPickerSelect(topicId, label) {
+    if (_skillPickerOnSelect) _skillPickerOnSelect(topicId, label);
+}
+
+function _pickerSetHighlight(options, idx) {
+    _pickerHighlightIdx = idx;
+    options.forEach((o, i) => o.classList.toggle('skill-picker-option--highlighted', i === idx));
+    if (idx >= 0) options[idx]?.scrollIntoView({ block: 'nearest' });
+}
+
+function renderSkillPickerDropdown(dropdownEl, query, onSelect, opts = {}) {
+    if (!dropdownEl) return;
+    _skillPickerOnSelect = onSelect;
+
+    const norm       = normaliseStr(query || '');
+    const hidePointe = opts.hidePointe ?? !!appState.hidePointe;
+    const currentId  = opts.currentTopicId || null;
+
+    const skills = (appState.skills || DATA.skills || []).filter(s =>
+        !(hidePointe && s.dimensionIds?.includes('pointe'))
+    );
+
+    _pickerHighlightIdx = -1;  // reset keyboard highlight on every re-render
+    let html = '';
+
+    if (!norm) {
+        // ── Unfiltered: General option, skills by category, then custom skills ──
+        if (opts.includeGeneral) {
+            const sel = currentId === 'general' ? ' skill-picker-option--current' : '';
+            html += `<div class="skill-picker-option${sel}" data-topic-id="general" data-label="General" onmousedown="_onSkillPickerSelect('general','General')"><span class="skill-picker-option-label">General</span></div>`;
+        }
+
+        const categoryOrder = ['barre','centre','turns','allegro','artistry','body-and-technique'];
+        categoryOrder.forEach(catId => {
+            const catSkills = skills.filter(s => s.categoryId === catId);
+            if (!catSkills.length) return;
+            html += `<div class="skill-picker-group">${DATA.categoryNames[catId] || catId}</div>`;
+            catSkills.forEach(s => {
+                const sel = currentId === 'skill:' + s.id ? ' skill-picker-option--current' : '';
+                html += `<div class="skill-picker-option${sel}" data-topic-id="skill:${s.id}" data-label="${escapeHtml(s.french)}" onmousedown="_onSkillPickerSelect('skill:${s.id}',${JSON.stringify(s.french)})"><span class="skill-picker-option-label">${escapeHtml(s.french)}</span><span class="skill-picker-option-sub">${escapeHtml(s.english)}</span></div>`;
+            });
+        });
+
+        if (opts.includeDimensions) {
+            const dims = [
+                { id: 'technique', label: 'Technique' },
+                { id: 'movement',  label: 'Movement'  },
+                { id: 'artistry',  label: 'Artistry'  },
+                { id: 'the-body',  label: 'The Body'  },
+                ...(hidePointe ? [] : [{ id: 'pointe', label: 'Pointe' }]),
+            ];
+            if (dims.length) {
+                html += `<div class="skill-picker-group">Dimensions</div>`;
+                dims.forEach(d => {
+                    const sel = currentId === d.id ? ' skill-picker-option--current' : '';
+                    html += `<div class="skill-picker-option${sel}" data-topic-id="${d.id}" data-label="${d.label}" onmousedown="_onSkillPickerSelect('${d.id}','${d.label}')"><span class="skill-picker-option-label">${d.label}</span></div>`;
+                });
+            }
+        }
+
+        if (opts.includeCustomSkills && appState.customSkills?.length) {
+            html += `<div class="skill-picker-group">Your skills</div>`;
+            appState.customSkills.forEach(c => {
+                const sel = currentId === 'custom:' + c.id ? ' skill-picker-option--current' : '';
+                html += `<div class="skill-picker-option${sel}" data-topic-id="custom:${c.id}" data-label="${escapeHtml(c.name)}" onmousedown="_onSkillPickerSelect('custom:${c.id}',${JSON.stringify(c.name)})"><span class="skill-picker-option-label">${escapeHtml(c.name)}</span></div>`;
+            });
+        }
+    } else {
+        // ── Filtered: ranked flat list ──
+        const ranked = _rankSkillPickerMatches(skills, norm);
+        const customMatches = opts.includeCustomSkills
+            ? (appState.customSkills || []).filter(c => normaliseStr(c.name).includes(norm))
+            : [];
+
+        if (!ranked.length && !customMatches.length && !opts.includeDimensions) {
+            html += `<div class="skill-picker-empty">No skills match</div>`;
+        } else {
+            ranked.forEach(s => {
+                const sel = currentId === 'skill:' + s.id ? ' skill-picker-option--current' : '';
+                html += `<div class="skill-picker-option${sel}" data-topic-id="skill:${s.id}" data-label="${escapeHtml(s.french)}" onmousedown="_onSkillPickerSelect('skill:${s.id}',${JSON.stringify(s.french)})"><span class="skill-picker-option-label">${escapeHtml(s.french)}</span><span class="skill-picker-option-sub">${escapeHtml(s.english)}</span></div>`;
+            });
+
+            customMatches.forEach(c => {
+                const sel = currentId === 'custom:' + c.id ? ' skill-picker-option--current' : '';
+                html += `<div class="skill-picker-option${sel}" data-topic-id="custom:${c.id}" data-label="${escapeHtml(c.name)}" onmousedown="_onSkillPickerSelect('custom:${c.id}',${JSON.stringify(c.name)})"><span class="skill-picker-option-label">${escapeHtml(c.name)}</span><span class="skill-picker-option-sub">your skill</span></div>`;
+            });
+
+            if (opts.includeDimensions) {
+                const dims = [
+                    { id: 'technique', label: 'Technique' },
+                    { id: 'movement',  label: 'Movement'  },
+                    { id: 'artistry',  label: 'Artistry'  },
+                    { id: 'the-body',  label: 'The Body'  },
+                    ...(hidePointe ? [] : [{ id: 'pointe', label: 'Pointe' }]),
+                ].filter(d => normaliseStr(d.label).includes(norm));
+                dims.forEach(d => {
+                    const sel = currentId === d.id ? ' skill-picker-option--current' : '';
+                    html += `<div class="skill-picker-option${sel}" data-topic-id="${d.id}" data-label="${d.label}" onmousedown="_onSkillPickerSelect('${d.id}','${d.label}')"><span class="skill-picker-option-label">${d.label}</span></div>`;
+                });
+                if (!ranked.length && !customMatches.length && !dims.length) {
+                    html = `<div class="skill-picker-empty">No skills match</div>`;
+                }
+            }
+        }
+    }
+
+    if (!html) { dropdownEl.style.display = 'none'; return; }
+    dropdownEl.innerHTML = html;
+    dropdownEl.style.display = 'block';
+
+    // iOS tap fix: touchend on the container fires the option's onmousedown immediately,
+    // bypassing the 300ms click delay and the blur/focus sequencing that kills selection.
+    dropdownEl.ontouchend = function(e) {
+        const option = e.target.closest('.skill-picker-option');
+        if (option?.onmousedown) { e.preventDefault(); option.onmousedown(e); }
+    };
+}
+
+function _rankSkillPickerMatches(skills, norm) {
+    return skills
+        .map(s => {
+            const fr = normaliseStr(s.french);
+            const en = normaliseStr(s.english);
+            const al = (s.aliases || []).map(a => normaliseStr(a));
+            let score = 0;
+            if (fr === norm)                            score = 100;
+            else if (fr.startsWith(norm))               score = 80;
+            else if (fr.includes(norm))                 score = 60;
+            else if (en === norm)                       score = 50;
+            else if (en.startsWith(norm))               score = 40;
+            else if (en.includes(norm))                 score = 30;
+            else if (al.some(a => a === norm))          score = 25;
+            else if (al.some(a => a.startsWith(norm)))  score = 20;
+            else if (al.some(a => a.includes(norm)))    score = 10;
+            return { s, score };
+        })
+        .filter(r => r.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map(r => r.s);
+}
+
+// ── Skill Slot Field — two-slot primary / secondary skill component ───────
+// Used by all non-goal session blocks. Primary maps to block.topicId,
+// secondary to block.secondaryTopicId. Both use the 'skill:id' | 'custom:id'
+// format. _slotEditing tracks which slot (if any) is in input mode.
+//
+// Data rules (per spec):
+//   - Recurring detection runs on primary skill only.
+//   - Secondary surfaces corrections under that skill's record.
+//   - User-typed entries saved to appState.customSkills / 'plie:customSkills'.
+//   - Deleting a custom skill entry does not affect past corrections.
+
+function _slotLabel(topicId) {
+    if (!topicId || topicId === 'general') return '';
+    if (topicId.startsWith('skill:')) {
+        const sk = DATA.skills.find(s => s.id === topicId.replace('skill:', ''));
+        return sk?.french || topicId.replace('skill:', '');
+    }
+    if (topicId.startsWith('custom:')) {
+        const c = (appState.customSkills || []).find(c => c.id === topicId.replace('custom:', ''));
+        return c?.name || '';
+    }
+    return topicId;
+}
+
+function renderSkillSlotHtml(block) {
+    const bid           = block.id;
+    const primaryId     = (block.topicId && block.topicId !== 'general') ? block.topicId : null;
+    const secondaryId   = block.secondaryTopicId || null;
+    const editingSlot   = block._slotEditing;
+
+    const primaryLabel   = _slotLabel(primaryId);
+    const secondaryLabel = _slotLabel(secondaryId);
+
+    // Primary area
+    let primaryHtml;
+    if (!primaryId || editingSlot === 'primary') {
+        primaryHtml = `<input class="skill-slot-input skill-slot-input--primary"
+                              type="text"
+                              autocomplete="off"
+                              spellcheck="false"
+                              placeholder="Primary skill…"
+                              value="${escapeHtml(editingSlot === 'primary' ? primaryLabel : '')}"
+                              id="skill-slot-primary-input-${bid}"
+                              oninput="filterSkillSlot('${bid}','primary',this.value)"
+                              onkeydown="handleSkillSlotKey(event,'${bid}','primary')"
+                              onblur="closeSkillSlot('${bid}','primary')"
+                              onfocus="filterSkillSlot('${bid}','primary',this.value)" />`;
+    } else {
+        primaryHtml = `<span class="skill-slot-token skill-slot-token--primary"
+                             onmousedown="editSkillSlot('${bid}','primary')"
+                             ontouchend="event.preventDefault();editSkillSlot('${bid}','primary')">${escapeHtml(primaryLabel)}</span>`;
+    }
+
+    // Secondary area — only shown when primary is present
+    let secondaryHtml = '';
+    if (primaryId || editingSlot === 'primary') {
+        const sep = `<span class="skill-slot-sep">, </span>`;
+        if (!secondaryId || editingSlot === 'secondary') {
+            secondaryHtml = sep + `<input class="skill-slot-input skill-slot-input--secondary"
+                                          type="text"
+                                          autocomplete="off"
+                                          spellcheck="false"
+                                          placeholder="secondary (optional)…"
+                                          value="${escapeHtml(editingSlot === 'secondary' ? secondaryLabel : '')}"
+                                          id="skill-slot-secondary-input-${bid}"
+                                          oninput="filterSkillSlot('${bid}','secondary',this.value)"
+                                          onkeydown="handleSkillSlotKey(event,'${bid}','secondary')"
+                                          onblur="closeSkillSlot('${bid}','secondary')"
+                                          onfocus="filterSkillSlot('${bid}','secondary',this.value)" />`;
+        } else {
+            secondaryHtml = sep + `<span class="skill-slot-token skill-slot-token--secondary"
+                                         onmousedown="editSkillSlot('${bid}','secondary')"
+                                         ontouchend="event.preventDefault();editSkillSlot('${bid}','secondary')">${escapeHtml(secondaryLabel)}</span>`;
+        }
+    }
+
+    // Border state: gold when any input is active, neutral when both tokens filled
+    const bothFilled  = primaryId && !editingSlot && secondaryId;
+    const fieldCls    = 'skill-slot-field' + (bothFilled ? ' skill-slot-field--filled' : '');
+
+    return `<div class="${fieldCls}" id="skill-slot-${bid}">
+        <div class="skill-slot-row">${primaryHtml}${secondaryHtml}</div>
+        <div class="block-topic-dropdown" id="skill-slot-dropdown-${bid}" style="display:none;"></div>
+    </div>`;
+}
+
+function renderSkillSlotInPlace(blockId, focusSlot) {
+    const block  = getBlockById(blockId);
+    const oldEl  = document.getElementById(`skill-slot-${blockId}`);
+    if (!block || !oldEl) return;
+    oldEl.outerHTML = renderSkillSlotHtml(block);
+    if (focusSlot) {
+        requestAnimationFrame(() =>
+            document.getElementById(`skill-slot-${focusSlot}-input-${blockId}`)?.focus()
+        );
+    }
+}
+
+function editSkillSlot(blockId, slot) {
+    const block = getBlockById(blockId);
+    if (!block) return;
+    block._slotEditing = slot;
+    renderSkillSlotInPlace(blockId, slot);
+    // Open dropdown immediately showing current query
+    requestAnimationFrame(() => {
+        const input = document.getElementById(`skill-slot-${slot}-input-${blockId}`);
+        if (input) filterSkillSlot(blockId, slot, input.value);
+    });
+}
+
+function filterSkillSlot(blockId, slot, query) {
+    const block      = getBlockById(blockId);
+    const dropdownEl = document.getElementById(`skill-slot-dropdown-${blockId}`);
+    if (!block || !dropdownEl) return;
+    const currentId = slot === 'primary' ? block.topicId : block.secondaryTopicId;
+    renderSkillPickerDropdown(dropdownEl, query, (topicId, label) => {
+        confirmSkillSlot(blockId, slot, topicId, label);
+    }, { includeCustomSkills: true, currentTopicId: currentId });
+}
+
+function handleSkillSlotKey(event, blockId, slot) {
+    const dropdown = document.getElementById(`skill-slot-dropdown-${blockId}`);
+    const options  = dropdown?.style.display !== 'none'
+        ? [...(dropdown?.querySelectorAll('.skill-picker-option') || [])]
+        : [];
+
+    if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        _pickerSetHighlight(options, Math.min(_pickerHighlightIdx + 1, options.length - 1));
+        return;
+    }
+
+    if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        _pickerSetHighlight(options, Math.max(_pickerHighlightIdx - 1, -1));
+        return;
+    }
+
+    if (event.key === 'Enter') {
+        event.preventDefault();
+
+        // If an arrow-highlighted option exists, select it directly
+        if (_pickerHighlightIdx >= 0 && options[_pickerHighlightIdx]) {
+            const opt     = options[_pickerHighlightIdx];
+            const topicId = opt.dataset.topicId;
+            const label   = opt.dataset.label;
+            if (topicId && label) { confirmSkillSlot(blockId, slot, topicId, label); return; }
+        }
+
+        // Otherwise match on typed text
+        const input = document.getElementById(`skill-slot-${slot}-input-${blockId}`);
+        const query = (input?.value || '').trim();
+        if (query) {
+            const norm   = normaliseStr(query);
+            const skills = (appState.skills || DATA.skills).filter(s =>
+                !(appState.hidePointe && s.dimensionIds?.includes('pointe'))
+            );
+            const top = _rankSkillPickerMatches(skills, norm)[0];
+            if (top) { confirmSkillSlot(blockId, slot, 'skill:' + top.id, top.french); return; }
+            const custom = (appState.customSkills || []).find(c => normaliseStr(c.name).includes(norm));
+            if (custom) { confirmSkillSlot(blockId, slot, 'custom:' + custom.id, custom.name); return; }
+            _saveCustomSkillSlot(blockId, slot, query);
+        } else if (slot === 'secondary') {
+            const block = getBlockById(blockId);
+            if (block) { block._slotEditing = null; renderSkillSlotInPlace(blockId); }
+        }
+        return;
+    }
+
+    if (event.key === 'Backspace') {
+        const input = document.getElementById(`skill-slot-${slot}-input-${blockId}`);
+        if (input && input.value === '' && slot === 'secondary') {
+            const block = getBlockById(blockId);
+            if (block) { block.secondaryTopicId = null; block._slotEditing = null; }
+            renderSkillSlotInPlace(blockId);
+        }
+        // Primary: backspace on empty input does nothing — tap token to edit
+        return;
+    }
+
+    if (event.key === 'Escape') {
+        const block = getBlockById(blockId);
+        if (block) block._slotEditing = null;
+        renderSkillSlotInPlace(blockId);
+    }
+}
+
+function closeSkillSlot(blockId, slot) {
+    // Delayed so onmousedown/touchend on a dropdown option fires first.
+    // Only reverts editing state if no selection was made (_slotEditing still set).
+    // Does NOT null _skillPickerOnSelect unconditionally — the secondary slot's
+    // onfocus may have already replaced it with a new closure.
+    setTimeout(() => {
+        const block      = getBlockById(blockId);
+        const dropdownEl = document.getElementById(`skill-slot-dropdown-${blockId}`);
+        if (dropdownEl) dropdownEl.style.display = 'none';
+        if (block && block._slotEditing === slot) {
+            block._slotEditing = null;
+            _skillPickerOnSelect = null;
+            renderSkillSlotInPlace(blockId);
+        }
+    }, 250);
+}
+
+function confirmSkillSlot(blockId, slot, topicId, label) {
+    const block = getBlockById(blockId);
+    if (!block) return;
+    _pickerHighlightIdx = -1;
+    if (slot === 'primary') {
+        block.topicId      = topicId;
+        block._slotEditing = null;
+        sortBlocks();
+        renderBlocksOnly();
+        // No auto-focus: auto-focusing secondary immediately causes pending
+        // mouseup/click from the primary selection to land on the newly-opened
+        // secondary dropdown and ghost-select the wrong skill.
+    } else {
+        block.secondaryTopicId = topicId;
+        block._slotEditing     = null;
+        renderSkillSlotInPlace(blockId);
+    }
+}
+
+function _saveCustomSkillSlot(blockId, slot, name) {
+    if (!appState.customSkills) appState.customSkills = [];
+    let custom = appState.customSkills.find(
+        c => c.name.toLowerCase() === name.toLowerCase()
+    );
+    if (!custom) {
+        custom = { id: generateId(), userId: null, name };
+        appState.customSkills.push(custom);
+        storage.save('customSkills', appState.customSkills);
+    }
+    confirmSkillSlot(blockId, slot, 'custom:' + custom.id, custom.name);
 }
 
 function openSessionLogger(mode) {
@@ -118,6 +515,9 @@ function openSessionLogger(mode) {
         sessionName:     null,
         sessionLocation: null,
         classType:       null,
+        teacher:         null,
+        venue:           null,
+        city:            null,
         blocks:          [],
         _predicted:      false,
         _mode:           mode || 'session',
@@ -865,12 +1265,14 @@ const BLOCK_MODES = ['correction', 'praise', 'reflection'];
 
 function addBlock(focusTitle = false, type = 'correction') {
     const block = {
-        id:          generateId(),
-        topicId:     'general',
-        title:       '',
-        text:        '',
-        notes:       '',
-        notesOpen:   false,
+        id:                generateId(),
+        topicId:           'general',
+        secondaryTopicId:  null,
+        _slotEditing:      null,
+        title:             '',
+        text:              '',
+        notes:             '',
+        notesOpen:         false,
         blockType:         type,
         isHighlight:       false,
         previousBlockType: null,
@@ -1038,10 +1440,10 @@ function renderBlockHtml(block, index) {
         const starSvg = '<svg class="star-icon" width="16" height="16" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
         return '<div class="swipe-row" data-block-id="' + block.id + '">' +
             '<div class="swipe-action-left swipe-action-remove">' + ICONS.get('x', 16) + 'remove</div>' +
-            '<div class="session-block session-block--collapsed" id="block-' + block.id + '" onmousedown="expandBlock(' + block.id + ')">' +
+            '<div class="session-block session-block--collapsed" id="block-' + block.id + '" onmousedown="expandBlock(\'' + block.id + '\')">' +
                 '<div class="session-block-collapse-header">' +
                     '<span class="session-block-type-inline">' + blockType + '</span>' +
-                    '<button class="block-star-btn ' + (block.isHighlight ? 'active' : '') + '" onmousedown="event.stopPropagation(); toggleBlockHighlight(' + block.id + ')" aria-label="Highlight">' + starSvg + '</button>' +
+                    '<button class="block-star-btn ' + (block.isHighlight ? 'active' : '') + '" onmousedown="event.stopPropagation(); toggleBlockHighlight(\'' + block.id + '\')" aria-label="Highlight">' + starSvg + '</button>' +
                 '</div>' +
                 (bodyHtml ? '<div class="session-block-collapse-body">' + bodyHtml + '</div>' : '') +
             '</div>' +
@@ -1057,10 +1459,10 @@ function renderBlockHtml(block, index) {
         const d = block._goalDraft || {};
         const typeTabsHtml = d.goalType ? `
             <div class="goal-type-tabs" id="inline-goal-type-tabs-${block.id}">
-                <button class="goal-type-tab ${d.goalType === 'skill'     ? 'active' : ''}" onmousedown="setBlockGoalType(${block.id}, 'skill')">A skill</button>
-                <button class="goal-type-tab ${d.goalType === 'body'      ? 'active' : ''}" onmousedown="setBlockGoalType(${block.id}, 'body')">Body</button>
-                <button class="goal-type-tab ${d.goalType === 'intention' ? 'active' : ''}" onmousedown="setBlockGoalType(${block.id}, 'intention')">A feeling or state</button>
-                <button class="goal-type-tab ${d.goalType === 'habit'     ? 'active' : ''}" onmousedown="setBlockGoalType(${block.id}, 'habit')">A habit</button>
+                <button class="goal-type-tab ${d.goalType === 'skill'     ? 'active' : ''}" onmousedown="setBlockGoalType('${block.id}', 'skill')">A skill</button>
+                <button class="goal-type-tab ${d.goalType === 'body'      ? 'active' : ''}" onmousedown="setBlockGoalType('${block.id}', 'body')">Body</button>
+                <button class="goal-type-tab ${d.goalType === 'intention' ? 'active' : ''}" onmousedown="setBlockGoalType('${block.id}', 'intention')">A feeling or state</button>
+                <button class="goal-type-tab ${d.goalType === 'habit'     ? 'active' : ''}" onmousedown="setBlockGoalType('${block.id}', 'habit')">A habit</button>
             </div>` : '';
         const starSvg = `<svg class="star-icon" width="16" height="16" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
         return `
@@ -1073,11 +1475,11 @@ function renderBlockHtml(block, index) {
                     ${blockTypeLabelHtml}
                     <div class="session-block-header">
                         <button class="block-star-btn ${block.isHighlight ? 'active' : ''}"
-                                onmousedown="toggleBlockHighlight(${block.id})"
+                                onmousedown="toggleBlockHighlight('${block.id}')"
                                 aria-label="Highlight">
                             ${starSvg}
                         </button>
-                        <button class="block-remove-btn" onclick="removeBlock(${block.id})" aria-label="Remove">
+                        <button class="block-remove-btn" onclick="removeBlock('${block.id}')" aria-label="Remove">
                             ${ICONS.get('x', 14)}
                         </button>
                     </div>
@@ -1098,7 +1500,7 @@ function renderBlockHtml(block, index) {
                          data-block-id="${block.id}"
                          onfocus="normalizeBulletEntryOnFocus(this)"
                          onblur="normalizeBulletEntry(this)"
-                         oninput="updateBlockBullets(${block.id}, this)"
+                         oninput="updateBlockBullets('${block.id}', this)"
                          >${escapeHtml(blockText) || ''}</div>`;
     } else {
         const bulletLines = blockText ? blockText.split('\n') : [];
@@ -1110,7 +1512,7 @@ function renderBlockHtml(block, index) {
                          data-block-id="${block.id}"
                          onfocus="normalizeBulletEntryOnFocus(this)"
                          onblur="normalizeBulletEntry(this)"
-                         oninput="updateBlockBullets(${block.id}, this)"
+                         oninput="updateBlockBullets('${block.id}', this)"
                          >${bulletDivsHtml}</div>`;
     }
 
@@ -1124,26 +1526,13 @@ function renderBlockHtml(block, index) {
             <div class="session-block session-block--expanded" id="block-${block.id}">
                     ${blockTypeLabelHtml}
 
-                    <div class="session-block-header">
+                    <div class="session-block-header session-block-header--slim">
                         <button class="block-star-btn ${block.isHighlight ? 'active' : ''}"
-                                onmousedown="toggleBlockHighlight(${block.id})"
+                                onmousedown="toggleBlockHighlight('${block.id}')"
                                 aria-label="Highlight">
                             <svg class="star-icon" width="16" height="16" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                         </button>
-                        <div class="session-block-topic-wrapper" id="topic-wrapper-${block.id}">
-                            <input class="session-block-topic-input"
-                                   id="topic-input-${block.id}"
-                                   type="text"
-                                   autocomplete="off"
-                                   spellcheck="false"
-                                   value="${topics.find(t => t.id === block.topicId)?.label || ''}"
-                                   oninput="filterBlockTopics(${block.id}, this.value)"
-                                   onfocus="openBlockTopicDropdown(${block.id})"
-                                   onblur="closeBlockTopicDropdown(${block.id}, 300)"
-                                   placeholder="Search skill…" />
-                            <div class="block-topic-dropdown" id="topic-dropdown-${block.id}" style="display:none;"></div>
-                        </div>
-                        <button class="block-remove-btn" onclick="removeBlock(${block.id})" aria-label="Remove">
+                        <button class="block-remove-btn" onclick="removeBlock('${block.id}')" aria-label="Remove">
                             ${ICONS.get('x', 14)}
                         </button>
                     </div>
@@ -1151,10 +1540,11 @@ function renderBlockHtml(block, index) {
                     <div class="session-block-fields">
                         ${entryHtml}
                     </div>
+                    ${renderSkillSlotHtml(block)}
                     ${blockType === 'correction' ? `
                     <div class="block-tag-row">
                         <button class="block-tag-chip${block.bodyTag ? ' active' : ''}"
-                                onmousedown="toggleBlockBodyTag(${block.id})">Body</button>
+                                onmousedown="toggleBlockBodyTag('${block.id}')">Body</button>
                     </div>` : ''}
                 </div>
             </div>
@@ -1194,7 +1584,7 @@ function renderInlineGoalFormHtml(block) {
             <input type="text" class="session-input" id="inline-goal-title-${bid}"
                    placeholder="name this goal"
                    value="${escapeHtml(d.title || '')}"
-                   oninput="updateBlockGoalDraftField(${bid}, 'title', this.value)" />
+                   oninput="updateBlockGoalDraftField('${bid}', 'title', this.value)" />
         </div>`;
 
     // No type selected — title + type selection cards
@@ -1202,19 +1592,19 @@ function renderInlineGoalFormHtml(block) {
         return `
             ${titleHtml}
             <div class="goal-type-cards" style="padding:0; margin-top:var(--sp-sm);">
-                <button class="goal-type-card" onmousedown="setBlockGoalType(${bid}, 'skill')">
+                <button class="goal-type-card" onmousedown="setBlockGoalType('${bid}', 'skill')">
                     <span class="goal-type-card-name">A skill</span>
                     <span class="goal-type-card-desc">Something specific. A technique, a step, a quality of movement.</span>
                 </button>
-                <button class="goal-type-card" onmousedown="setBlockGoalType(${bid}, 'body')">
+                <button class="goal-type-card" onmousedown="setBlockGoalType('${bid}', 'body')">
                     <span class="goal-type-card-name">Body</span>
                     <span class="goal-type-card-desc">Alignment, proprioception, physical conditioning cues.</span>
                 </button>
-                <button class="goal-type-card" onmousedown="setBlockGoalType(${bid}, 'intention')">
+                <button class="goal-type-card" onmousedown="setBlockGoalType('${bid}', 'intention')">
                     <span class="goal-type-card-name">A feeling or state</span>
                     <span class="goal-type-card-desc">Presence, confidence, ease. Harder to measure, worth naming.</span>
                 </button>
-                <button class="goal-type-card" onmousedown="setBlockGoalType(${bid}, 'habit')">
+                <button class="goal-type-card" onmousedown="setBlockGoalType('${bid}', 'habit')">
                     <span class="goal-type-card-name">A habit</span>
                     <span class="goal-type-card-desc">A rhythm to build in. Conditioning, practice, consistency.</span>
                 </button>
@@ -1225,7 +1615,7 @@ function renderInlineGoalFormHtml(block) {
     const periodOptions = ['A week', 'Two weeks', 'A month', 'Three months'];
     const periodChipsHtml = periodOptions.map(p => {
         const isActive = d.commitmentPeriod === p;
-        return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onmousedown="setBlockGoalPeriod(${bid}, '${p}')">${p}</button>`;
+        return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onmousedown="setBlockGoalPeriod('${bid}', '${p}')">${p}</button>`;
     }).join('');
 
     let typeFields = '';
@@ -1239,14 +1629,14 @@ function renderInlineGoalFormHtml(block) {
                 <input type="text" class="goal-marker-input"
                        value="${escapeHtml(m.text)}"
                        placeholder="${markerPlaceholders[i % markerPlaceholders.length]}"
-                       oninput="updateBlockGoalProgressMarker(${bid}, ${i}, this.value)" />
-                <button class="block-remove-btn" onmousedown="removeBlockGoalMarker(${bid}, ${i})">${removeSvg}</button>
+                       oninput="updateBlockGoalProgressMarker('${bid}', ${i}, this.value)" />
+                <button class="block-remove-btn" onmousedown="removeBlockGoalMarker('${bid}', ${i})">${removeSvg}</button>
             </div>`).join('');
         typeFields = `
             <div class="session-field">
                 <label class="session-field-label">What does it look like when it happens? <span class="session-field-optional">optional</span></label>
                 <textarea class="session-input" rows="2" style="resize:none;"
-                          oninput="updateBlockGoalDraftField(${bid}, 'body', this.value); autoResizeTextarea(this);"
+                          oninput="updateBlockGoalDraftField('${bid}', 'body', this.value); autoResizeTextarea(this);"
                           >${escapeHtml(d.body || '')}</textarea>
             </div>
             <div class="session-field">
@@ -1256,8 +1646,8 @@ function renderInlineGoalFormHtml(block) {
                            id="inline-goal-skill-input-${bid}"
                            value="${escapeHtml(selectedSkillLabel)}"
                            placeholder="Search skill\u2026"
-                           oninput="filterBlockGoalSkills(${bid}, this.value)"
-                           onfocus="filterBlockGoalSkills(${bid}, this.value)"
+                           oninput="filterBlockGoalSkills('${bid}', this.value)"
+                           onfocus="filterBlockGoalSkills('${bid}', this.value)"
                            onblur="setTimeout(()=>{const el=document.getElementById('inline-goal-skill-dropdown-${bid}');if(el)el.style.display='none';},200)" />
                     <div class="block-topic-dropdown" id="inline-goal-skill-dropdown-${bid}" style="display:none;"></div>
                 </div>
@@ -1265,7 +1655,7 @@ function renderInlineGoalFormHtml(block) {
             <div class="session-field">
                 <label class="session-field-label">Milestones <span class="session-field-optional">optional</span></label>
                 <div id="inline-goal-markers-${bid}">${markersHtml}</div>
-                <button class="add-block-btn" style="margin-top:var(--sp-sm);" onmousedown="addBlockGoalMarker(${bid})">+ add a step</button>
+                <button class="add-block-btn" style="margin-top:var(--sp-sm);" onmousedown="addBlockGoalMarker('${bid}')">+ add a step</button>
             </div>`;
 
     } else if (d.goalType === 'body') {
@@ -1274,20 +1664,20 @@ function renderInlineGoalFormHtml(block) {
                 <input type="text" class="goal-marker-input"
                        value="${escapeHtml(m.text)}"
                        placeholder="${markerPlaceholders[i % markerPlaceholders.length]}"
-                       oninput="updateBlockGoalProgressMarker(${bid}, ${i}, this.value)" />
-                <button class="block-remove-btn" onmousedown="removeBlockGoalMarker(${bid}, ${i})">${removeSvg}</button>
+                       oninput="updateBlockGoalProgressMarker('${bid}', ${i}, this.value)" />
+                <button class="block-remove-btn" onmousedown="removeBlockGoalMarker('${bid}', ${i})">${removeSvg}</button>
             </div>`).join('');
         typeFields = `
             <div class="session-field">
                 <label class="session-field-label">What does it look like when it happens? <span class="session-field-optional">optional</span></label>
                 <textarea class="session-input" rows="2" style="resize:none;"
-                          oninput="updateBlockGoalDraftField(${bid}, 'body', this.value); autoResizeTextarea(this);"
+                          oninput="updateBlockGoalDraftField('${bid}', 'body', this.value); autoResizeTextarea(this);"
                           >${escapeHtml(d.body || '')}</textarea>
             </div>
             <div class="session-field">
                 <label class="session-field-label">Milestones <span class="session-field-optional">optional</span></label>
                 <div id="inline-goal-markers-${bid}">${markersHtml}</div>
-                <button class="add-block-btn" style="margin-top:var(--sp-sm);" onmousedown="addBlockGoalMarker(${bid})">+ add a step</button>
+                <button class="add-block-btn" style="margin-top:var(--sp-sm);" onmousedown="addBlockGoalMarker('${bid}')">+ add a step</button>
             </div>`;
 
     } else if (d.goalType === 'intention') {
@@ -1297,7 +1687,7 @@ function renderInlineGoalFormHtml(block) {
                 <label class="session-field-label">describe it <span class="session-field-optional">optional</span></label>
                 <textarea class="session-input" rows="2" style="resize:none;"
                           placeholder="${bodyPhs[phIdx]}"
-                          oninput="updateBlockGoalDraftField(${bid}, 'body', this.value); autoResizeTextarea(this);"
+                          oninput="updateBlockGoalDraftField('${bid}', 'body', this.value); autoResizeTextarea(this);"
                           >${escapeHtml(d.body || '')}</textarea>
             </div>`;
 
@@ -1309,15 +1699,15 @@ function renderInlineGoalFormHtml(block) {
         const numVal = isSetNum ? parseInt(d.howOften.slice(1)) || 1 : 1;
         const howOftenChipsHtml = howOftenOptions.map(o => {
             const active = o === 'set a number' ? isSetNum : o === 'other' ? isOtherHowOften : d.howOften === o;
-            return `<button class="goal-period-chip ${active ? 'selected' : ''}" onmousedown="setBlockGoalHowOften(${bid}, '${o}')">${o}</button>`;
+            return `<button class="goal-period-chip ${active ? 'selected' : ''}" onmousedown="setBlockGoalHowOften('${bid}', '${o}')">${o}</button>`;
         }).join('');
         let howOftenExtra = '';
         if (d.howOften === 'set a number' || isSetNum) {
             howOftenExtra = `
                 <div class="goal-number-stepper">
-                    <button class="goal-stepper-btn" onmousedown="adjustBlockGoalHowOftenNum(${bid}, -1)" ${numVal <= 1 ? 'disabled' : ''}>−</button>
+                    <button class="goal-stepper-btn" onmousedown="adjustBlockGoalHowOftenNum('${bid}', -1)" ${numVal <= 1 ? 'disabled' : ''}>−</button>
                     <span class="goal-stepper-value">${numVal}</span>
-                    <button class="goal-stepper-btn" onmousedown="adjustBlockGoalHowOftenNum(${bid}, 1)">+</button>
+                    <button class="goal-stepper-btn" onmousedown="adjustBlockGoalHowOftenNum('${bid}', 1)">+</button>
                     <span class="goal-stepper-label">times per week</span>
                 </div>`;
         } else if (d.howOften === 'other' || isOtherHowOften) {
@@ -1326,14 +1716,14 @@ function renderInlineGoalFormHtml(block) {
                        id="inline-goal-how-often-other-${bid}"
                        placeholder="e.g. whenever I feel ready"
                        value="${isOtherHowOften ? escapeHtml(d.howOften) : ''}"
-                       oninput="updateBlockGoalDraftField(${bid}, 'howOften', this.value || 'other')" />`;
+                       oninput="updateBlockGoalDraftField('${bid}', 'howOften', this.value || 'other')" />`;
         }
         typeFields = `
             <div class="session-field">
                 <label class="session-field-label">what does it involve? <span class="session-field-optional">optional</span></label>
                 <textarea class="session-input" rows="2" style="resize:none;"
                           placeholder="${bodyPhs[phIdx]}"
-                          oninput="updateBlockGoalDraftField(${bid}, 'body', this.value); autoResizeTextarea(this);"
+                          oninput="updateBlockGoalDraftField('${bid}', 'body', this.value); autoResizeTextarea(this);"
                           >${escapeHtml(d.body || '')}</textarea>
             </div>
             <div class="session-field">
@@ -1429,25 +1819,14 @@ function removeBlockGoalMarker(blockId, idx) {
 function filterBlockGoalSkills(blockId, query) {
     const dropdownEl = document.getElementById(`inline-goal-skill-dropdown-${blockId}`);
     if (!dropdownEl) return;
-    const topics = getBlockTopics().filter(t => !(appState.hidePointe && t.id === 'pointe'));
-    const matches = topics.filter(t => _topicMatchesQuery(t, query));
-    if (!matches.length) { dropdownEl.style.display = 'none'; return; }
-    const groups = [
-        { label: 'General',  items: matches.filter(t => t.group === 'General')  },
-        { label: 'Category', items: matches.filter(t => t.group === 'Category') },
-        { label: 'Skills',   items: matches.filter(t => t.group === 'Skills')   },
-    ].filter(g => g.items.length);
-    const rows = groups.map(g =>
-        `<div class="block-topic-group-label">${g.label}</div>` +
-        g.items.map(t =>
-            `<div class="block-topic-option" onmousedown="selectBlockGoalLinkedTopic(${blockId}, '${t.id}', '${t.label.replace(/'/g, "\\'")}')">` +
-            `${t.label}${t.sub ? `<span class="block-topic-option-sub"> \u2014 ${t.sub}</span>` : ''}` +
-            `</div>`
-        ).join('')
-    ).join('');
-    dropdownEl.textContent = '';
-    dropdownEl.insertAdjacentHTML('afterbegin', rows);
-    dropdownEl.style.display = 'block';
+    const block = getBlockById(blockId);
+    renderSkillPickerDropdown(dropdownEl, query, (topicId, label) => {
+        selectBlockGoalLinkedTopic(blockId, topicId, label);
+        dropdownEl.style.display = 'none';
+    }, {
+        includeDimensions: true,
+        currentTopicId: block?._goalDraft?.skillId ? 'skill:' + block._goalDraft.skillId : (block?._goalDraft?.dimensionId || null),
+    });
 }
 
 function selectBlockGoalLinkedTopic(blockId, topicId, label) {
@@ -1523,7 +1902,7 @@ function renderSkillSuggestionChips(blockId, matches) {
     row.className = 'skill-suggestion-chip-row';
     row.innerHTML = filtered.map(m => `
         <button class="skill-suggestion-chip"
-                onmousedown="acceptSkillSuggestion(${blockId}, '${m.topicId}', '${m.label.replace(/'/g, "\'")}')">
+                onmousedown="acceptSkillSuggestion('${blockId}', '${m.topicId}', '${m.label.replace(/'/g, "\'")}')">
             link to ${m.label} →
         </button>`).join('');
 
@@ -1638,79 +2017,41 @@ function addBlockForSkill(topicId, label) {
 
 
 
-function _topicMatchesQuery(topic, q) {
-    if (!q) return true;
-    const norm = normaliseStr(q);
-    if (normaliseStr(topic.label).includes(norm)) return true;
-    // For skill topics, also match english name and aliases
-    if (topic.id.startsWith('skill:')) {
-        const skillId = topic.id.replace('skill:', '');
-        const skill = DATA.skills.find(s => s.id === skillId);
-        if (!skill) return false;
-        return normaliseStr(skill.english).includes(norm) ||
-               (skill.aliases || []).some(a => normaliseStr(a).includes(norm));
-    }
-    return false;
-}
-
 function openBlockTopicDropdown(blockId) {
-    filterBlockTopics(blockId, '');
+    const dropdown = document.getElementById(`topic-dropdown-${blockId}`);
+    const input    = document.getElementById(`topic-input-${blockId}`);
+    const block    = getBlockById(blockId);
+    if (!dropdown || !input || !block) return;
+    renderSkillPickerDropdown(dropdown, input.value, (topicId, label) => {
+        input.value = label;
+        updateBlockTopic(blockId, topicId);
+    }, { includeGeneral: true, currentTopicId: block.topicId });
 }
 
 function filterBlockTopics(blockId, query) {
     const dropdown = document.getElementById(`topic-dropdown-${blockId}`);
-    const input    = document.getElementById(`topic-input-${blockId}`);
-    if (!dropdown || !input) return;
-
-    const topics = getBlockTopics();
-    const matches = topics.filter(t => _topicMatchesQuery(t, query));
-
-    if (!matches.length) {
-        dropdown.style.display = 'none';
-        return;
-    }
-
-    // Group results
-    const groups = [
-        { label: 'General',  items: matches.filter(t => t.group === 'General')  },
-        { label: 'Category', items: matches.filter(t => t.group === 'Category') },
-        { label: 'Skills',   items: matches.filter(t => t.group === 'Skills')   },
-    ].filter(g => g.items.length);
-
-    dropdown.innerHTML = groups.map(g => `
-        <div class="block-topic-group-label">${g.label}</div>
-        ${g.items.map(t => `
-            <div class="block-topic-option"
-                 onmousedown="selectBlockTopic(${blockId}, '${t.id}', '${t.label.replace(/'/g, "\'")}')">
-                ${t.label}${t.sub ? `<span class="block-topic-option-sub"> — ${t.sub}</span>` : ''}
-            </div>`).join('')}
-    `).join('');
-
-    dropdown.style.display = 'block';
-}
-
-function selectBlockTopic(blockId, topicId, label) {
-    const input = document.getElementById(`topic-input-${blockId}`);
-    if (input) input.value = label;
-    const dropdown = document.getElementById(`topic-dropdown-${blockId}`);
-    if (dropdown) dropdown.style.display = 'none';
-    updateBlockTopic(blockId, topicId);
+    const block    = getBlockById(blockId);
+    if (!dropdown) return;
+    renderSkillPickerDropdown(dropdown, query, (topicId, label) => {
+        const input = document.getElementById(`topic-input-${blockId}`);
+        if (input) input.value = label;
+        updateBlockTopic(blockId, topicId);
+    }, { includeGeneral: true, currentTopicId: block?.topicId });
 }
 
 function closeBlockTopicDropdown(blockId, delay) {
-    // Delay allows onmousedown on option to fire before blur hides dropdown
     setTimeout(() => {
         const dropdown = document.getElementById(`topic-dropdown-${blockId}`);
         const input    = document.getElementById(`topic-input-${blockId}`);
         if (!dropdown || dropdown.style.display === 'none') return;
-        // If input is blank or doesn't match a topic, revert to current selection
         const block = getBlockById(blockId);
-        if (block) {
+        if (block && input) {
             const topics = getBlockTopics();
             const current = topics.find(t => t.id === block.topicId);
-            if (input && current) input.value = current.label;
+            if (current) input.value = current.label;
         }
         dropdown.style.display = 'none';
+        _skillPickerOnSelect = null;
     }, delay);
 }
 
@@ -1767,13 +2108,13 @@ function toggleBlockNotes(blockId) {
     notesArea.innerHTML = block.notesOpen || block.notes ? `
         <textarea class="session-block-textarea session-block-capped"
                   placeholder="Notes — context, rehearsal, how it felt…"
-                  oninput="updateBlockField(${block.id}, 'notes', this.value); autoResizeCapped(this);"
+                  oninput="updateBlockField('${block.id}', 'notes', this.value); autoResizeCapped(this);"
                   >${block.notes || ''}</textarea>
         <button class="block-notes-toggle block-notes-toggle-open"
-                onmousedown="toggleBlockNotes(${block.id})">hide notes</button>
+                onmousedown="toggleBlockNotes('${block.id}')">hide notes</button>
     ` : `
         <button class="block-notes-toggle"
-                onmousedown="toggleBlockNotes(${block.id})">
+                onmousedown="toggleBlockNotes('${block.id}')">
             ${block.notes ? `${ICONS.get('edit', 12)} notes` : '+ add notes'}
         </button>
     `;
@@ -1849,12 +2190,12 @@ function renderBlockBulletsInPlace(block, blockId) {
                      contenteditable="true"
                      data-block="${blockId}"
                      data-ci="${ci}"
-                     oninput="updateCorrectionBullet(${blockId}, ${ci}, this.innerText)"
-                     onkeydown="handleCorrectionBulletKey(event, ${blockId}, ${ci})"
+                     oninput="updateCorrectionBullet('${blockId}', ${ci}, this.innerText)"
+                     onkeydown="handleCorrectionBulletKey(event, '${blockId}', ${ci})"
                      >${text}</div>
             </div>
             <button class="correction-bullet-delete"
-                    onmousedown="deleteCorrectionBullet(${blockId}, ${ci})"
+                    onmousedown="deleteCorrectionBullet('${blockId}', ${ci})"
                     aria-label="Delete">${ICONS.get('x', 12)}</button>
         </div>
     `).join('') + `
@@ -1865,8 +2206,8 @@ function renderBlockBulletsInPlace(block, blockId) {
                      contenteditable="true"
                      data-block="${blockId}"
                      data-ci="${corrList.length}"
-                     oninput="handleNewCorrectionBulletInput(event, ${blockId})"
-                     onkeydown="handleCorrectionBulletKey(event, ${blockId}, ${corrList.length})"
+                     oninput="handleNewCorrectionBulletInput(event, '${blockId}')"
+                     onkeydown="handleCorrectionBulletKey(event, '${blockId}', ${corrList.length})"
                      ></div>
             </div>
         </div>
@@ -1924,13 +2265,16 @@ function openSessionEditor(sessionId) {
             .map(id => appState.corrections.find(c => c.id === id))
             .filter(Boolean);
         return {
-            id:          ss.id,
-            topicId:     'skill:' + ss.skillId,
-            title:       ss.blockTitle || '',
-            notes:       ss.notes || '',
-            notesOpen:   ss.notes ? true : false,
-            mode:        ss.mode || (corrections.some(c => c.type === 'praise') ? 'praise' : 'correction'),
-            corrections: corrections.map(c => c.text),
+            id:               ss.id,
+            topicId:          ss.skillId ? 'skill:' + ss.skillId : 'general',
+            secondaryTopicId: ss.secondarySkillId ? 'skill:' + ss.secondarySkillId : null,
+            _slotEditing:     null,
+            title:            ss.blockTitle || '',
+            blockType:        ss.blockType || 'correction',
+            notes:            ss.notes || '',
+            notesOpen:        ss.notes ? true : false,
+            mode:             ss.mode || (corrections.some(c => c.type === 'praise') ? 'praise' : 'correction'),
+            corrections:      corrections.map(c => c.text),
         };
     });
 
@@ -1997,6 +2341,16 @@ function saveSession() {
         if (text) block.text = text;
     });
 
+    // Flush note block titles — captures custom label typed in the topic input
+    // for note blocks that don't have a skill selected (topicId === 'general').
+    document.querySelectorAll('[id^="topic-input-"]').forEach(el => {
+        const blockId = el.id.slice('topic-input-'.length);
+        const block = getBlockById(blockId);
+        if (!block || block.blockType !== 'note' || block.topicId !== 'general') return;
+        const val = el.value.trim();
+        if (val && val !== 'General') block.title = val;
+    });
+
     // Flush any pending new-bullet inputs — if the user typed in a correction
     // row and tapped Save without pressing Enter, capture it before processing.
     document.querySelectorAll('.correction-bullet-new .correction-bullet-input').forEach(el => {
@@ -2029,6 +2383,9 @@ function saveSession() {
         sessionName:     s.sessionName     || null,
         sessionLocation: s.sessionLocation || null,
         classType:       s.classType       || null,
+        teacher:         s.teacher         || null,
+        venue:           s.venue           || null,
+        city:            s.city            || null,
         notes:           s.generalNotes    || null,
         isNote:          isNoteMode || null,
         ...(s._reflectionGoalId ? { _goalId: s._reflectionGoalId } : {}),
@@ -2061,8 +2418,12 @@ function saveSession() {
     const pendingSkillNotes = [];
 
     s.blocks.forEach(block => {
-        const isSkill = block.topicId?.startsWith('skill:');
-        const skillId = isSkill ? block.topicId.replace('skill:', '') : null;
+        const isSkill         = block.topicId?.startsWith('skill:');
+        const skillId         = isSkill ? block.topicId.replace('skill:', '') : null;
+        const skillLabel      = _slotLabel(block.topicId && block.topicId !== 'general' ? block.topicId : null) || null;
+        const isSecondarySkill   = block.secondaryTopicId?.startsWith('skill:');
+        const secondarySkillId   = isSecondarySkill ? block.secondaryTopicId.replace('skill:', '') : null;
+        const secondarySkillLabel = _slotLabel(block.secondaryTopicId || null) || null;
         const blockCorrectionIds = [];
 
         // Resolve block text — new format uses block.text; legacy format uses corrections[]/praiseText/reflectionText
@@ -2082,15 +2443,21 @@ function saveSession() {
             const lines = blockText.split('\n').map(l => l.trim()).filter(Boolean);
             lines.forEach(text => {
                 const correction = {
-                    id:               generateId(),
-                    userId:           null,
-                    skillId:          skillId || null,
+                    id:                      generateId(),
+                    userId:                  null,
+                    skillId:                 skillId || null,
                     text,
-                    createdAt:        now,
-                    sessionId:        session.id,
-                    isHighlight:      !!block.isHighlight,
-                    bodyTag:          !!block.bodyTag,
-                    previousBlockType: block.previousBlockType || null,
+                    createdAt:               now,
+                    sessionId:               session.id,
+                    source:                  null,
+                    type:                    null,
+                    isRecurring:             false,
+                    isPinned:                false,
+                    isResolved:              false,
+                    derivedFromCorrectionId: null,
+                    isHighlight:             !!block.isHighlight,
+                    bodyTag:                 !!block.bodyTag,
+                    previousBlockType:       block.previousBlockType || null,
                 };
                 appState.corrections.push(correction);
                 blockCorrectionIds.push(correction.id);
@@ -2119,18 +2486,25 @@ function saveSession() {
         // not just skill-linked blocks, so general notes appear in session detail.
         if (blockText || block.notes?.trim()) {
             const sessionSkill = {
-                id:            generateId(),
-                userId:        null,
-                sessionId:     session.id,
-                skillId:       skillId || null,
-                notes:         block.notes?.trim() || null,
-                correctionIds: blockCorrectionIds,
-                tracked:       true,
-                blockTitle:    block.title?.trim() || null,
-                blockType:         resolvedType,
-                isHighlight:       !!block.isHighlight,
-                bodyTag:           !!block.bodyTag,
-                previousBlockType: block.previousBlockType || null,
+                id:                  generateId(),
+                userId:              null,
+                sessionId:           session.id,
+                skillId:             skillId || null,
+                skillLabel:          skillLabel,
+                secondarySkillId:    secondarySkillId || null,
+                secondarySkillLabel: secondarySkillLabel,
+                notes:               block.notes?.trim() || null,
+                correctionIds:       blockCorrectionIds,
+                tracked:             true,
+                blockTitle:          block.title?.trim() || null,
+                blockType:           resolvedType,
+                isHighlight:         !!block.isHighlight,
+                bodyTag:             !!block.bodyTag,
+                isPinned:            false,
+                previousBlockType:   block.previousBlockType || null,
+                teacher:             session.teacher || null,
+                venue:               session.venue   || null,
+                city:                session.city    || null,
             };
             appState.sessionSkills.push(sessionSkill);
 
@@ -2207,17 +2581,22 @@ function saveSession() {
             });
             // SessionSkill record links this goal to the session for session detail display
             appState.sessionSkills.push({
-                id:            generateId(),
-                userId:        null,
-                sessionId:     session.id,
-                skillId:       null,
-                notes:         null,
-                correctionIds: [],
-                tracked:       true,
-                blockType:     'goal',
-                goalId:        goalId,
-                isHighlight:   !!b.isHighlight,
-                bodyTag:       false,
+                id:                generateId(),
+                userId:            null,
+                sessionId:         session.id,
+                skillId:           null,
+                notes:             null,
+                correctionIds:     [],
+                tracked:           true,
+                blockType:         'goal',
+                goalId:            goalId,
+                isHighlight:       !!b.isHighlight,
+                bodyTag:           false,
+                isPinned:          false,
+                previousBlockType: null,
+                teacher:           session.teacher || null,
+                venue:             session.venue   || null,
+                city:              session.city    || null,
             });
         });
         storage.save('goals',        appState.goals);
@@ -2312,6 +2691,48 @@ function suppressPrompt(type) {
 }
 
 // config: { body, primaryLabel, primaryFn (JS string), suppressKey }
+function showConditionTimelinePrompt(condition, eventType) {
+    if (document.getElementById('post-save-prompt')) return;
+    const isActivated = eventType === 'condition-activated';
+    const body = isActivated
+        ? `condition added: ${condition.name}. save as a timeline event?`
+        : `${condition.name} archived. save as a timeline event?`;
+    const titleText = isActivated
+        ? `condition: ${condition.name}`
+        : `condition resolved: ${condition.name}`;
+
+    const prompt = document.createElement('div');
+    prompt.id = 'post-save-prompt';
+    prompt.className = 'post-save-prompt';
+    prompt.innerHTML = `
+        <div class="post-save-prompt-inner">
+            <button class="post-save-dismiss" onmousedown="this.closest('#post-save-prompt').remove()" ontouchend="event.preventDefault();this.closest('#post-save-prompt').remove()">${ICONS.get('x', 14)}</button>
+            <div class="post-save-body">${body}</div>
+            <div class="post-save-actions">
+                <button class="post-save-btn" id="condition-timeline-yes">yes</button>
+                <button class="post-save-btn-muted" onmousedown="this.closest('#post-save-prompt').remove()" ontouchend="event.preventDefault();this.closest('#post-save-prompt').remove()">not now</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(prompt);
+
+    const yesBtn = document.getElementById('condition-timeline-yes');
+    const doSave = () => {
+        appendTimelineEntry({
+            type:     eventType,
+            objectId: condition.id,
+            title:    titleText,
+            body:     condition.description || null,
+            date:     condition.statusChangedDate || new Date().toISOString().split('T')[0],
+        });
+        prompt.remove();
+    };
+    yesBtn.onmousedown = doSave;
+    yesBtn.ontouchend  = (e) => { e.preventDefault(); doSave(); };
+
+    setTimeout(() => prompt.remove(), 8000);
+}
+
 function showContextualPrompt({ body, primaryLabel, primaryFn, suppressKey }) {
     if (document.getElementById('post-save-prompt')) return;
 
@@ -4416,31 +4837,12 @@ function adjustGoalHowOftenNum(delta) {
 function filterGoalSkills(query) {
     const dropdown = document.getElementById('goal-skill-dropdown');
     if (!dropdown) return;
-
-    const topics = getBlockTopics().filter(t => !(appState.hidePointe && t.id === 'pointe'));
-    const matches = topics.filter(t => _topicMatchesQuery(t, query));
-
-    if (!matches.length) {
+    const d = appState._goalDraft;
+    const currentTopicId = d?.skillId ? 'skill:' + d.skillId : (d?.dimensionId || null);
+    renderSkillPickerDropdown(dropdown, query, (topicId, label) => {
+        selectGoalLinkedTopic(topicId, label);
         dropdown.style.display = 'none';
-        return;
-    }
-
-    const groups = [
-        { label: 'General',  items: matches.filter(t => t.group === 'General')  },
-        { label: 'Category', items: matches.filter(t => t.group === 'Category') },
-        { label: 'Skills',   items: matches.filter(t => t.group === 'Skills')   },
-    ].filter(g => g.items.length);
-
-    dropdown.innerHTML = groups.map(g => `
-        <div class="block-topic-group-label">${g.label}</div>
-        ${g.items.map(t => `
-            <div class="block-topic-option"
-                 onmousedown="selectGoalLinkedTopic('${t.id}', '${t.label.replace(/'/g, "\\'")}')">
-                ${t.label}${t.sub ? `<span class="block-topic-option-sub"> — ${t.sub}</span>` : ''}
-            </div>`).join('')}
-    `).join('');
-
-    dropdown.style.display = 'block';
+    }, { includeDimensions: true, currentTopicId });
 }
 
 function selectGoalLinkedTopic(topicId, label) {
@@ -5561,13 +5963,20 @@ function saveLearnLine(btn) {
     } else {
         // save as correction
         const correction = {
-            id:          generateId(),
-            userId:      null,
-            skillId:     skillId || null,
-            text:        text,
-            createdAt:   Date.now(),
-            sessionId:   null,
-            isHighlight: false,
+            id:                      generateId(),
+            userId:                  null,
+            skillId:                 skillId || null,
+            text:                    text,
+            createdAt:               Date.now(),
+            sessionId:               null,
+            source:                  null,
+            type:                    null,
+            isRecurring:             false,
+            isPinned:                false,
+            isResolved:              false,
+            derivedFromCorrectionId: null,
+            isHighlight:             false,
+            previousBlockType:       null,
         };
         appState.corrections.push(correction);
         storage.save('corrections', appState.corrections);
@@ -5971,6 +6380,7 @@ function showBarreTimelineSheet() {
    ═══════════════════════════════════════════════════════════════ */
 
 function showSessionDetail(sessionId) {
+    document.getElementById('barre-timeline-sheet')?.remove();
     const session = appState.sessions.find(s => s.id === sessionId);
     if (!session) return;
 
@@ -6156,6 +6566,7 @@ function renderDetailBlockHtml(sessionSkill) {
     } else {
         skillRowHtml = `
             <div class="note-block-highlight-row${isHighlight ? '' : ' note-block-highlight-row--inactive'}">
+                ${sessionSkill.blockTitle ? `<span class="note-block-skill-name" style="font-style:normal;font-size:var(--fs-small);font-weight:600;font-family:'DM Sans',sans-serif;">${escapeHtml(sessionSkill.blockTitle)}</span>` : ''}
                 ${bodyTagHtml}${starBtn}
             </div>`;
     }
@@ -7217,12 +7628,13 @@ function _saveCorrectionFromCreator(skillId) {
     const text = textarea?.value?.trim();
     if (!text) { textarea?.focus(); return; }
     const now = Date.now();
-    appState.corrections.push({ id: now, skillId, text, createdAt: now, sessionId: null, source: 'self', type: 'technical', isRecurring: false });
+    const correctionId = generateId();
+    appState.corrections.push({ id: correctionId, userId: null, skillId, text, createdAt: now, sessionId: null, source: 'self', type: 'technical', isRecurring: false, isPinned: false, isResolved: false, derivedFromCorrectionId: null, previousBlockType: null });
     storage.save('corrections', appState.corrections);
     const pending = appState._pendingCorrectionLineSave;
     if (pending) {
         appState.learnLineSaves = appState.learnLineSaves || [];
-        appState.learnLineSaves.push({ id: now, lineText: pending.lineText, saveType: 'correction', objectId: now, createdAt: now });
+        appState.learnLineSaves.push({ id: generateId(), lineText: pending.lineText, saveType: 'correction', objectId: correctionId, createdAt: now });
         storage.save('learnLineSaves', appState.learnLineSaves);
         _refreshAllLineSaveStates();
     }
@@ -8184,14 +8596,19 @@ function saveKnowledgeItem(skillId, popoverEl, type) {
 
     if (type === 'correction') {
         appState.corrections.push({
-            id:          now,
+            id:                      generateId(),
+            userId:                  null,
             skillId,
             text,
-            createdAt:   now,
-            sessionId:   null,
-            source:      'self',
-            type:        'technical',
-            isRecurring: false,
+            createdAt:               now,
+            sessionId:               null,
+            source:                  'self',
+            type:                    'technical',
+            isRecurring:             false,
+            isPinned:                false,
+            isResolved:              false,
+            derivedFromCorrectionId: null,
+            previousBlockType:       null,
         });
         storage.save('corrections', appState.corrections);
     } else {

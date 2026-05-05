@@ -1443,7 +1443,7 @@ h1, h2, .screen-heading {
     justify-content: center;
     width: 28px;
     height: 28px;
-    color: var(--ink-3);
+    color: var(--ink-4);
     transition: color 0.2s ease;
 }
 
@@ -1455,6 +1455,11 @@ h1, h2, .screen-heading {
 .nav-item.active .nav-icon {
     color: var(--brown);
 }
+
+.nav-svg-inactive { display: block; }
+.nav-svg-active   { display: none; }
+.nav-item.active .nav-svg-inactive { display: none; }
+.nav-item.active .nav-svg-active   { display: block; }
 
 .nav-label {
     font-size: var(--fs-caption);
@@ -3533,7 +3538,7 @@ input.session-block-topic-input:focus {
 .block-topic-dropdown {
     position: absolute;
     top: calc(100% + 4px);
-    left: -var(--sp-md);
+    left: 0;
     min-width: 220px;
     max-width: 300px;
     background: var(--surface);
@@ -3544,6 +3549,63 @@ input.session-block-topic-input:focus {
     overflow: hidden;
     max-height: 280px;
     overflow-y: auto;
+}
+
+/* ── Skill Picker — shared dropdown styles ── */
+.skill-picker-group {
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    padding: 8px var(--sp-md) 4px;
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+}
+
+.skill-picker-option {
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-sm);
+    padding: 8px var(--sp-md);
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+
+.skill-picker-option:hover,
+.skill-picker-option:active {
+    background: var(--gold-wash);
+}
+
+.skill-picker-option--current {
+    background: var(--gold-wash);
+}
+
+.skill-picker-option--highlighted {
+    background: var(--gold-wash);
+    outline: 2px solid var(--gold);
+    outline-offset: -2px;
+}
+
+.skill-picker-option-label {
+    font-size: var(--fs-small);
+    color: var(--ink);
+    font-weight: 400;
+}
+
+.skill-picker-option-sub {
+    font-size: 11px;
+    color: var(--ink-4);
+    font-weight: 400;
+}
+
+.skill-picker-empty {
+    padding: var(--sp-md);
+    font-size: var(--fs-small);
+    color: var(--ink-4);
+    font-style: italic;
+    text-align: center;
 }
 
 .block-topic-group-label {
@@ -3716,6 +3778,113 @@ input.session-block-topic-input:focus {
     content: "Note…";
     color: var(--ink-4);
     font-weight: 400;
+}
+
+/* ── Skill Slot Field ── */
+.skill-slot-field {
+    margin: var(--sp-xs) var(--sp-md) var(--sp-sm);
+    background: var(--input-bg, #F9F5F0);
+    border: 1.5px solid var(--gold-soft);
+    border-radius: var(--r-md);
+    padding: 7px var(--sp-md);
+    position: relative;
+    transition: border-color 0.15s ease;
+}
+
+.skill-slot-field:focus-within {
+    border-color: var(--gold);
+}
+
+.skill-slot-field--filled {
+    border-color: var(--border, #E9E9E7);
+    background: transparent;
+}
+
+.skill-slot-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2px;
+    min-height: 22px;
+}
+
+.skill-slot-token--primary {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 500;
+    color: var(--ink);
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 1px 2px;
+    transition: background 0.1s ease;
+}
+
+.skill-slot-token--primary:hover {
+    background: var(--gold-wash, #FDF5E0);
+}
+
+.skill-slot-token--secondary {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 400;
+    color: var(--ink-3);
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 1px 2px;
+    transition: background 0.1s ease;
+}
+
+.skill-slot-token--secondary:hover {
+    background: var(--gold-wash, #FDF5E0);
+}
+
+.skill-slot-sep {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink-4);
+    user-select: none;
+}
+
+.skill-slot-input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink);
+    padding: 0;
+    min-width: 80px;
+    flex: 1;
+}
+
+/* Override the global input[type="text"] rule — higher specificity wins */
+.skill-slot-field input[type="text"],
+.skill-slot-field input[type="text"]:focus {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+}
+
+.skill-slot-input--primary {
+    font-weight: 500;
+    width: 100%;
+}
+
+.skill-slot-input--secondary {
+    font-weight: 400;
+    color: var(--ink-3);
+}
+
+.skill-slot-input::placeholder {
+    color: var(--ink-4);
+    font-weight: 400;
+}
+
+/* Slim header variant — star + × only, no topic input */
+.session-block-header--slim {
+    padding-bottom: var(--sp-xs);
 }
 
 .block-tag-row {

@@ -1,5 +1,15 @@
 /**
- * PLIÉ — DATA ARCHITECTURE v3.0
+ * PLIÉ — DATA ARCHITECTURE v3.2
+ *
+ * Changes from v3.1 (PLI-006):
+ * - Entity: new model — teachers[], venues[], cities[] suggestion lists
+ * - Session: teacher, venue, city fields added (string | null)
+ * - SessionSkill: teacher, venue, city fields added (inherited from session at save)
+ *
+ * Changes from v3.0:
+ * - Condition: new model added (PLI-005) — injuries, chronic conditions, structural body facts
+ * - SessionSkill: bodyTag field added
+ * - TimelineEntry: 'note', 'condition-activated', 'condition-resolved' type values added
  *
  * Changes from v2.2:
  * - Skill: dimensionId (String) → dimensionIds (Array); category → categoryId
@@ -88,6 +98,7 @@ const SessionSkill = {
   blockTitle: String,
   blockType: String,      // see block type enum above
   isHighlight: Boolean,
+  bodyTag: Boolean,
   isPinned: Boolean,
   previousBlockType: String,  // null if block type has never changed
 };
@@ -191,6 +202,39 @@ const STORAGE_KEYS = {
 //
 //   persistSkillState()   — writes the sparse array after any tracked/flagged change
 //   loadUserSkillState()  — merges sparse state onto runtime skills at startup
+
+// ─── ENTITY ───────────────────────────────────────────────────────
+// Three entity types — all share the same shape.
+// Stored as suggestion lists only; sessions/blocks store the name string
+// directly (not the entity id) so deletion does not affect past records.
+const Entity = {
+  id: String,    // crypto.randomUUID()
+  userId: null,
+  name: String,
+};
+// Persisted under 'plie:teachers', 'plie:venues', 'plie:cities'.
+// Session and SessionSkill each carry teacher/venue/city as string | null.
+// SessionSkill values are inherited from the session at save time.
+// saveEntity(type, name)            — finds or creates; returns entity object
+// deleteEntitySuggestion(type, id)  — removes from list; does not touch past records
+
+// ─── CONDITION ────────────────────────────────────────────────────
+// Covers injuries, chronic conditions, and structural body facts.
+// All use the same model — no separate surface needed.
+const Condition = {
+  id: String,              // crypto.randomUUID()
+  userId: null,
+  name: String,
+  description: String,     // optional
+  startDate: String,       // YYYY-MM-DD
+  status: String,          // 'active' | 'inactive' | 'archived'
+  statusChangedDate: String, // YYYY-MM-DD — updated on every status change
+  linkedNoteIds: Array,
+  linkedSessionIds: Array,
+};
+// Persisted under 'plie:conditions'.
+// Timeline prompt fires on transitions to 'active' (type: 'condition-activated')
+// or 'archived' (type: 'condition-resolved'). Not on 'inactive'.
 
 // ─── RELATIONSHIPS ────────────────────────────────────────────────
 /*
