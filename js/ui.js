@@ -7415,10 +7415,12 @@ function attachCorrectionSwipe(row, skillId) {
     const leftEl  = row.querySelector('.swipe-action-left');
     if (!content) return;
 
-    const SNAP = 200, MIN_MS = 120;
-    let startX = 0, startTime = 0, dx = 0, dragging = false, revealed = false;
+    const SNAP = 200, MIN_MS = 120, DEAD = 8;
+    let startX = 0, startY = 0, startTime = 0, dx = 0;
+    let dragging = false, revealed = false, axisLocked = false;
 
     function getX(e) { return e.touches ? e.touches[0].clientX : e.clientX; }
+    function getY(e) { return e.touches ? e.touches[0].clientY : e.clientY; }
 
     function reset() {
         content.style.transition = 'transform 0.25s var(--ease-out)';
@@ -7426,28 +7428,39 @@ function attachCorrectionSwipe(row, skillId) {
         if (leftEl) { leftEl.style.opacity = '0'; leftEl.classList.remove('corr-swipe-revealed'); }
         revealed = false;
         dragging = false;
+        axisLocked = false;
     }
 
     function onStart(e) {
         if (revealed) { reset(); return; }
         if (e.target.closest('button, input, a')) return;
-        startX    = getX(e);
-        startTime = Date.now();
-        dx        = 0;
-        dragging  = true;
+        startX     = getX(e);
+        startY     = getY(e);
+        startTime  = Date.now();
+        dx         = 0;
+        dragging   = true;
+        axisLocked = false;
         content.style.transition = 'none';
     }
 
     function onMove(e) {
         if (!dragging || revealed) return;
-        const raw = getX(e) - startX;
-        if (Math.abs(raw) < 8) return;
-        dx = raw;
-        if (dx < 0) {
-            const t = dx < -SNAP ? -SNAP + (dx + SNAP) * 0.1 : dx;
-            content.style.transform = `translateX(${t}px)`;
-            if (leftEl) leftEl.style.opacity = String(Math.min(1, Math.abs(dx) / SNAP));
+        const rawX = getX(e) - startX;
+        const rawY = getY(e) - startY;
+
+        // Lock to horizontal axis after DEAD px — cancel if more vertical
+        if (!axisLocked) {
+            if (Math.abs(rawX) < DEAD && Math.abs(rawY) < DEAD) return;
+            if (Math.abs(rawY) >= Math.abs(rawX)) { dragging = false; return; }
+            axisLocked = true;
         }
+
+        if (rawX >= 0) return; // left swipe only
+        dx = rawX;
+        e.preventDefault(); // stop page scroll during horizontal drag
+        const t = dx < -SNAP ? -SNAP + (dx + SNAP) * 0.1 : dx;
+        content.style.transform = `translateX(${t}px)`;
+        if (leftEl) leftEl.style.opacity = String(Math.min(1, Math.abs(dx) / SNAP));
     }
 
     function onEnd() {
@@ -7464,12 +7477,14 @@ function attachCorrectionSwipe(row, skillId) {
         }
     }
 
-    content.addEventListener('touchstart', onStart, { passive: true });
-    content.addEventListener('mousedown',  onStart);
-    document.addEventListener('touchmove', onMove, { passive: true });
-    document.addEventListener('touchend',  onEnd);
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup',   onEnd);
+    // Attach to row (not content, not document) so listeners stay scoped and get GC'd with the element
+    row.addEventListener('touchstart', onStart, { passive: true });
+    row.addEventListener('touchmove',  onMove,  { passive: false }); // non-passive to allow preventDefault
+    row.addEventListener('touchend',   onEnd);
+    row.addEventListener('mousedown',  onStart);
+    row.addEventListener('mousemove',  onMove);
+    row.addEventListener('mouseup',    onEnd);
+    row.addEventListener('mouseleave', onEnd);
 }
 
 function resolveCorrectionWithConfirm(correctionId, skillId) {
