@@ -344,9 +344,9 @@ function skipOnboarding() {
             date:  new Date().toISOString().split('T')[0],
         });
     }
-    navigateTo('barre');
     document.querySelector('.bottom-nav')?.classList.add('visible');
     document.querySelector('.fab')?.classList.add('visible');
+    maybeShowNamePrompt();
 }
 
 // Touch/swipe
@@ -592,6 +592,44 @@ const ORIENTATION_GOALS_OPTIONS = [
     'Preparing for a performance',
     'Enjoying ballet as part of my life',
 ];
+
+const AVATAR_COLORS = [
+    { name: 'coral',            hex: '#C97060', textColor: '#FFFFFF' },
+    { name: 'sage',             hex: '#7A8F6A', textColor: '#FFFFFF' },
+    { name: 'chocolate',        hex: '#7A6358', textColor: '#FFFFFF' },
+    { name: 'gold-subtle',      hex: '#A08840', textColor: '#FFFFFF' },
+    { name: 'dusty-slate',      hex: '#8A9AAA', textColor: '#FFFFFF' },
+    { name: 'dusty-sage',       hex: '#9AB0A0', textColor: '#1A1714' }, // WCAG AA requires dark text
+    { name: 'dusty-blush',      hex: '#D4A8A0', textColor: '#1A1714' }, // WCAG AA requires dark text
+    { name: 'dusty-terracotta', hex: '#C8785A', textColor: '#FFFFFF' },
+    { name: 'dusty-brick',      hex: '#B08070', textColor: '#FFFFFF' },
+];
+
+function assignAvatarColor() {
+    const idx = Math.floor(Math.random() * AVATAR_COLORS.length);
+    return AVATAR_COLORS[idx].name;
+}
+
+function generateInitialsAvatar(displayName, colorName) {
+    const color = AVATAR_COLORS.find(c => c.name === colorName) || AVATAR_COLORS[0];
+    let initials = '?';
+    if (displayName) {
+        const parts = displayName.trim().split(/\s+/).filter(Boolean);
+        if (parts.length >= 2) {
+            initials = (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        } else if (parts.length === 1) {
+            initials = parts[0][0].toUpperCase();
+        }
+    }
+    return `<svg viewBox="0 0 88 88" width="88" height="88" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="44" cy="44" r="44" fill="${color.hex}"/>
+        <text x="44" y="44" dominant-baseline="central" text-anchor="middle"
+            font-family="EB Garamond, Georgia, serif"
+            font-size="${initials.length === 1 ? 36 : 28}"
+            font-weight="500"
+            fill="${color.textColor}">${initials}</text>
+    </svg>`;
+}
 
 const PERSONAS = {
     duckling: {
@@ -915,7 +953,7 @@ function confirmOrientationLevel(personaKey) {
     storage.save('onboardingComplete', true);
     document.querySelector('.bottom-nav')?.classList.add('visible');
     document.querySelector('.fab')?.classList.add('visible');
-    navigateTo('barre');
+    maybeShowNamePrompt();
 }
 
 function showOrientationLevelPicker() {
@@ -959,7 +997,7 @@ function exitOrientation() {
         }
         document.querySelector('.bottom-nav')?.classList.add('visible');
         document.querySelector('.fab')?.classList.add('visible');
-        navigateTo('barre');
+        maybeShowNamePrompt();
     }
 }
 
@@ -1360,10 +1398,12 @@ function skipToProfile() {
     // Load preferences
     const prefs = storage.load('preferences');
     if (prefs) {
-        appState.hidePointe     = prefs.hidePointe     ?? false;
-        appState.profilePicture = prefs.profilePicture ?? null;
-        appState.displayName    = prefs.displayName    ?? null;
-        appState.trainingState  = prefs.trainingState  ?? 'active';
+        appState.hidePointe           = prefs.hidePointe     ?? false;
+        appState.profilePicture       = prefs.profilePicture ?? null;
+        appState.displayName          = prefs.displayName    ?? null;
+        appState.trainingState        = prefs.trainingState  ?? 'active';
+        appState.avatarColor          = prefs.avatarColor    ?? null;
+        appState.namePromptShown      = prefs.namePromptShown ?? false;
         appState._exploreAllDoneShown = prefs._exploreAllDoneShown ?? false;
     }
 
@@ -1393,10 +1433,12 @@ function skipToProfile() {
    ═══════════════════════════════════════════════════════════════ */
 function savePreferences() {
     storage.save('preferences', {
-        hidePointe:     appState.hidePointe,
-        profilePicture: appState.profilePicture,
-        displayName:    appState.displayName,
-        trainingState:  appState.trainingState,
+        hidePointe:           appState.hidePointe,
+        profilePicture:       appState.profilePicture,
+        displayName:          appState.displayName,
+        trainingState:        appState.trainingState,
+        avatarColor:          appState.avatarColor,
+        namePromptShown:      appState.namePromptShown,
         _exploreAllDoneShown: appState._exploreAllDoneShown,
     });
 }
@@ -1410,74 +1452,86 @@ function renderProfileStatus() {
     if (!el) return;
 
     const level = appState.level || 'not-assessed';
-    const levelName = { duckling: 'Duckling', deer: 'Deer', swan: 'Swan', firebird: 'Firebird' }[level] || 'Not yet assessed';
+    const persona = PERSONAS[level];
+    const levelName = persona ? persona.name : 'Not yet assessed';
+    const levelDesc = persona ? persona.description : null;
+    const isAssessed = level !== 'not-assessed';
+    const isExpanded = appState._levelCardExpanded || false;
 
-    // Animal watermark — maps new level IDs to illustration keys
-    const LEVEL_TO_ILLUS = { duckling: 'beginner', deer: 'improver', swan: 'intermediate', firebird: 'advanced',
-                              beginner: 'beginner', elementary: 'beginner', improver: 'improver',
-                              intermediate: 'intermediate', 'upper-intermediate': 'intermediate', advanced: 'advanced' };
-    const animalSrc = ILLUSTRATIONS.levels[LEVEL_TO_ILLUS[level]] || null;
-
-    // Avatar — uploaded photo, default illustration, or placeholder SVG
+    // Avatar — priority: custom upload > initials > placeholder
     let avatarContent;
     if (appState.profilePicture) {
-        // Could be a data URL (uploaded) or a key into ILLUSTRATIONS.profiles
         const src = appState.profilePicture.startsWith('data:')
             ? appState.profilePicture
             : (ILLUSTRATIONS.profiles[appState.profilePicture] || null);
-        avatarContent = src
-            ? `<img src="${src}" alt="Profile picture">`
-            : defaultAvatarSvg();
+        avatarContent = src ? `<img src="${src}" alt="Profile picture">` : defaultAvatarSvg();
+    } else if (appState.displayName) {
+        avatarContent = generateInitialsAvatar(appState.displayName, appState.avatarColor);
     } else {
         avatarContent = defaultAvatarSvg();
     }
 
-    // Insight sentence — event-driven priority queue
-    const insight = buildInsightSentence(level);
-
-    // Assessed caveat
+    // Latest assessment date
     const latestAssessment = (appState.assessments || [])
         .filter(a => a.type === 'placement')
         .slice(-1)[0];
-    const assessedText = latestAssessment
-        ? `orientation quiz · ${formatTimelineDate(latestAssessment.date)}`
+    const assessedDateText = latestAssessment
+        ? `Last assessed ${formatTimelineDate(latestAssessment.date)}`
         : null;
-    const isAssessed = level !== 'not-assessed';
+    const quizLabel = isAssessed ? 'Retake placement quiz →' : 'Start orientation quiz →';
+
+    // Display name
+    const displayName = appState.displayName || '';
 
     el.innerHTML = `
-        ${animalSrc ? `
-        <div class="status-animal">
-            <img src="${animalSrc}" alt="${levelName}">
-        </div>` : ''}
-        <div class="status-row">
+        <div class="profile-avatar-row">
             <div class="status-avatar-wrap">
-                <div class="status-avatar" onclick="openPicPicker()">
+                <div class="status-avatar" onmousedown="openPicPicker()" ontouchend="event.preventDefault(); openPicPicker()">
                     ${avatarContent}
                 </div>
-                <div class="status-avatar-edit" onclick="openPicPicker()">
-                    <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round">
-                        <path d="M6.5 1L8 2.5 3 7.5H1.5V6L6.5 1Z"/>
-                    </svg>
-                </div>
             </div>
-            <div class="status-text">
-                <div class="status-level-eyebrow">
-                    <span>${levelName}</span>
-                    ${assessedText ? `
-                    <span style="color:var(--ink-4)">·</span>
-                    <span class="assessed-note">${assessedText}</span>` : ''}
-                </div>
-                <div class="status-insight">${insight}</div>
+            ${displayName
+                ? `<div class="profile-display-name">${escapeHtml(displayName)}</div>`
+                : `<button class="profile-add-name-btn" onmousedown="openSettings()" ontouchend="event.preventDefault(); openSettings()">add your name →</button>`}
+            <button class="profile-level-toggle-btn" onmousedown="toggleLevelCard()" ontouchend="event.preventDefault(); toggleLevelCard()">
+                ${levelName}
+                <svg class="profile-level-chevron${isExpanded ? ' rotated' : ''}" width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M2 3.5L5 6.5L8 3.5" stroke="var(--gold)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="profile-avatar-divider"></div>
+
+        ${isExpanded ? `
+        <div class="profile-level-card">
+            <div class="profile-level-card-top">
+                <span class="profile-level-label">${levelName}</span>
+                <button class="profile-level-skills-link" onmousedown="openMySkillsPlaceholder()" ontouchend="event.preventDefault(); openMySkillsPlaceholder()">My Skills →</button>
             </div>
+            ${levelDesc ? `<div class="profile-level-desc">${levelDesc}</div>` : ''}
+            <div class="profile-level-card-bottom">
+                <button class="profile-quiz-link" onclick="startOrientationQuiz()">${quizLabel}</button>
+                ${assessedDateText ? `<span class="profile-assessed-date">${assessedDateText}</span>` : ''}
+            </div>
+        </div>` : ''}
+
+        <div class="profile-rhythm-card" id="profileRhythmCard">
+            <!-- Rendered by renderTrainingRhythmChart() -->
         </div>
     `;
 
-    // Append orientation quiz CTA button via DOM (not inline HTML)
-    const quizBtn = document.createElement('button');
-    quizBtn.className = isAssessed ? 'profile-quiz-cta profile-quiz-retake' : 'profile-quiz-cta';
-    quizBtn.textContent = isAssessed ? 'retake orientation quiz →' : 'start orientation quiz →';
-    quizBtn.addEventListener('click', () => startOrientationQuiz());
-    el.appendChild(quizBtn);
+    renderTrainingRhythmChart();
+}
+
+function toggleLevelCard() {
+    appState._levelCardExpanded = !appState._levelCardExpanded;
+    renderProfileStatus();
+}
+
+function openMySkillsPlaceholder() {
+    // TODO PLI-015: wire to skill library filtered to "Skills I've recorded"
+    alert('My Skills coming soon');
 }
 
 function defaultAvatarSvg() {
@@ -1492,67 +1546,165 @@ function defaultAvatarSvg() {
     </svg>`;
 }
 
-function buildInsightSentence(level) {
-    if (appState.trainingState === 'resting')    return 'Taking a break.';
-    if (appState.trainingState === 'recovering') return 'Focusing on recuperating.';
+function renderTrainingRhythmChart() {
+    const el = document.getElementById('profileRhythmCard');
+    if (!el) return;
 
-    // Priority queue: session today > milestone > correction pattern > assessment fallback
-    const today = new Date().toISOString().split('T')[0];
-    const lastSession = (appState.sessions || [])
-        .slice().sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))[0];
+    const metric  = appState._rhythmMetric  || 'sessions'; // 'sessions' | 'hours'
+    const period  = appState._rhythmPeriod  || 'two-weeks'; // 'two-weeks' | 'two-months' | 'all-time'
 
-    // 1. Session logged today
-    if (lastSession?.date === today) {
-        const corrCount = (appState.corrections || [])
-            .filter(c => {
-                const ss = (appState.sessionSkills || []).find(ss => ss.sessionId === lastSession.id);
-                return ss && (ss.correctionIds || []).includes(c.id);
-            }).length;
-        if (corrCount > 0) {
-            return `Session logged today with ${corrCount} correction${corrCount !== 1 ? 's' : ''}. Keep the record going.`;
-        }
-        return 'Session logged today. Good work — keep the record going.';
-    }
-
-    // 2. Recent milestone / goal completed
-    const recentMilestone = (appState.timeline || [])
-        .find(e => e.type === 'milestone' && e.date === today);
-    if (recentMilestone) {
-        return `Milestone reached today — ${recentMilestone.body || recentMilestone.title}.`;
-    }
-
-    // 3. Correction pattern — 3+ corrections on same skill this month
-    const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const recentCorrs = (appState.corrections || []).filter(c => c.createdAt > monthAgo);
-    if (recentCorrs.length >= 3) {
-        const skillCounts = {};
-        recentCorrs.forEach(c => {
-            if (c.skillId) skillCounts[c.skillId] = (skillCounts[c.skillId] || 0) + 1;
+    // Build week Mon–Sun offsets relative to today
+    function getWeekDates(mondayOffset) {
+        const today = new Date();
+        const day = today.getDay(); // 0=Sun
+        const diffToMon = (day === 0 ? -6 : 1 - day);
+        const monday = new Date(today);
+        monday.setDate(today.getDate() + diffToMon + mondayOffset * 7);
+        return Array.from({ length: 7 }, (_, i) => {
+            const d = new Date(monday);
+            d.setDate(monday.getDate() + i);
+            return d.toISOString().split('T')[0];
         });
-        const topSkillId = Object.entries(skillCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
-        const topSkill = topSkillId ? DATA.skills.find(s => s.id === topSkillId) : null;
-        if (topSkill && skillCounts[topSkillId] >= 3) {
-            return `${topSkill.french} is getting attention — ${skillCounts[topSkillId]} corrections this month pointing the same way.`;
-        }
     }
 
-    // 4. Assessment-based fallback per level
-    const fallbacks = {
-        'duckling':  'You\'re at the start of something. Log your first session to begin building a picture of your training.',
-        'deer':      'A solid foundation developing well. Log sessions to start seeing where your corrections cluster.',
-        'swan':      'Your technique is developing well. Log sessions to track where the most growth is happening.',
-        'firebird':  'You\'re working at a high level. The app is most useful as a record of nuance at this stage.',
-        'not-assessed': 'Take the placement quiz to get a picture of where you are and where to focus.',
-        // backward compat
-        'beginner':          'You\'re at the start of something. Log your first session to begin building a picture of your training.',
-        'elementary':        'You\'re at the start of something. Log your first session to begin building a picture of your training.',
-        'improver':          'A solid foundation developing well. Log sessions to start seeing where your corrections cluster.',
-        'intermediate':      'Your technique is developing well. Log sessions to track where the most growth is happening.',
-        'upper-intermediate':'Your technique is developing well. Log sessions to track where the most growth is happening.',
-        'advanced':          'You\'re working at a high level. The app is most useful as a record of nuance at this stage.',
-    };
-    return fallbacks[level] || fallbacks['not-assessed'];
+    // Aggregate sessions per date — hours fallback: 1hr per session until duration is stored
+    function valuesByDate(dates) {
+        const vals = {};
+        dates.forEach(d => vals[d] = 0);
+        (appState.sessions || []).forEach(s => {
+            if (s.date && vals[s.date] !== undefined) {
+                const v = metric === 'hours' ? (s.duration || 1) : 1;
+                vals[s.date] += v;
+            }
+        });
+        return dates.map(d => vals[d]);
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const thisWeekDates = getWeekDates(0);
+    const lastWeekDates = getWeekDates(-1);
+    const thisWeekData  = valuesByDate(thisWeekDates);
+    const lastWeekData  = valuesByDate(lastWeekDates);
+    const todayIdx = thisWeekDates.indexOf(today);
+
+    const hasLastWeekData = lastWeekData.some(v => v > 0);
+
+    // Y-axis: auto-scale to data
+    const allVals = [...thisWeekData, ...(hasLastWeekData ? lastWeekData : [])];
+    const maxVal  = Math.max(...allVals, 1);
+    const yMax    = Math.ceil(maxVal / 3) * 3 || 3;
+    const yTicks  = Array.from({ length: yMax / 3 + 1 }, (_, i) => i * 3);
+
+    // Averages — days elapsed so far this week
+    const daysElapsed = Math.max(todayIdx + 1, 1);
+    const thisAvg = (thisWeekData.slice(0, daysElapsed).reduce((a, b) => a + b, 0) / daysElapsed).toFixed(1);
+    const metricLabel = metric === 'hours' ? 'hours' : 'sessions';
+
+    // SVG layout
+    const W = 384, H = 66;
+    const padL = 0, padR = 0, padT = 4, padB = 0;
+    const chartW = W - padL - padR;
+    const chartH = H - padT - padB;
+    const cols = 7;
+    const colW = chartW / cols;
+
+    function xPos(i) { return padL + i * colW + colW / 2; }
+    function yPos(v) { return padT + chartH - (v / yMax) * chartH; }
+
+    function buildAreaPath(data, futureIdx) {
+        const pts = data.map((v, i) => {
+            if (futureIdx >= 0 && i > futureIdx) return null;
+            return [xPos(i), yPos(v)];
+        }).filter(Boolean);
+        if (pts.length < 2) return '';
+        let d = `M ${pts[0][0]} ${pts[0][1]}`;
+        for (let i = 1; i < pts.length; i++) {
+            const [x1, y1] = pts[i - 1], [x2, y2] = pts[i];
+            const cx = (x1 + x2) / 2;
+            d += ` C ${cx} ${y1} ${cx} ${y2} ${x2} ${y2}`;
+        }
+        const baseY = padT + chartH;
+        d += ` L ${pts[pts.length - 1][0]} ${baseY} L ${pts[0][0]} ${baseY} Z`;
+        return d;
+    }
+
+    const lastPath = buildAreaPath(lastWeekData, -1);
+    const thisPath = buildAreaPath(thisWeekData, todayIdx);
+
+    const dayLabels = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+
+    const periodOpts = [
+        { label: 'Last two weeks', value: 'two-weeks' },
+        { label: 'Last two months', value: 'two-months' },
+        { label: 'All-time', value: 'all-time' },
+    ];
+
+    el.innerHTML = `
+        <div class="rhythm-header">
+            <span class="rhythm-title">Training Rhythm</span>
+            <div class="seg-ctrl">
+                <button class="seg-opt${metric === 'sessions' ? ' seg-opt--active' : ''}"
+                    onmousedown="setRhythmMetric('sessions')"
+                    ontouchend="event.preventDefault(); setRhythmMetric('sessions')">Sessions</button>
+                <button class="seg-opt${metric === 'hours' ? ' seg-opt--active' : ''}"
+                    onmousedown="setRhythmMetric('hours')"
+                    ontouchend="event.preventDefault(); setRhythmMetric('hours')">Hours</button>
+            </div>
+        </div>
+
+        <div class="rhythm-legend">
+            ${hasLastWeekData ? `<span class="rhythm-legend-item"><span class="rhythm-dot" style="background:var(--color-chart-secondary)"></span>Last Week</span>` : ''}
+            <span class="rhythm-legend-item"><span class="rhythm-dot" style="background:var(--color-chart-primary)"></span>This Week</span>
+        </div>
+
+        <div class="rhythm-chart-wrap" onmousedown="openTrainingHistoryPlaceholder()" style="cursor:pointer">
+            <div class="rhythm-yaxis">
+                ${yTicks.slice().reverse().map(t => `<span class="rhythm-ylabel">${t}</span>`).join('')}
+            </div>
+            <svg class="rhythm-svg" viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                ${yTicks.map(t => {
+                    const y = yPos(t).toFixed(1);
+                    return `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="rgba(26,23,20,0.06)" stroke-width="1"/>`;
+                }).join('')}
+                ${hasLastWeekData && lastPath ? `<path d="${lastPath}" fill="var(--color-chart-secondary)" fill-opacity="0.45"/>` : ''}
+                ${thisPath ? `<path d="${thisPath}" fill="var(--color-chart-primary)" fill-opacity="0.65"/>` : ''}
+            </svg>
+        </div>
+
+        <div class="rhythm-xaxis">
+            ${dayLabels.map(l => `<span class="rhythm-xlabel">${l}</span>`).join('')}
+        </div>
+
+        <div class="rhythm-period-ctrl">
+            <div class="seg-ctrl">
+                ${periodOpts.map(o => `
+                <button class="seg-opt${period === o.value ? ' seg-opt--active' : ''}"
+                    onmousedown="setRhythmPeriod('${o.value}')"
+                    ontouchend="event.preventDefault(); setRhythmPeriod('${o.value}')">${o.label}</button>`).join('')}
+            </div>
+        </div>
+
+        <div class="rhythm-footer">
+            <span class="rhythm-average">Average: <strong>${thisAvg} ${metricLabel} / week</strong></span>
+            <button class="rhythm-history-btn" onmousedown="openTrainingHistoryPlaceholder()" ontouchend="event.preventDefault(); openTrainingHistoryPlaceholder()">Training History →</button>
+        </div>
+    `;
 }
+
+function setRhythmMetric(metric) {
+    appState._rhythmMetric = metric;
+    renderTrainingRhythmChart();
+}
+
+function setRhythmPeriod(period) {
+    appState._rhythmPeriod = period;
+    renderTrainingRhythmChart();
+}
+
+function openTrainingHistoryPlaceholder() {
+    alert('Training history coming soon');
+}
+
 
 /* ═══════════════════════════════════════════════════════════════
    FOCUS AREA CARD STACK
@@ -2127,6 +2279,61 @@ function dismissAndAddPointe() {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   DISPLAY NAME PROMPT
+   ═══════════════════════════════════════════════════════════════ */
+
+function maybeShowNamePrompt() {
+    if (appState.namePromptShown || appState.displayName) {
+        navigateTo('barre');
+        return;
+    }
+    showNamePrompt();
+}
+
+function showNamePrompt() {
+    const el = document.getElementById('name-prompt-body');
+    if (!el) { navigateTo('barre'); return; }
+
+    el.innerHTML = `
+        <div class="name-prompt-inner">
+            <p class="name-prompt-eyebrow">one last thing</p>
+            <h2 class="name-prompt-heading">What should we call you?</h2>
+            <p class="name-prompt-body">Completely optional. You can add or change this any time in settings.</p>
+            <input class="name-prompt-input" id="namePromptInput" type="text" placeholder="Your name" autocomplete="off" maxlength="40">
+            <div class="name-prompt-actions">
+                <button class="name-prompt-save" onmousedown="saveNameFromPrompt()" ontouchend="event.preventDefault(); saveNameFromPrompt()">save and continue</button>
+                <button class="name-prompt-skip" onmousedown="dismissNamePrompt()" ontouchend="event.preventDefault(); dismissNamePrompt()">skip for now</button>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('name-prompt-overlay').classList.add('open');
+
+    setTimeout(() => {
+        document.getElementById('namePromptInput')?.focus();
+    }, 300);
+}
+
+function saveNameFromPrompt() {
+    const input = document.getElementById('namePromptInput');
+    const name = input ? input.value.trim() : '';
+    if (name) {
+        appState.displayName = name;
+        appState.avatarColor = assignAvatarColor();
+    }
+    appState.namePromptShown = true;
+    savePreferences();
+    dismissNamePrompt();
+}
+
+function dismissNamePrompt() {
+    document.getElementById('name-prompt-overlay')?.classList.remove('open');
+    appState.namePromptShown = true;
+    savePreferences();
+    navigateTo('barre');
+}
+
+/* ═══════════════════════════════════════════════════════════════
    SETTINGS SHEET
    ═══════════════════════════════════════════════════════════════ */
 function openSettings() {
@@ -2156,102 +2363,94 @@ function renderSettings() {
     const body = document.getElementById('settings-body');
     if (!body) return;
 
-    body.innerHTML = `
-        <!-- Profile -->
-        <div class="settings-section">
-            <div class="settings-section-label">Profile</div>
-            <div class="settings-row">
-                <div>
-                    <div class="settings-row-label">Profile picture</div>
+    const trainingSegments = [
+        { label: 'Active',               value: 'active'    },
+        { label: 'On a break',           value: 'resting'   },
+        { label: 'Recovering / Injured', value: 'recovering' },
+    ];
+    const pointeSegments = [
+        { label: 'Yes', value: 'yes' },
+        { label: 'No',  value: 'no'  },
+    ];
+    const pointeActive = appState.hidePointe ? 'no' : 'yes';
+
+    const trainingStatePromptHtml = (() => {
+        const p = appState._trainingStatePrompt;
+        if (!p) return '';
+        const goalWord = p.count === 1 ? 'goal' : `${p.count} goals`;
+        const itThem   = p.count === 1 ? 'it'   : 'them';
+        if (p.type === 'pause') {
+            const stateWord = p.state === 'recovering' ? 'recuperating' : 'resting';
+            return `<div class="training-state-prompt">
+                <div class="training-state-prompt-body">You have ${p.count === 1 ? 'an active goal' : `${p.count} active goals`}. Do you want to pause ${itThem} while you're ${stateWord}?</div>
+                <div class="training-state-prompt-actions">
+                    <button class="training-state-prompt-btn" onmousedown="pauseGoalsForTrainingState()">pause ${goalWord}</button>
+                    <button class="training-state-prompt-btn training-state-prompt-dismiss" onmousedown="dismissTrainingStatePrompt()">not now</button>
                 </div>
-                <button class="settings-row-action" onclick="openPicPicker()">change</button>
+            </div>`;
+        }
+        if (p.type === 'reactivate') {
+            return `<div class="training-state-prompt">
+                <div class="training-state-prompt-body">You have ${p.count === 1 ? 'a paused goal' : `${p.count} paused goals`} from before your break. Do you want to reactivate ${itThem}?</div>
+                <div class="training-state-prompt-actions">
+                    <button class="training-state-prompt-btn" onmousedown="reactivateGoalsForTrainingState()">reactivate</button>
+                    <button class="training-state-prompt-btn training-state-prompt-dismiss" onmousedown="dismissTrainingStatePrompt()">leave them</button>
+                </div>
+            </div>`;
+        }
+        return '';
+    })();
+
+    body.innerHTML = `
+        <!-- Profile and Account -->
+        <div class="settings-section">
+            <div class="settings-section-label">Profile and Account</div>
+            <div class="settings-row">
+                <div class="settings-row-label">Profile Picture</div>
+                <div class="settings-row-actions">
+                    ${appState.profilePicture ? `<button class="settings-row-action settings-row-action--danger" onmousedown="removeProfilePicture()" ontouchend="event.preventDefault(); removeProfilePicture()">Remove</button>` : ''}
+                    <button class="settings-row-action" onmousedown="openPicPicker()" ontouchend="event.preventDefault(); openPicPicker()">Change</button>
+                </div>
+            </div>
+            <div class="settings-row" id="display-name-row">
+                <div>
+                    <div class="settings-row-label">Display Name</div>
+                    ${appState.displayName ? `<div class="settings-row-sub">${appState.displayName}</div>` : ''}
+                </div>
+                <button class="settings-row-action" onmousedown="editDisplayName()" ontouchend="event.preventDefault(); editDisplayName()">Edit</button>
             </div>
             <div class="settings-row">
                 <div>
-                    <div class="settings-row-label">Display name</div>
-                    <div class="settings-row-sub">${appState.displayName || 'Not set'}</div>
+                    <div class="settings-row-label">User Account</div>
+                    <div class="settings-row-sub">Not logged in</div>
                 </div>
-                <button class="settings-row-action" onclick="editDisplayName()">edit</button>
+                <button class="settings-row-action" onmousedown="alert('Sign in coming soon')">Sign in / Create an account</button>
             </div>
         </div>
 
-        <!-- My training -->
+        <!-- Training -->
         <div class="settings-section">
-            <div class="settings-section-label">My training</div>
-            <div class="settings-row settings-row--stacked">
+            <div class="settings-section-label">Training</div>
+            <div class="settings-row settings-row--between">
                 <div class="settings-row-label">Training state</div>
-                <div class="training-state-selector">
-                    ${['active', 'resting', 'recovering'].map(s => `
-                    <button class="training-state-opt${appState.trainingState === s ? ' selected' : ''}"
-                            onmousedown="setTrainingState('${s}')">${s}</button>`).join('')}
+                <div class="seg-ctrl">
+                    ${trainingSegments.map(s => `
+                    <button class="seg-opt${appState.trainingState === s.value ? ' seg-opt--active' : ''}"
+                            onmousedown="setTrainingState('${s.value}')"
+                            ontouchend="event.preventDefault(); setTrainingState('${s.value}')">${s.label}</button>`).join('')}
                 </div>
             </div>
-            ${(() => {
-                const p = appState._trainingStatePrompt;
-                if (!p) return '';
-                const goalWord = p.count === 1 ? 'goal' : `${p.count} goals`;
-                const itThem   = p.count === 1 ? 'it'   : 'them';
-                if (p.type === 'pause') {
-                    const stateWord = p.state === 'recovering' ? 'recuperating' : 'resting';
-                    return `<div class="training-state-prompt">
-                        <div class="training-state-prompt-body">You have ${p.count === 1 ? 'an active goal' : `${p.count} active goals`}. Do you want to pause ${itThem} while you're ${stateWord}?</div>
-                        <div class="training-state-prompt-actions">
-                            <button class="training-state-prompt-btn" onmousedown="pauseGoalsForTrainingState()">pause ${goalWord}</button>
-                            <button class="training-state-prompt-btn training-state-prompt-dismiss" onmousedown="dismissTrainingStatePrompt()">not now</button>
-                        </div>
-                    </div>`;
-                }
-                if (p.type === 'reactivate') {
-                    return `<div class="training-state-prompt">
-                        <div class="training-state-prompt-body">You have ${p.count === 1 ? 'a paused goal' : `${p.count} paused goals`} from before your break. Do you want to reactivate ${itThem}?</div>
-                        <div class="training-state-prompt-actions">
-                            <button class="training-state-prompt-btn" onmousedown="reactivateGoalsForTrainingState()">reactivate</button>
-                            <button class="training-state-prompt-btn training-state-prompt-dismiss" onmousedown="dismissTrainingStatePrompt()">leave them</button>
-                        </div>
-                    </div>`;
-                }
-                return '';
-            })()}
-            <div class="settings-row">
+            ${trainingStatePromptHtml}
+            <div class="settings-row settings-row--between">
                 <div>
                     <div class="settings-row-label">Pointe work</div>
-                    <div class="settings-row-sub">Show pointe in profile and assessments</div>
+                    <div class="settings-row-sub">Include pointe in profile and assessments</div>
                 </div>
-                <button class="settings-toggle ${!appState.hidePointe ? 'on' : ''}"
-                        onclick="togglePointeSetting(this)"></button>
-            </div>
-        </div>
-
-        <!-- Notifications -->
-        <div class="settings-section">
-            <div class="settings-section-label">Notifications</div>
-            <div class="settings-row">
-                <div>
-                    <div class="settings-row-label">Session reminders</div>
-                    <div class="settings-row-sub settings-tbd">coming soon</div>
-                </div>
-            </div>
-            <div class="settings-row">
-                <div>
-                    <div class="settings-row-label">Reflection prompts</div>
-                    <div class="settings-row-sub settings-tbd">coming soon</div>
-                </div>
-            </div>
-            <div class="settings-row">
-                <div>
-                    <div class="settings-row-label">Milestone celebrations</div>
-                    <div class="settings-row-sub settings-tbd">coming soon</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Display -->
-        <div class="settings-section">
-            <div class="settings-section-label">Display</div>
-            <div class="settings-row">
-                <div>
-                    <div class="settings-row-label">Dark mode</div>
-                    <div class="settings-row-sub settings-tbd">coming soon</div>
+                <div class="seg-ctrl">
+                    ${pointeSegments.map(s => `
+                    <button class="seg-opt${pointeActive === s.value ? ' seg-opt--active' : ''}"
+                            onmousedown="togglePointeSetting('${s.value}')"
+                            ontouchend="event.preventDefault(); togglePointeSetting('${s.value}')">${s.label}</button>`).join('')}
                 </div>
             </div>
         </div>
@@ -2261,27 +2460,50 @@ function renderSettings() {
             <div class="settings-section-label">Data</div>
             <div class="settings-row">
                 <div>
-                    <div class="settings-row-label">Export training log</div>
+                    <div class="settings-row-label">Export Training Log</div>
                     <div class="settings-row-sub">Save a readable copy of your data</div>
                 </div>
-                <button class="settings-row-action" onclick="exportReadableData()">export</button>
+                <button class="settings-row-action" onmousedown="exportReadableData()">Export</button>
             </div>
             <div class="settings-row">
                 <div>
                     <div class="settings-row-label">Reset all data</div>
-                    <div class="settings-row-sub">Wipes everything and restarts onboarding</div>
+                    <div class="settings-row-sub">Wipes everything and restarts from onboarding</div>
                 </div>
-                <button class="settings-danger-btn" onclick="closeSettings(); confirmResetProfile();">reset</button>
+                <button class="settings-danger-btn" onmousedown="closeSettings(); confirmResetProfile();">Reset</button>
             </div>
         </div>
 
-        <!-- Account -->
+        <!-- Notifications -->
         <div class="settings-section">
-            <div class="settings-section-label">Account</div>
+            <div class="settings-section-label">Notifications</div>
             <div class="settings-row">
                 <div>
-                    <div class="settings-row-label">Sign in / create account</div>
-                    <div class="settings-row-sub settings-tbd">coming soon — enables sync across devices</div>
+                    <div class="settings-row-label">Session Reminders</div>
+                    <div class="settings-row-sub settings-tbd">Coming soon</div>
+                </div>
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-row-label">Reflection Prompt</div>
+                    <div class="settings-row-sub settings-tbd">Coming soon</div>
+                </div>
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-row-label">Milestone Celebrations</div>
+                    <div class="settings-row-sub settings-tbd">Coming soon</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Display -->
+        <div class="settings-section">
+            <div class="settings-section-label">Display</div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-row-label">Dark Mode</div>
+                    <div class="settings-row-sub settings-tbd">Coming soon</div>
                 </div>
             </div>
         </div>
@@ -2290,12 +2512,12 @@ function renderSettings() {
         <div class="settings-section" style="padding-bottom: var(--sp-3xl);">
             <div class="settings-section-label">About</div>
             <div class="settings-row">
-                <div class="settings-row-label">Privacy policy</div>
-                <span class="settings-tbd">coming soon</span>
+                <div class="settings-row-label">Privacy Policy</div>
+                <span class="settings-tbd">Coming soon</span>
             </div>
             <div class="settings-row">
                 <div class="settings-row-label">Terms of service</div>
-                <span class="settings-tbd">coming soon</span>
+                <span class="settings-tbd">Coming soon</span>
             </div>
             <div class="settings-row">
                 <div class="settings-row-label">Version</div>
@@ -2398,27 +2620,51 @@ function dismissTrainingStatePrompt() {
     renderSettings();
 }
 
-function togglePointeSetting(btn) {
-    const isOn = btn.classList.contains('on');
-    appState.hidePointe = isOn;
-    btn.classList.toggle('on', !isOn);
+function togglePointeSetting(value) {
+    appState.hidePointe = value === 'no';
     savePreferences();
     renderFocusCardStack();
+    renderSettings();
 }
 
 function editDisplayName() {
+    const row = document.getElementById('display-name-row');
+    if (!row) return;
     const current = appState.displayName || '';
-    const name = window.prompt('Display name (optional):', current);
-    if (name === null) return; // cancelled
-    appState.displayName = name.trim() || null;
+    row.innerHTML = `
+        <div class="settings-name-edit">
+            <input class="settings-name-input" id="displayNameInput" type="text"
+                value="${escapeHtml(current)}" placeholder="Your name" maxlength="40" autocomplete="off">
+            <button class="settings-row-action" onclick="saveDisplayName()">Save</button>
+        </div>
+    `;
+    setTimeout(() => document.getElementById('displayNameInput')?.focus(), 50);
+}
+
+function saveDisplayName() {
+    const input = document.getElementById('displayNameInput');
+    if (!input) return;
+    appState.displayName = input.value.trim() || null;
+    if (appState.displayName) {
+        appState.avatarColor = assignAvatarColor();
+    }
     savePreferences();
     renderSettings();
-    renderProfileStatus();
+    const profileEl = document.getElementById('profileStatus');
+    if (profileEl) renderProfileStatus();
 }
 
 /* ═══════════════════════════════════════════════════════════════
    PROFILE PICTURE PICKER
    ═══════════════════════════════════════════════════════════════ */
+function removeProfilePicture() {
+    appState.profilePicture = null;
+    savePreferences();
+    renderSettings();
+    const profileEl = document.getElementById('profileStatus');
+    if (profileEl) renderProfileStatus();
+}
+
 function openPicPicker() {
     renderPicPicker();
     document.getElementById('pic-picker-overlay')?.classList.add('open');

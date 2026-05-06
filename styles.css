@@ -46,6 +46,10 @@
     --success:       #4A7038;
     --error:         #A84030;
 
+    /* ── Chart colours ── */
+    --color-chart-primary:   #C8785A;  /* This Week — dusty terracotta */
+    --color-chart-secondary: #8FA0A8;  /* Last Week — dusty slate */
+
     /* ── Brown (buttons, FAB, active tabs) ── */
     --brown-btn:     #5A4030;
     --brown:         #6B4F3A;
@@ -70,6 +74,7 @@
     --fs-h3:      1.0625rem; /* 17px */
     --fs-body:    0.9375rem; /* 15px */
     --fs-small:   0.8125rem; /* 13px */
+    --fs-card:    0.75rem;   /* 12px — card body, seg control */
     --fs-caption: 0.6875rem; /* 11px */
 
     /* ── Spacing scale ──
@@ -2415,6 +2420,9 @@ h1, h2, .screen-heading {
     cursor: grab;
     display: none;
 }
+#settings-overlay .session-sheet-handle {
+    display: block;
+}
 
 .session-logger-header {
     display: flex;
@@ -2434,7 +2442,7 @@ h1, h2, .screen-heading {
 }
 
 .session-logger-sheet, .goal-creator-overlay .session-logger-sheet {
-    background: var(--surface);
+    background: var(--background);
     box-shadow: var(--shadow-2);
     border-radius: var(--r-xl) var(--r-xl) 0 0;
 }
@@ -7646,11 +7654,11 @@ button, a, input, select, textarea,
     flex-direction: column;
 }
 
-/* ── Status area — the background surface, not a card ── */
+/* ── Status area — scroll container for level + rhythm cards ── */
 .profile-status {
     flex-shrink: 0;
     position: relative;
-    padding: 16px var(--sp-lg) 18px;
+    padding: 0;
     overflow: visible;
 }
 
@@ -7688,11 +7696,11 @@ button, a, input, select, textarea,
     flex-shrink: 0;
 }
 .status-avatar {
-    width: 60px;
-    height: 60px;
-    border-radius: 18px; /* squircle — larger than component 4px */
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
     background: var(--gold-wash);
-    border: 1.5px solid var(--gold-soft);
+    border: none;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -7780,6 +7788,340 @@ button, a, input, select, textarea,
 .status-meta-text {
     font-size: var(--fs-caption);
     color: var(--ink-4);
+}
+
+/* ── Profile status — new layout ── */
+.profile-avatar-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp-sm);
+    padding: var(--sp-xl) 0 var(--sp-md);
+}
+.profile-display-name {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: var(--fs-h2);
+    font-weight: 400;
+    color: var(--ink-2);
+    text-align: center;
+    margin-bottom: 0;
+}
+.profile-add-name-btn {
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 400;
+    color: var(--gold);
+    cursor: pointer;
+    padding: 0;
+}
+.profile-display-name-empty {
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 400;
+    color: var(--ink-4);
+    cursor: pointer;
+    padding: 0;
+}
+.profile-level-toggle-btn {
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 600;
+    color: var(--gold);
+    cursor: pointer;
+    padding: 0;
+}
+.profile-avatar-divider {
+    width: 100%;
+    height: 0.5px;
+    background: rgba(26,23,20,0.10);
+    margin: var(--sp-sm) 0;
+}
+
+/* Level card */
+.profile-level-card {
+    background: var(--surface);
+    border-radius: 8px;
+    border: 0.5px solid rgba(26,23,20,0.10);
+    margin: 0 var(--sp-lg) var(--sp-sm);
+    padding: var(--sp-md);
+}
+.profile-level-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--sp-xs);
+}
+.profile-level-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-body);
+    font-weight: 500;
+    color: var(--ink);
+}
+.profile-level-chevron {
+    transition: transform 0.2s ease;
+    color: var(--ink-3);
+}
+.profile-level-chevron.rotated { transform: rotate(180deg); }
+.profile-level-skills-link {
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-card);
+    font-weight: 600;
+    color: var(--gold);
+    cursor: pointer;
+    padding: 0;
+}
+.profile-level-desc {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 400;
+    color: var(--ink-2);
+    line-height: 1.55;
+    margin-bottom: var(--sp-sm);
+}
+.profile-level-card-bottom {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-top: var(--sp-xs);
+}
+.profile-quiz-link {
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-card);
+    font-weight: 600;
+    color: var(--gold);
+    cursor: pointer;
+    padding: 0;
+}
+.profile-assessed-date {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-card);
+    font-weight: 400;
+    color: var(--ink-4);
+}
+
+/* Training rhythm card */
+.profile-rhythm-card {
+    background: var(--background);
+    border-radius: 4px;
+    border: 0.5px solid rgba(26,23,20,0.10);
+    margin: 0 2px var(--sp-sm);
+    padding: var(--sp-md);
+    overflow: hidden;
+}
+.rhythm-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--sp-sm);
+}
+.rhythm-title {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+}
+.rhythm-legend {
+    display: flex;
+    gap: var(--sp-md);
+    margin-bottom: var(--sp-md);
+    justify-content: flex-end;
+}
+.rhythm-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-card);
+    color: var(--ink-3);
+}
+.rhythm-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.rhythm-chart-wrap {
+    display: flex;
+    gap: 4px;
+    align-items: stretch;
+}
+.rhythm-yaxis {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-bottom: 0;
+    flex-shrink: 0;
+    width: 18px;
+}
+.rhythm-ylabel {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    text-align: right;
+    line-height: 1;
+}
+.rhythm-svg {
+    flex: 1;
+    display: block;
+    overflow: visible;
+}
+.rhythm-xaxis {
+    display: flex;
+    justify-content: space-around;
+    padding-left: 22px;
+    margin-top: 4px;
+    margin-bottom: var(--sp-md);
+}
+.rhythm-xlabel {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    text-align: center;
+    flex: 1;
+}
+.rhythm-period-ctrl {
+    display: flex;
+    justify-content: center;
+    margin-bottom: var(--sp-md);
+}
+.rhythm-footer {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-top: 0;
+}
+.rhythm-average {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-card);
+    color: var(--ink-3);
+}
+.rhythm-average strong {
+    font-weight: 600;
+    color: var(--ink-2);
+}
+.rhythm-history-btn {
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-card);
+    font-weight: 600;
+    color: var(--gold);
+    cursor: pointer;
+    padding: 0;
+}
+
+/* ── Display name prompt overlay ── */
+.name-prompt-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(26,23,20,0.4);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 300;
+}
+.name-prompt-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+}
+.name-prompt-sheet {
+    background: var(--background);
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    width: 100%;
+    max-width: 430px;
+    padding: var(--sp-xl) var(--sp-lg) var(--sp-3xl);
+}
+.name-prompt-inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-sm);
+}
+.name-prompt-eyebrow {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    margin: 0;
+}
+.name-prompt-heading {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: var(--fs-h2);
+    font-weight: 400;
+    color: var(--ink);
+    margin: 0;
+}
+.name-prompt-body {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink-3);
+    margin: 0;
+    line-height: 1.5;
+}
+.name-prompt-input {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--input-bg);
+    border: 1px solid var(--gold-soft);
+    border-radius: 8px;
+    padding: 10px var(--sp-md);
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink);
+    margin-top: var(--sp-sm);
+    outline: none;
+}
+.name-prompt-input:focus { border-color: var(--gold); }
+.name-prompt-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-sm);
+    margin-top: var(--sp-sm);
+    align-items: center;
+}
+.name-prompt-save {
+    width: 100%;
+    background: var(--brown-btn);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 600;
+    cursor: pointer;
+}
+.name-prompt-skip {
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink-4);
+    cursor: pointer;
+    padding: 0;
 }
 
 /* ── Focus area card stack ── */
@@ -8279,92 +8621,131 @@ button, a, input, select, textarea,
 .focus-assess-add-btn:hover { color: var(--gold); }
 
 /* ── Settings sheet ── */
-.settings-section {
-    padding: var(--sp-lg) var(--sp-lg) 0;
+#settings-overlay .session-logger-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-xs);
+    padding: var(--sp-xs) 0 var(--sp-3xl);
+    overflow-y: auto;
 }
-.settings-section + .settings-section {
-    border-top: 1px solid var(--border-light);
-    margin-top: var(--sp-lg);
-    padding-top: var(--sp-lg);
+.settings-section {
+    background: var(--surface);
+    border-radius: 0;
+    border: none;
+    border-top: 0.5px solid rgba(26,23,20,0.08);
+    border-bottom: 0.5px solid rgba(26,23,20,0.08);
+    padding: 0 var(--sp-md);
 }
 .settings-section-label {
+    font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-caption);
-    font-weight: 500;
+    font-weight: 700;
     letter-spacing: .09em;
     text-transform: uppercase;
-    color: var(--ink-3);
-    margin-bottom: var(--sp-sm);
+    color: var(--ink-4);
+    padding: var(--sp-md) 0 var(--sp-xs);
 }
 .settings-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 10px 0;
-    border-bottom: 1px solid var(--border-light);
 }
-.settings-row:last-child { border-bottom: none; }
-.settings-row-label { font-size: var(--fs-small); color: var(--ink-2); }
-.settings-row-sub { font-size: var(--fs-caption); color: var(--ink-3); margin-top: 2px; }
-.settings-row-action {
+.settings-row-label {
+    font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-small);
+    font-weight: 400;
+    color: var(--ink-2);
+}
+.settings-row-sub {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 400;
+    color: var(--ink-3);
+    margin-top: 2px;
+}
+.settings-row-action {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 600;
     color: var(--gold);
     background: none;
     border: none;
     cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
     padding: 0;
+    flex-shrink: 0;
+    margin-left: var(--sp-sm);
 }
-.settings-toggle {
-    width: 40px;
-    height: 22px;
-    border-radius: var(--r-full);
-    background: var(--border-mid);
-    position: relative;
-    cursor: pointer;
-    border: none;
-    transition: background .2s;
+.settings-row-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-md);
     flex-shrink: 0;
 }
-.settings-toggle.on { background: var(--brown-btn); }
-.settings-toggle::after {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: white;
-    transition: transform .2s var(--ease-out);
+.settings-row-action--danger {
+    color: var(--error);
 }
-.settings-toggle.on::after { transform: translateX(18px); }
+.settings-name-edit {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-sm);
+    width: 100%;
+    padding: 4px 0;
+}
+.settings-name-input {
+    flex: 1;
+    background: var(--input-bg);
+    border: 1px solid var(--gold-soft);
+    border-radius: 8px;
+    padding: 6px var(--sp-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink);
+    outline: none;
+    min-width: 0;
+}
+.settings-name-input:focus { border-color: var(--gold); }
 .settings-row--stacked {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--sp-sm);
+    padding-bottom: var(--sp-md);
 }
-.training-state-selector {
-    display: flex;
-    gap: 6px;
-    width: 100%;
+.settings-row--between {
+    align-items: center;
 }
-.training-state-opt {
-    flex: 1;
+
+/* Segmented control */
+.seg-ctrl {
+    display: inline-flex;
+    background: #F2EDE1;
+    border: none;
+    border-radius: 8px;
+    padding: 4px;
+    gap: 0;
+    flex-shrink: 0;
+}
+.seg-opt {
     font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
+    font-size: var(--fs-card);
     font-weight: 400;
-    padding: 6px 0;
-    border-radius: var(--r-full);
-    border: 1px solid rgba(26,23,20,0.15);
-    background: white;
-    color: var(--ink-3);
+    color: var(--ink-2);
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    padding: 0 8px;
+    height: 20px;
+    line-height: 20px;
     cursor: pointer;
     text-align: center;
+    transition: background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
 }
-.training-state-opt.selected {
-    background: var(--ink);
-    color: white;
-    border-color: transparent;
+.seg-opt--active {
+    background: #fff;
+    color: var(--ink);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(26,23,20,0.12);
 }
 .training-state-prompt {
     background: var(--surface-warm);
@@ -8403,13 +8784,33 @@ button, a, input, select, textarea,
     font-style: italic;
 }
 .settings-danger-btn {
+    font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-small);
+    font-weight: 600;
     color: var(--error);
     background: none;
     border: none;
     cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
     padding: 0;
+    flex-shrink: 0;
+    margin-left: var(--sp-sm);
+}
+
+/* ── Settings sheet header ── */
+#settings-overlay .session-logger-sheet {
+    padding: 10px 0 0;
+    background: var(--background);
+}
+.settings-sheet-header {
+    padding: var(--sp-xs) var(--sp-md) var(--sp-xs);
+    flex-shrink: 0;
+}
+.settings-sheet-title {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: var(--fs-h2);
+    font-weight: 400;
+    color: var(--ink);
+    line-height: 1.1;
 }
 
 /* ── Profile picture picker ── */
