@@ -2751,7 +2751,7 @@ function saveSession() {
         return;
     }
 
-    // 3. Write timeline entry (new sessions only — edits don't create duplicate entries)
+    // 3. Write timeline entry — create for new sessions, update for edits
     if (!s._isEdit) {
         const template = appState.sessionTemplates.find(t => t.id === s.templateId);
         if (isNoteMode) {
@@ -2782,6 +2782,31 @@ function saveSession() {
                 date:     session.date,
             });
         }
+    } else {
+        // Sync the existing timeline entry's date, title, and body with the updated session
+        const entryIdx = (appState.timeline || []).findIndex(e => e.objectId === session.id);
+        if (entryIdx > -1) {
+            const existing = appState.timeline[entryIdx];
+            let updatedTitle = existing.title;
+            let updatedBody  = existing.body;
+            if (isNoteMode) {
+                updatedTitle = (session.notes || '').split('\n')[0].trim() || 'Note';
+            } else {
+                const template = appState.sessionTemplates.find(t => t.id === s.templateId);
+                updatedTitle = session.sessionName || template?.name || 'Session';
+                const classTypeLabel = session.classType
+                    ? (ALL_CLASS_TYPES.find(ct => ct.id === session.classType)?.label || session.classType)
+                    : null;
+                const bodyParts = [
+                    classTypeLabel,
+                    skillCount      ? `${skillCount} skill${skillCount !== 1 ? 's' : ''}`               : null,
+                    correctionCount ? `${correctionCount} correction${correctionCount !== 1 ? 's' : ''}` : null,
+                ].filter(Boolean);
+                updatedBody = bodyParts.join(' · ') || null;
+            }
+            appState.timeline[entryIdx] = { ...existing, date: session.date, title: updatedTitle, body: updatedBody };
+            storage.save('timeline', appState.timeline);
+        }
     }
 
     // Getting started completion hooks
@@ -2793,6 +2818,7 @@ function saveSession() {
     appState.currentSession = null;
     closeSessionLogger();
 
+    if (appState.currentScreen === 'barre-screen') showBarreScreen();
     if (appState.currentScreen === 'profile') initProfile();
     if (appState.currentScreen === 'goals-screen') renderGoalsScreen();
     if (appState.currentScreen?.startsWith('session-detail-')) {
