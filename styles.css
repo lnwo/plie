@@ -4365,6 +4365,13 @@ input.session-block-topic-input:focus {
 }
 
 
+.timeline-milestone-review {
+    font-size: var(--fs-small);
+    font-weight: 500;
+    color: var(--gold);
+    margin-top: 4px;
+}
+
 /* ═══════════════════════════════════════
    SESSION DETAIL VIEW
    ═══════════════════════════════════════ */
@@ -9511,9 +9518,9 @@ button, a, input, select, textarea,
     -webkit-tap-highlight-color: transparent;
 }
 .goal-period-chip.selected {
-    background: var(--ink);
-    border-color: var(--ink);
-    color: #fff;
+    background: var(--gold-wash);
+    border-color: var(--gold);
+    color: var(--ink);
 }
 
 .goal-period-resolved {
@@ -9523,6 +9530,22 @@ button, a, input, select, textarea,
     color: var(--ink-5);
     margin-top: var(--sp-xs);
 }
+
+/* Goal creator — field labels use small-caps muted style */
+.goal-creator-overlay .session-field-label {
+    font-size: var(--fs-caption);
+    font-weight: 500;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+
+/* Goal creator — milestone delete button */
+.goal-marker-delete {
+    color: var(--ink-3);
+    flex-shrink: 0;
+}
+.goal-marker-delete:hover { color: var(--ink); }
 
 /* Skill chips in goal creator */
 .goal-skill-chips {
