@@ -1550,16 +1550,26 @@ function renderTrainingRhythmChart() {
     const el = document.getElementById('profileRhythmCard');
     if (!el) return;
 
-    const metric  = appState._rhythmMetric  || 'sessions'; // 'sessions' | 'hours'
-    const period  = appState._rhythmPeriod  || 'two-weeks'; // 'two-weeks' | 'two-months' | 'all-time'
+    const metric  = appState._rhythmMetric  || 'sessions';
+    const period  = appState._rhythmPeriod  || 'two-weeks';
 
-    // Build week Mon–Sun offsets relative to today
+    const todayDate = new Date();
+    const todayStr  = todayDate.toISOString().split('T')[0];
+    const metricLabel = metric === 'hours' ? 'hours' : 'sessions';
+
+    // Monday of the week containing a given date
+    function getMondayOf(date) {
+        const d = new Date(date);
+        const day = d.getDay();
+        d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }
+
+    // Return YYYY-MM-DD strings for a full Mon–Sun week at mondayOffset weeks back
     function getWeekDates(mondayOffset) {
-        const today = new Date();
-        const day = today.getDay(); // 0=Sun
-        const diffToMon = (day === 0 ? -6 : 1 - day);
-        const monday = new Date(today);
-        monday.setDate(today.getDate() + diffToMon + mondayOffset * 7);
+        const monday = getMondayOf(todayDate);
+        monday.setDate(monday.getDate() + mondayOffset * 7);
         return Array.from({ length: 7 }, (_, i) => {
             const d = new Date(monday);
             d.setDate(monday.getDate() + i);
@@ -1567,56 +1577,90 @@ function renderTrainingRhythmChart() {
         });
     }
 
-    // Aggregate sessions per date — hours fallback: 1hr per session until duration is stored
+    // Session value for metric
+    function sessionValue(s) { return metric === 'hours' ? (s.duration || 1) : 1; }
+
+    // Aggregate sessions per date string → array of values in date order
     function valuesByDate(dates) {
         const vals = {};
-        dates.forEach(d => vals[d] = 0);
+        dates.forEach(d => { vals[d] = 0; });
         (appState.sessions || []).forEach(s => {
-            if (s.date && vals[s.date] !== undefined) {
-                const v = metric === 'hours' ? (s.duration || 1) : 1;
-                vals[s.date] += v;
-            }
+            if (s.date && vals[s.date] !== undefined) vals[s.date] += sessionValue(s);
         });
         return dates.map(d => vals[d]);
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    // ── Period-specific data ──
+    // All periods: primary = this week (Mon–Sun, terracotta), secondary = comparison (slate)
+    // Two weeks:   secondary = last week actual values
+    // Two months:  secondary = per-weekday average across prior 8 weeks (shaped curve)
+    // All-time:    secondary = per-weekday average across all prior weeks (shaped curve)
+
     const thisWeekDates = getWeekDates(0);
-    const lastWeekDates = getWeekDates(-1);
-    const thisWeekData  = valuesByDate(thisWeekDates);
-    const lastWeekData  = valuesByDate(lastWeekDates);
-    const todayIdx = thisWeekDates.indexOf(today);
+    const cutoffIdx     = thisWeekDates.indexOf(todayStr);
+    const chartData     = valuesByDate(thisWeekDates); // always this week
+    const xLabels       = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+    const primaryLabel  = 'This Week';
 
-    const hasLastWeekData = lastWeekData.some(v => v > 0);
+    let secondaryData, secondaryLabel, numWeeksForAvg;
 
-    // Y-axis: auto-scale to data
-    const allVals = [...thisWeekData, ...(hasLastWeekData ? lastWeekData : [])];
+    if (period === 'two-weeks') {
+        secondaryData  = valuesByDate(getWeekDates(-1));
+        secondaryLabel = 'Last Week';
+        numWeeksForAvg = 2;
+    } else {
+        // Per-weekday average across N prior weeks — gives the shaped curve of her typical week
+        let priorWeeks;
+        if (period === 'two-months') {
+            priorWeeks     = 8;
+            secondaryLabel = 'Avg (2 months)';
+        } else { // all-time
+            const sessions = (appState.sessions || []).filter(s => s.date);
+            if (sessions.length > 0) {
+                const earliest    = sessions.map(s => s.date).sort()[0];
+                const startMonday = getMondayOf(new Date(earliest));
+                const thisMonday  = getMondayOf(todayDate);
+                priorWeeks = Math.max(1, Math.round((thisMonday - startMonday) / (7 * 24 * 60 * 60 * 1000)));
+            } else {
+                priorWeeks = 1;
+            }
+            secondaryLabel = 'Avg (all time)';
+        }
+
+        // Sum per day-of-week (index 0=Mon … 6=Sun) across priorWeeks
+        const dayTotals = Array(7).fill(0);
+        for (let w = 1; w <= priorWeeks; w++) {
+            valuesByDate(getWeekDates(-w)).forEach((v, i) => { dayTotals[i] += v; });
+        }
+        secondaryData  = dayTotals.map(t => t / priorWeeks);
+        numWeeksForAvg = priorWeeks + 1;
+    }
+
+    // ── Average (footer) — sessions per week across the full period ──
+    const avgRaw = period === 'two-weeks'
+        ? (chartData.reduce((a, b) => a + b, 0) + secondaryData.reduce((a, b) => a + b, 0)) / 2
+        : secondaryData.reduce((a, b) => a + b, 0); // secondary is already per-week avg shape; sum = weekly avg
+    const avgStr = avgRaw % 1 === 0 ? String(avgRaw) : avgRaw.toFixed(1);
+
+    // ── Y-axis scale ──
+    const allVals = [...chartData, ...(secondaryData || [])];
     const maxVal  = Math.max(...allVals, 1);
     const yMax    = Math.ceil(maxVal / 3) * 3 || 3;
     const yTicks  = Array.from({ length: yMax / 3 + 1 }, (_, i) => i * 3);
 
-    // Average — total across both weeks divided by 2 (full weeks, not days elapsed)
-    // This gives a stable "per week" number that doesn't collapse to 0 mid-week
-    const twoWeekTotal = [...thisWeekData, ...lastWeekData].reduce((a, b) => a + b, 0);
-    const avgRaw = twoWeekTotal / 2;
-    // Show one decimal only when meaningful — drop .0 suffix
-    const thisAvg = avgRaw % 1 === 0 ? String(avgRaw) : avgRaw.toFixed(1);
-    const metricLabel = metric === 'hours' ? 'hours' : 'sessions';
-
-    // SVG layout
+    // ── SVG paths ──
     const W = 384, H = 66;
-    const padL = 0, padR = 0, padT = 4, padB = 0;
-    const chartW = W - padL - padR;
+    const padT = 4, padB = 0;
     const chartH = H - padT - padB;
-    const cols = 7;
-    const colW = chartW / cols;
+    const cols   = chartData.length;
+    const colW   = W / cols;
 
-    function xPos(i) { return padL + i * colW + colW / 2; }
+    function xPos(i) { return i * colW + colW / 2; }
     function yPos(v) { return padT + chartH - (v / yMax) * chartH; }
 
-    function buildAreaPath(data, futureIdx) {
+    function buildAreaPath(data, stopIdx) {
         const pts = data.map((v, i) => {
-            if (futureIdx >= 0 && i > futureIdx) return null;
+            if (stopIdx >= 0 && i > stopIdx) return null;
             return [xPos(i), yPos(v)];
         }).filter(Boolean);
         if (pts.length < 2) return '';
@@ -1626,21 +1670,22 @@ function renderTrainingRhythmChart() {
             const cx = (x1 + x2) / 2;
             d += ` C ${cx} ${y1} ${cx} ${y2} ${x2} ${y2}`;
         }
-        const baseY = padT + chartH;
-        d += ` L ${pts[pts.length - 1][0]} ${baseY} L ${pts[0][0]} ${baseY} Z`;
+        d += ` L ${pts[pts.length - 1][0]} ${padT + chartH} L ${pts[0][0]} ${padT + chartH} Z`;
         return d;
     }
 
-    const lastPath = buildAreaPath(lastWeekData, -1);
-    const thisPath = buildAreaPath(thisWeekData, todayIdx);
-
-    const dayLabels = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+    const primaryPath   = buildAreaPath(chartData, cutoffIdx);
+    const secondaryPath = secondaryData ? buildAreaPath(secondaryData, -1) : '';
+    const hasSecondary  = !!secondaryData && secondaryData.some(v => v > 0);
 
     const periodOpts = [
         { label: 'Last two weeks', value: 'two-weeks' },
         { label: 'Last two months', value: 'two-months' },
         { label: 'All-time', value: 'all-time' },
     ];
+
+    // X-axis: show a subset of labels for dense views to avoid overlap
+    const xAxisHtml = xLabels.map(l => `<span class="rhythm-xlabel">${l}</span>`).join('');
 
     el.innerHTML = `
         <div class="rhythm-header">
@@ -1656,8 +1701,8 @@ function renderTrainingRhythmChart() {
         </div>
 
         <div class="rhythm-legend">
-            ${hasLastWeekData ? `<span class="rhythm-legend-item"><span class="rhythm-dot" style="background:var(--color-chart-secondary)"></span>Last Week</span>` : ''}
-            <span class="rhythm-legend-item"><span class="rhythm-dot" style="background:var(--color-chart-primary)"></span>This Week</span>
+            ${hasSecondary ? `<span class="rhythm-legend-item"><span class="rhythm-dot" style="background:var(--color-chart-secondary)"></span>${secondaryLabel}</span>` : ''}
+            <span class="rhythm-legend-item"><span class="rhythm-dot" style="background:var(--color-chart-primary)"></span>${primaryLabel}</span>
         </div>
 
         <div class="rhythm-chart-wrap" onmousedown="openTrainingHistoryPlaceholder()" style="cursor:pointer">
@@ -1669,13 +1714,13 @@ function renderTrainingRhythmChart() {
                     const y = yPos(t).toFixed(1);
                     return `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="rgba(26,23,20,0.06)" stroke-width="1"/>`;
                 }).join('')}
-                ${hasLastWeekData && lastPath ? `<path d="${lastPath}" fill="var(--color-chart-secondary)" fill-opacity="0.45"/>` : ''}
-                ${thisPath ? `<path d="${thisPath}" fill="var(--color-chart-primary)" fill-opacity="0.65"/>` : ''}
+                ${hasSecondary && secondaryPath ? `<path d="${secondaryPath}" fill="var(--color-chart-secondary)" fill-opacity="0.45"/>` : ''}
+                ${primaryPath ? `<path d="${primaryPath}" fill="var(--color-chart-primary)" fill-opacity="0.65"/>` : ''}
             </svg>
         </div>
 
         <div class="rhythm-xaxis">
-            ${dayLabels.map(l => `<span class="rhythm-xlabel">${l}</span>`).join('')}
+            ${xAxisHtml}
         </div>
 
         <div class="rhythm-period-ctrl">
@@ -1688,7 +1733,7 @@ function renderTrainingRhythmChart() {
         </div>
 
         <div class="rhythm-footer">
-            <span class="rhythm-average">Average: <strong>${thisAvg} ${metricLabel} / week</strong></span>
+            <span class="rhythm-average">Average: <strong>${avgStr} ${metricLabel} / week</strong></span>
             <button class="rhythm-history-btn" onmousedown="openTrainingHistoryPlaceholder()" ontouchend="event.preventDefault(); openTrainingHistoryPlaceholder()">Training History →</button>
         </div>
     `;
