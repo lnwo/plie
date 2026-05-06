@@ -19,6 +19,8 @@ const ICONS = {
         'cat-pointe':      (s) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4 L8 16 C8 18 10 20 13 20 C16 20 17 18 17 17 C17 15 15 14 12 15"/><line x1="5" y1="4" x2="11" y2="4"/></svg>`,
         'learn-pirouette': (s) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/><circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="14"/></svg>`,
         'bookmark-fill':   (s) => `<ph-bookmark-simple size="${s}" weight="fill" style="display:inline-flex;align-items:center;line-height:1;"></ph-bookmark-simple>`,
+        // PLI-016 — highlighter icon, always duotone in pale terracotta regardless of call site
+        'highlighter':     (s) => `<ph-highlighter size="${s}" weight="duotone" style="display:inline-flex;align-items:center;line-height:1;color:#E49874;"></ph-highlighter>`,
     },
 
     get(key, size = 24) {
@@ -68,6 +70,7 @@ const ICONS = {
         'flag':             'flag-pennant-fill',        // filled — skill in focus
         'flag-outline':     'flag-pennant',             // outline — not yet flagged
         'edit':             'pencil-simple',
+        // 'highlighter' is in _svg above — duotone weight, overrides _map lookup
         'star':             'star',
         'star-fill':        'star-fill',
         'plus':             'plus',
@@ -1552,6 +1555,22 @@ function buildInsightSentence(level) {
         'advanced':          'You\'re working at a high level. The app is most useful as a record of nuance at this stage.',
     };
     return fallbacks[level] || fallbacks['not-assessed'];
+}
+
+function setRhythmMetric(metric) {
+    appState._rhythmMetric = metric;
+    renderTrainingRhythmChart();
+}
+
+function setRhythmPeriod(period) {
+    appState._rhythmPeriod = period;
+    renderTrainingRhythmChart();
+}
+
+function openTrainingHistoryPlaceholder() {
+    // PLI-016 — training history grid cell indicator: distinct shading/mark on cells containing ≥1 highlight block.
+    // TODO: implement when training history grid is built. Check ss.isHighlight for sessions on each date cell.
+    alert('Training history coming soon');
 }
 
 /* ═══════════════════════════════════════════════════════════════
