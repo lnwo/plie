@@ -3413,6 +3413,71 @@ input.session-block-topic-input:focus {
     padding: var(--sp-md) var(--sp-md) 0;
 }
 
+/* ── PLI-016 — Highlight eyebrow row ── */
+
+/* Eyebrow row flex container when highlighted — block-type-label becomes a flex row */
+.block-type-label--highlight,
+.detail-block-type-label--highlight {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    line-height: 1;
+}
+
+/* The base type name (CORRECTION part) — same styling as normal type label */
+.block-eyebrow-base {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: var(--fs-caption);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-5);
+}
+
+/* · separator */
+.block-eyebrow-sep {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    font-size: var(--fs-caption);
+    color: var(--ink-5);
+    margin: 0 5px;
+    line-height: 1;
+}
+
+/* [icon] HIGHLIGHT button — tap target wrapping both icon and label */
+.block-highlight-eyebrow-btn {
+    all: unset;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    line-height: 1;
+}
+
+/* Keep the icon from adding extra height — constrain to text line */
+.block-highlight-eyebrow-btn ph-highlighter {
+    display: block;
+    line-height: 1;
+    height: 1em;
+    overflow: visible;
+}
+
+/* HIGHLIGHT text label */
+.block-eyebrow-highlight-label {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: var(--fs-caption);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #E49874;
+}
+
+/* Gold full-border on highlighted session blocks in the logger */
+.session-block--highlighted {
+    border: 1.5px solid var(--gold);
+}
+
 /* Star/highlight button in block header */
 .block-star-btn {
     all: unset;
@@ -4256,6 +4321,15 @@ input.session-block-topic-input:focus {
     font-size: var(--fs-caption);
 }
 
+/* PLI-016 stub — highlight indicator on timeline session cards. Form TBD design pass. */
+.timeline-highlight-indicator {
+    display: inline-flex;
+    align-items: center;
+    color: var(--gold);
+    vertical-align: middle;
+    margin-left: 3px;
+}
+
 /* Goal completion milestone — inline header + reflection */
 .timeline-milestone-header {
     display: flex;
@@ -4445,8 +4519,7 @@ input.session-block-topic-input:focus {
 .note-block--observation { border-left: 2.5px solid var(--ink-6); }
 .note-block--note        { border-left: 2.5px solid var(--ink-6); }
 .note-block--goal        { border-left: 2.5px solid var(--ink-4); }
-.note-block--highlight   { border-left: 2.5px solid var(--gold); }
-.note-block--gold-bg     { background: var(--gold-wash); }
+.note-block--highlight   { border: 1.5px solid var(--gold); }  /* PLI-016 — full gold border, replaces faint default */
 
 /* Block type label — appears at top of every session detail card */
 .detail-block-type-label {
@@ -5368,6 +5441,24 @@ input.session-block-topic-input:focus {
 .skill-detail-section-count {
     font-size: var(--fs-small);
     color: var(--ink-5);
+}
+
+/* PLI-016 — highlights section collapse */
+.skill-detail-section-header--clickable {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.skill-highlights-body--collapsed {
+    display: none;
+}
+
+.skill-highlights-collapse-indicator {
+    font-size: var(--fs-small);
+    color: var(--ink-5);
+    font-weight: 400;
+    line-height: 1;
+    user-select: none;
 }
 
 .skill-detail-add-goal-btn {

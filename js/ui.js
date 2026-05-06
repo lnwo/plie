@@ -1540,14 +1540,23 @@ function renderBlockHtml(block, index) {
             }
         }
 
-        const starSvg = '<svg class="star-icon" width="16" height="16" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+        // Eyebrow: when highlighted — CORRECTION · [icon] HIGHLIGHT (icon is the un-highlight tap target)
+        // When not highlighted — label + standalone highlighter button on the right
+        const baseLabel = block.previousBlockType || 'correction';
+        const eyebrowHtml = block.isHighlight
+            ? '<span class="session-block-type-inline">' + baseLabel + '</span>' +
+              '<span class="block-eyebrow-sep">·</span>' +
+              '<button class="block-highlight-eyebrow-btn" onmousedown="event.stopPropagation(); toggleBlockHighlight(\'' + block.id + '\')" ontouchend="event.preventDefault(); event.stopPropagation(); toggleBlockHighlight(\'' + block.id + '\')" aria-label="Remove highlight">' +
+                  ICONS.get('highlighter', 16) +
+                  '<span class="block-eyebrow-highlight-label">highlight</span>' +
+              '</button>'
+            : '<span class="session-block-type-inline">' + blockType + '</span>' +
+              '<button class="block-star-btn" onmousedown="event.stopPropagation(); toggleBlockHighlight(\'' + block.id + '\')" ontouchend="event.preventDefault(); event.stopPropagation(); toggleBlockHighlight(\'' + block.id + '\')" aria-label="Highlight">' + ICONS.get('highlighter', 16) + '</button>';
+
         return '<div class="swipe-row" data-block-id="' + block.id + '">' +
             '<div class="swipe-action-left swipe-action-remove">' + ICONS.get('x', 16) + 'remove</div>' +
-            '<div class="session-block session-block--collapsed" id="block-' + block.id + '" onmousedown="expandBlock(\'' + block.id + '\')">' +
-                '<div class="session-block-collapse-header">' +
-                    '<span class="session-block-type-inline">' + blockType + '</span>' +
-                    '<button class="block-star-btn ' + (block.isHighlight ? 'active' : '') + '" onmousedown="event.stopPropagation(); toggleBlockHighlight(\'' + block.id + '\')" aria-label="Highlight">' + starSvg + '</button>' +
-                '</div>' +
+            '<div class="session-block session-block--collapsed' + (block.isHighlight ? ' session-block--highlighted' : '') + '" id="block-' + block.id + '" onmousedown="expandBlock(\'' + block.id + '\')">' +
+                '<div class="session-block-collapse-header">' + eyebrowHtml + '</div>' +
                 (bodyHtml ? '<div class="session-block-collapse-body">' + bodyHtml + '</div>' : '') +
             '</div>' +
         '</div>';
@@ -1555,7 +1564,19 @@ function renderBlockHtml(block, index) {
 
     // ── Expanded state — lives on sheet surface, no bg/border ──
     const blockText = resolveBlockText();
-    const blockTypeLabelHtml = '<div class="block-type-label">' + blockType + '</div>';
+
+    // Eyebrow: CORRECTION · [icon] HIGHLIGHT when highlighted; otherwise just the block type
+    const expandedBaseLabel = block.previousBlockType || 'correction';
+    const blockTypeLabelHtml = block.isHighlight
+        ? '<div class="block-type-label block-type-label--highlight">' +
+              '<span class="block-eyebrow-base">' + expandedBaseLabel + '</span>' +
+              '<span class="block-eyebrow-sep">·</span>' +
+              '<button class="block-highlight-eyebrow-btn" onmousedown="toggleBlockHighlight(\'' + block.id + '\')" ontouchend="event.preventDefault(); toggleBlockHighlight(\'' + block.id + '\')" aria-label="Remove highlight">' +
+                  ICONS.get('highlighter', 16) +
+                  '<span class="block-eyebrow-highlight-label">highlight</span>' +
+              '</button>' +
+          '</div>'
+        : '<div class="block-type-label">' + blockType + '</div>';
 
     // Goal blocks — inline form with draft state, no contenteditable
     if (blockType === 'goal') {
@@ -1567,21 +1588,21 @@ function renderBlockHtml(block, index) {
                 <button class="goal-type-tab ${d.goalType === 'intention' ? 'active' : ''}" onmousedown="setBlockGoalType('${block.id}', 'intention')">A feeling or state</button>
                 <button class="goal-type-tab ${d.goalType === 'habit'     ? 'active' : ''}" onmousedown="setBlockGoalType('${block.id}', 'habit')">A habit</button>
             </div>` : '';
-        const starSvg = `<svg class="star-icon" width="16" height="16" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
         return `
             <div class="swipe-row swipe-row--expanded" data-block-id="${block.id}">
                 <div class="swipe-action-left swipe-action-remove">
                     ${ICONS.get('x', 16)}
                     remove
                 </div>
-                <div class="session-block session-block--expanded" id="block-${block.id}">
+                <div class="session-block session-block--expanded${block.isHighlight ? ' session-block--highlighted' : ''}" id="block-${block.id}">
                     ${blockTypeLabelHtml}
                     <div class="session-block-header">
-                        <button class="block-star-btn ${block.isHighlight ? 'active' : ''}"
+                        ${!block.isHighlight ? `<button class="block-star-btn"
                                 onmousedown="toggleBlockHighlight('${block.id}')"
+                                ontouchend="event.preventDefault(); toggleBlockHighlight('${block.id}')"
                                 aria-label="Highlight">
-                            ${starSvg}
-                        </button>
+                            ${ICONS.get('highlighter', 16)}
+                        </button>` : ''}
                         <button class="block-remove-btn" onclick="removeBlock('${block.id}')" aria-label="Remove">
                             ${ICONS.get('x', 14)}
                         </button>
@@ -1626,15 +1647,16 @@ function renderBlockHtml(block, index) {
                 remove
             </div>
 
-            <div class="session-block session-block--expanded" id="block-${block.id}">
+            <div class="session-block session-block--expanded${block.isHighlight ? ' session-block--highlighted' : ''}" id="block-${block.id}">
                     ${blockTypeLabelHtml}
 
                     <div class="session-block-header session-block-header--slim">
-                        <button class="block-star-btn ${block.isHighlight ? 'active' : ''}"
+                        ${!block.isHighlight ? `<button class="block-star-btn"
                                 onmousedown="toggleBlockHighlight('${block.id}')"
+                                ontouchend="event.preventDefault(); toggleBlockHighlight('${block.id}')"
                                 aria-label="Highlight">
-                            <svg class="star-icon" width="16" height="16" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                        </button>
+                            ${ICONS.get('highlighter', 16)}
+                        </button>` : ''}
                         <button class="block-remove-btn" onclick="removeBlock('${block.id}')" aria-label="Remove">
                             ${ICONS.get('x', 14)}
                         </button>
@@ -2192,13 +2214,20 @@ function toggleBlockHighlight(blockId) {
     block.isHighlight = !block.isHighlight;
     if (block.isHighlight) {
         block.previousBlockType = block.blockType || 'correction';
+        block.blockType = 'highlight';
     } else {
+        block.blockType = block.previousBlockType || 'correction';
         block.previousBlockType = null;
     }
-    const blockEl = document.getElementById(`block-${blockId}`);
-    if (!blockEl) return;
-    const btn = blockEl.querySelector('.block-star-btn');
-    if (btn) btn.classList.toggle('active', block.isHighlight);
+    // Re-render the block so the type label and border update immediately
+    const swipeRow = document.querySelector(`.swipe-row[data-block-id="${blockId}"]`);
+    if (swipeRow) {
+        const index = Array.from(swipeRow.parentNode.children).indexOf(swipeRow);
+        const tmp = document.createElement('div');
+        tmp.innerHTML = renderBlockHtml(block, index);
+        const newRow = tmp.firstElementChild;
+        if (newRow) swipeRow.replaceWith(newRow);
+    }
 }
 
 function toggleBlockNotes(blockId) {
@@ -6384,8 +6413,15 @@ function renderTimelineEntry(entry) {
     const typeKey    = isPraise ? 'praise' : (entry.type || 'manual');
     const typeLabels = { session: 'Session', note: 'Note', milestone: 'Milestone', assessment: 'Assessment', praise: 'Praise \u2605', manual: '' };
     const typeLabel  = typeLabels[typeKey] || '';
+    // PLI-016 \u2014 timeline card highlight indicator: distinct visual on cards with \u22651 highlight block.
+    // TODO: design pass to confirm final form (icon, placement, colour). Stub renders a highlighter icon inline.
     const hasHighlight = entry.type === 'session' && entry.objectId &&
         appState.sessionSkills.some(ss => ss.sessionId === entry.objectId && ss.isHighlight);
+    const highlightIndicatorHtml = hasHighlight
+        ? ` <span class="timeline-highlight-indicator" title="Contains highlights">${ICONS.get('highlighter', 11)}</span>`
+        : '';
+    // PLI-016 \u2014 Highlights filter chip on timeline: filter to sessions with \u22651 highlight block.
+    // TODO: add chip to timeline filter bar when filter UI is built. No implementation yet.
     const tapAction  = isNote ? `showNoteDetail('${entry.objectId}')` : `showSessionDetail('${entry.objectId}')`;
     return `
     <div class="timeline-item timeline-item-${typeKey} ${isTappable ? 'timeline-item-tappable' : ''}"
@@ -6393,7 +6429,7 @@ function renderTimelineEntry(entry) {
         <div class="timeline-content">
             ${typeLabel ? `<span class="timeline-type-label">${typeLabel}</span>` : ''}
             <div class="timeline-title ${isPraise ? 'timeline-praise-text' : ''}">${entry.title}</div>
-            ${entry.body ? `<div class="timeline-subtitle">${entry.body}${hasHighlight ? ` <span class="timeline-star">${ICONS.get('star-fill', 11)}</span>` : ''}</div>` : ''}
+            ${entry.body ? `<div class="timeline-subtitle">${entry.body}${highlightIndicatorHtml}</div>` : ''}
             ${isTappable ? `<div class="timeline-tap-hint">tap to review \u2192</div>` : ''}
         </div>
         ${dateHtml}
@@ -6644,10 +6680,21 @@ function renderDetailBlockHtml(sessionSkill) {
 
     if (!skill && !sessionSkill.notes && !hasCorrections) return '';
 
-    // Block type label
+    // Block type label / eyebrow
+    // When highlighted: CORRECTION · [icon] HIGHLIGHT (icon un-highlights on tap)
+    // When not highlighted: just the type label; highlighter icon lives in the skill row
     const TYPE_DISPLAY = { correction: 'correction', note: 'note', intention: 'intention', highlight: 'highlight', choreography: 'choreography', goal: 'goal', observation: 'note' };
-    const typeLabel = TYPE_DISPLAY[source] || 'correction';
-    const typeLabelHtml = `<div class="detail-block-type-label">${typeLabel}</div>`;
+    const baseTypeLabel = TYPE_DISPLAY[sessionSkill.previousBlockType || source] || 'correction';
+    const typeLabelHtml = isHighlight
+        ? `<div class="detail-block-type-label detail-block-type-label--highlight">
+               <span class="block-eyebrow-base">${baseTypeLabel}</span>
+               <span class="block-eyebrow-sep">·</span>
+               <button class="block-highlight-eyebrow-btn" onmousedown="toggleDetailBlockHighlight('${sessionSkill.id}')" ontouchend="event.preventDefault(); toggleDetailBlockHighlight('${sessionSkill.id}')" aria-label="Remove highlight">
+                   ${ICONS.get('highlighter', 16)}
+                   <span class="block-eyebrow-highlight-label">highlight</span>
+               </button>
+           </div>`
+        : `<div class="detail-block-type-label">${TYPE_DISPLAY[source] || 'correction'}</div>`;
 
     // Left border: highlight overrides everything; otherwise by type
     const borderClass = isHighlight         ? 'note-block--highlight'
@@ -6657,21 +6704,23 @@ function renderDetailBlockHtml(sessionSkill) {
     // Divider between type label and skill row — only when skill is present
     const dividerHtml = skill ? `<div class="detail-block-divider"></div>` : '';
 
-    // Skill / star row
-    const starBtn = `<button class="note-block-star${isHighlight ? ' active' : ''}" onmousedown="toggleDetailBlockHighlight('${sessionSkill.id}')">${isHighlight ? ICONS.get('star-fill', 14) : ICONS.get('star', 14)}</button>`;
+    // Skill row — when not highlighted, carry the highlighter icon as promote affordance
     const bodyTagHtml = sessionSkill.bodyTag ? `<span class="note-block-body-tag">Body</span>` : '';
+    const highlightBtn = !isHighlight
+        ? `<button class="note-block-star" onmousedown="toggleDetailBlockHighlight('${sessionSkill.id}')" ontouchend="event.preventDefault(); toggleDetailBlockHighlight('${sessionSkill.id}')" aria-label="Highlight">${ICONS.get('highlighter', 14)}</button>`
+        : '';
     let skillRowHtml = '';
     if (skill) {
         skillRowHtml = `
             <div class="note-block-skill-row">
                 <span class="note-block-skill-name">${skill.french}</span>
-                <span class="note-block-skill-right">${bodyTagHtml}${starBtn}<button class="note-block-view-link" onclick="showSkillDetail('${skill.id}', appState.currentScreen)">view →</button></span>
+                <span class="note-block-skill-right">${bodyTagHtml}${highlightBtn}<button class="note-block-view-link" onclick="showSkillDetail('${skill.id}', appState.currentScreen)">view →</button></span>
             </div>`;
     } else {
         skillRowHtml = `
             <div class="note-block-highlight-row${isHighlight ? '' : ' note-block-highlight-row--inactive'}">
                 ${sessionSkill.blockTitle ? `<span class="note-block-skill-name" style="font-style:normal;font-size:var(--fs-small);font-weight:600;font-family:'DM Sans',sans-serif;">${escapeHtml(sessionSkill.blockTitle)}</span>` : ''}
-                ${bodyTagHtml}${starBtn}
+                ${bodyTagHtml}${highlightBtn}
             </div>`;
     }
 
@@ -6764,6 +6813,13 @@ function toggleDetailBlockHighlight(sessionSkillId) {
         .filter(Boolean);
     const newState = !(ss.isHighlight || corrections.some(c => c.isHighlight));
     ss.isHighlight = newState;
+    if (newState) {
+        ss.previousBlockType = ss.blockType || 'correction';
+        ss.blockType = 'highlight';
+    } else {
+        ss.blockType = ss.previousBlockType || 'correction';
+        ss.previousBlockType = null;
+    }
     corrections.forEach(c => { c.isHighlight = newState; });
     storage.save('sessionSkills', appState.sessionSkills);
     storage.save('corrections', appState.corrections);
@@ -7115,22 +7171,32 @@ function buildSkillHighlightsHtml(skillId) {
                     </div>`).join('')}
             </div>` : '';
         return `
-            <div class="note-block note-block--highlight note-block--gold-bg" id="hl-${item.type}-${item.id}">
+            <div class="note-block note-block--highlight" id="hl-${item.type}-${item.id}">
                 <div class="note-block-highlight-row">
                     <button class="note-block-star active"
-                            onmousedown="toggleSkillHighlightItem('${item.type}', '${item.id}', '${skillId}')">${ICONS.get('star-fill', 14)}</button>
+                            onmousedown="toggleSkillHighlightItem('${item.type}', '${item.id}', '${skillId}')"
+                            ontouchend="event.preventDefault(); toggleSkillHighlightItem('${item.type}', '${item.id}', '${skillId}')"
+                            aria-label="Remove highlight">${ICONS.get('highlighter', 14)}</button>
                     <span class="note-block-highlight-label">${dateStr}</span>
                 </div>
                 ${bodyHtml}${bulletsHtml}
             </div>`;
     }).join('');
 
+    // Default expanded — collapse state persists in memory only (not storage)
+    const isCollapsed = appState._highlightsSectionCollapsed?.[skillId] || false;
+
     return `
         <div class="skill-detail-section" id="skill-highlights-section-${skillId}">
-            <div class="skill-detail-section-header">
-                <div class="skill-detail-section-label" style="color: var(--ink-5);">Highlights</div>
+            <div class="skill-detail-section-header skill-detail-section-header--clickable"
+                 onmousedown="toggleSkillHighlightsCollapse('${skillId}')"
+                 ontouchend="event.preventDefault(); toggleSkillHighlightsCollapse('${skillId}')">
+                <div class="skill-detail-section-label">Highlights</div>
+                <span class="skill-detail-section-count skill-highlights-collapse-indicator">${isCollapsed ? '+' : '−'}</span>
             </div>
-            ${blocksHtml}
+            <div class="skill-highlights-body${isCollapsed ? ' skill-highlights-body--collapsed' : ''}">
+                ${blocksHtml}
+            </div>
         </div>`;
 }
 
@@ -7149,11 +7215,25 @@ function renderSkillHighlightsSectionInPlace(skillId, sectionEl) {
     }
 }
 
+function toggleSkillHighlightsCollapse(skillId) {
+    if (!appState._highlightsSectionCollapsed) appState._highlightsSectionCollapsed = {};
+    appState._highlightsSectionCollapsed[skillId] = !appState._highlightsSectionCollapsed[skillId];
+    const sectionEl = document.getElementById(`skill-highlights-section-${skillId}`);
+    if (!sectionEl) return;
+    const body = sectionEl.querySelector('.skill-highlights-body');
+    const indicator = sectionEl.querySelector('.skill-highlights-collapse-indicator');
+    const isCollapsed = appState._highlightsSectionCollapsed[skillId];
+    if (body) body.classList.toggle('skill-highlights-body--collapsed', isCollapsed);
+    if (indicator) indicator.textContent = isCollapsed ? '+' : '−';
+}
+
 function toggleSkillHighlightItem(type, id, skillId) {
     if (type === 'ss') {
         const ss = appState.sessionSkills.find(s => s.id === id);
         if (!ss) return;
         ss.isHighlight = false;
+        ss.blockType = ss.previousBlockType || 'correction';
+        ss.previousBlockType = null;
         const corrections = (ss.correctionIds || [])
             .map(cid => appState.corrections.find(c => c.id === cid))
             .filter(Boolean);
