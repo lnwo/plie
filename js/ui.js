@@ -7231,7 +7231,7 @@ function renderSkillCorrectionsGrouped(corrections, skillId, opts = {}) {
             // Wrap in swipe-row — resolved items only get delete on left; active get resolve + delete
             const leftTray = isResolved
                 ? `<div class="swipe-action-left corr-swipe-left corr-swipe-left--resolved">
-                       <button class="corr-swipe-btn corr-swipe-unresolve" onmousedown="unresolveCorrection('${c.id}', '${skillId}')">un-resolve</button>
+                       <button class="corr-swipe-btn corr-swipe-unresolve" onmousedown="unresolveCorrection('${c.id}', '${skillId}')">mark as active</button>
                        <button class="corr-swipe-btn corr-swipe-delete" onmousedown="deleteCorrection('${c.id}', '${skillId}')">delete</button>
                    </div>`
                 : `<div class="swipe-action-left corr-swipe-left">
