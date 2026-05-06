@@ -7477,14 +7477,15 @@ function attachCorrectionSwipe(row, skillId) {
         }
     }
 
-    // Attach to row (not content, not document) so listeners stay scoped and get GC'd with the element
-    row.addEventListener('touchstart', onStart, { passive: true });
-    row.addEventListener('touchmove',  onMove,  { passive: false }); // non-passive to allow preventDefault
-    row.addEventListener('touchend',   onEnd);
-    row.addEventListener('mousedown',  onStart);
-    row.addEventListener('mousemove',  onMove);
-    row.addEventListener('mouseup',    onEnd);
-    row.addEventListener('mouseleave', onEnd);
+    // passive:false on touchstart so Safari knows this gesture may call preventDefault in touchmove
+    row.addEventListener('touchstart',  onStart, { passive: false });
+    row.addEventListener('touchmove',   onMove,  { passive: false });
+    row.addEventListener('touchend',    onEnd,   { passive: true });
+    row.addEventListener('touchcancel', reset,   { passive: true });
+    row.addEventListener('mousedown',   onStart);
+    row.addEventListener('mousemove',   onMove);
+    row.addEventListener('mouseup',     onEnd);
+    row.addEventListener('mouseleave',  onEnd);
 }
 
 function resolveCorrectionWithConfirm(correctionId, skillId) {
