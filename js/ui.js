@@ -6522,7 +6522,8 @@ function showBarreTimelineSheet() {
 
 function showSessionDetail(sessionId) {
     document.getElementById('barre-timeline-sheet')?.remove();
-    const session = appState.sessions.find(s => s.id === sessionId);
+    // == intentional: objectId on timeline entries may be string or number
+    const session = appState.sessions.find(s => s.id == sessionId);
     if (!session) return;
 
     pushNavHistory();
