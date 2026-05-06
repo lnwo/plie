@@ -2663,8 +2663,9 @@ function saveSession() {
     )];
     const sixtyDaysAgo = now - 60 * 24 * 60 * 60 * 1000;
     touchedSkillIds.forEach(sid => {
+        // PLI-018 — exclude resolved corrections; if she's marked it resolved, it's addressed
         const recent = appState.corrections.filter(
-            c => c.skillId === sid && c.createdAt >= sixtyDaysAgo
+            c => c.skillId === sid && c.createdAt >= sixtyDaysAgo && !c.isResolved
         );
         const sessionCount = new Set(recent.map(c => c.sessionId).filter(Boolean)).size;
         const isRecurring = recent.length >= 3 && sessionCount >= 2;
@@ -6902,24 +6903,38 @@ function showSkillDetail(skillId, returnTo) {
     const highlightsHtml = buildSkillHighlightsHtml(skillId);
 
     // ── Corrections for this skill ──
+    // allCorrections = full record including resolved (used for all-time total stat)
+    // activeCorrections = unresolved only (used for default display)
     const allCorrections = appState.corrections
         .filter(c => c.skillId === skillId)
         .sort((a, b) => b.createdAt - a.createdAt);
+    const activeCorrections = allCorrections.filter(c => !c.isResolved);
+    const resolvedCount = allCorrections.length - activeCorrections.length;
 
     const CORRECTIONS_PREVIEW = 3;
-    const hasMore = allCorrections.length > CORRECTIONS_PREVIEW;
-    const visibleCorrections = allCorrections.slice(0, CORRECTIONS_PREVIEW);
+    const hasMore = activeCorrections.length > CORRECTIONS_PREVIEW;
+    const visibleCorrections = activeCorrections.slice(0, CORRECTIONS_PREVIEW);
 
-    const correctionsHtml = allCorrections.length === 0
+    const seeAllLabel = resolvedCount > 0
+        ? `see all ${activeCorrections.length} corrections · ${resolvedCount} resolved`
+        : `see all ${activeCorrections.length} corrections`;
+
+    const correctionsHtml = activeCorrections.length === 0 && resolvedCount === 0
         ? `<div class="skill-detail-empty-state">No corrections logged yet. Add them when logging a session.</div>`
+        : activeCorrections.length === 0
+        ? `<div class="skill-detail-empty-state">No active corrections. <button class="skill-see-more-btn" style="display:inline;padding:0;" onclick="expandSkillCorrections('${skillId}')">See ${resolvedCount} resolved.</button></div>`
         : `
             <div id="skill-corrections-list">
-                ${renderSkillCorrectionsGrouped(visibleCorrections)}
+                ${renderSkillCorrectionsGrouped(visibleCorrections, skillId)}
             </div>
             ${hasMore ? `
                 <button class="skill-see-more-btn" id="skill-see-more"
                         onclick="expandSkillCorrections('${skillId}')">
-                    see all ${allCorrections.length} corrections
+                    ${seeAllLabel}
+                </button>` : resolvedCount > 0 ? `
+                <button class="skill-see-more-btn" id="skill-see-more"
+                        onclick="expandSkillCorrections('${skillId}')">
+                    ${seeAllLabel}
                 </button>` : ''}
         `;
 
@@ -7007,14 +7022,14 @@ function showSkillDetail(skillId, returnTo) {
     `;
 
     // ── Correction filters ──
-    const corrFilterHtml = allCorrections.length > 1 ? `
+    const corrFilterHtml = activeCorrections.length > 1 ? `
         <div class="skill-correction-filters" id="skill-corr-filters">
             <button class="skill-corr-filter active" data-filter="all"
                     onclick="filterSkillCorrections('${skillId}', 'all', this)">All</button>
-            ${allCorrections.some(c => c.isRecurring) ? `
+            ${activeCorrections.some(c => c.isRecurring) ? `
             <button class="skill-corr-filter" data-filter="recurring"
                     onclick="filterSkillCorrections('${skillId}', 'recurring', this)">Recurring</button>` : ''}
-            ${(appState.goals || []).some(g => (g.correctionIds || []).some(id => allCorrections.find(c => c.id === id))) ? `
+            ${(appState.goals || []).some(g => (g.correctionIds || []).some(id => activeCorrections.find(c => c.id === id))) ? `
             <button class="skill-corr-filter" data-filter="goals"
                     onclick="filterSkillCorrections('${skillId}', 'goals', this)">Linked to goals</button>` : ''}
         </div>` : '';
@@ -7126,6 +7141,10 @@ function showSkillDetail(skillId, returnTo) {
     // on the container, which can cause the viewport-based observer to misfire on iOS.
     requestAnimationFrame(() => {
         initClampedTexts(screen);
+        // Attach swipe handlers to correction cards
+        screen.querySelectorAll('.swipe-row[data-correction-id]').forEach(row => {
+            attachCorrectionSwipe(row, skillId);
+        });
         const hero = document.getElementById(`skill-hero-${skillId}`);
         const collapsed = document.getElementById(`skill-detail-collapsed-${skillId}`);
         if (!hero || !collapsed) return;
@@ -7250,7 +7269,8 @@ function toggleSkillHighlightItem(type, id, skillId) {
     if (sectionEl) renderSkillHighlightsSectionInPlace(skillId, sectionEl);
 }
 
-function renderSkillCorrectionsGrouped(corrections) {
+function renderSkillCorrectionsGrouped(corrections, skillId, opts = {}) {
+    const { showResolved = false } = opts;
     const groups = [];
     const sessionMap = {};
 
@@ -7279,12 +7299,31 @@ function renderSkillCorrectionsGrouped(corrections) {
         const sessionLink = session
             ? `<button class="skill-corr-source" onmousedown="showSessionDetail('${group.sessionId}')">${session.sessionName || 'Session'} →</button>`
             : '';
-        const itemsHtml = items.map(c => `
-            <div class="skill-corr-item${c.isRecurring ? ' is-recurring' : ''}">
-                <div class="skill-corr-text">&ldquo;${c.text}&rdquo;</div>
-                ${c.isRecurring ? `<span class="skill-correction-recurring">recurring</span>` : ''}
-            </div>
-        `).join('');
+        const itemsHtml = items.map(c => {
+            const isResolved = !!c.isResolved;
+            const cardHtml = `
+                <div class="skill-corr-item${c.isRecurring && !isResolved ? ' is-recurring' : ''}${isResolved ? ' is-resolved' : ''}">
+                    <div class="skill-corr-text">&ldquo;${escapeHtml(c.text)}&rdquo;</div>
+                    ${c.isRecurring && !isResolved ? `<span class="skill-correction-recurring">recurring</span>` : ''}
+                    ${isResolved ? `<span class="skill-corr-resolved-label">resolved</span>` : ''}
+                </div>`;
+            if (!skillId) return cardHtml;
+            // Wrap in swipe-row — resolved items only get delete on left; active get resolve + delete
+            const leftTray = isResolved
+                ? `<div class="swipe-action-left corr-swipe-left corr-swipe-left--resolved">
+                       <button class="corr-swipe-btn corr-swipe-unresolve" onmousedown="unresolveCorrection('${c.id}', '${skillId}')" ontouchend="event.preventDefault(); unresolveCorrection('${c.id}', '${skillId}')">mark as active</button>
+                       <button class="corr-swipe-btn corr-swipe-delete" onmousedown="deleteCorrection('${c.id}', '${skillId}')" ontouchend="event.preventDefault(); deleteCorrection('${c.id}', '${skillId}')">delete</button>
+                   </div>`
+                : `<div class="swipe-action-left corr-swipe-left">
+                       <button class="corr-swipe-btn corr-swipe-resolve" onmousedown="resolveCorrectionWithConfirm('${c.id}', '${skillId}')" ontouchend="event.preventDefault(); resolveCorrectionWithConfirm('${c.id}', '${skillId}')">resolve</button>
+                       <button class="corr-swipe-btn corr-swipe-delete" onmousedown="deleteCorrection('${c.id}', '${skillId}')" ontouchend="event.preventDefault(); deleteCorrection('${c.id}', '${skillId}')">delete</button>
+                   </div>`;
+            return `
+                <div class="swipe-row" data-correction-id="${c.id}">
+                    ${leftTray}
+                    <div class="swipe-content">${cardHtml}</div>
+                </div>`;
+        }).join('');
         return `
             <div class="skill-corr-group">
                 ${itemsHtml}
@@ -7306,8 +7345,21 @@ function expandSkillCorrections(skillId) {
         .filter(c => c.skillId === skillId)
         .sort((a, b) => b.createdAt - a.createdAt);
 
-    list.innerHTML = renderSkillCorrectionsGrouped(allCorrections);
+    const active   = allCorrections.filter(c => !c.isResolved);
+    const resolved = allCorrections.filter(c => c.isResolved);
+
+    let html = renderSkillCorrectionsGrouped(active, skillId);
+    if (resolved.length > 0) {
+        html += `<div class="skill-corr-resolved-divider">resolved</div>`;
+        html += renderSkillCorrectionsGrouped(resolved, skillId, { showResolved: true });
+    }
+    list.innerHTML = html;
     if (btn) btn.remove();
+
+    // Re-attach swipe handlers after re-render
+    list.querySelectorAll('.swipe-row[data-correction-id]').forEach(row => {
+        attachCorrectionSwipe(row, skillId);
+    });
 }
 
 function expandSkillNotes(skillId) {
@@ -7369,7 +7421,7 @@ function filterSkillCorrections(skillId, filter, btn) {
     btn.classList.add('active');
 
     const all = appState.corrections
-        .filter(c => c.skillId === skillId)
+        .filter(c => c.skillId === skillId && !c.isResolved)
         .sort((a, b) => b.createdAt - a.createdAt);
 
     let filtered;
@@ -7396,17 +7448,20 @@ function filterSkillCorrections(skillId, filter, btn) {
     }
 
     display.innerHTML = `
-        <div id="skill-corr-list">${renderSkillCorrectionsGrouped(filtered.slice(0, PREVIEW))}</div>
+        <div id="skill-corr-list">${renderSkillCorrectionsGrouped(filtered.slice(0, PREVIEW), skillId)}</div>
         ${hasMore ? `<button class="skill-see-more-btn"
             onclick="expandFilteredCorrections('${skillId}', '${filter}')">
             see all ${filtered.length} corrections
         </button>` : ''}
     `;
+    display.querySelectorAll('.swipe-row[data-correction-id]').forEach(row => {
+        attachCorrectionSwipe(row, skillId);
+    });
 }
 
 function expandFilteredCorrections(skillId, filter) {
     const all = appState.corrections
-        .filter(c => c.skillId === skillId)
+        .filter(c => c.skillId === skillId && !c.isResolved)
         .sort((a, b) => b.createdAt - a.createdAt);
 
     let filtered;
@@ -7422,10 +7477,252 @@ function expandFilteredCorrections(skillId, filter) {
     }
 
     const list = document.getElementById('skill-corr-list');
-    if (list) list.innerHTML = renderSkillCorrectionsGrouped(filtered);
+    if (list) {
+        list.innerHTML = renderSkillCorrectionsGrouped(filtered, skillId);
+        list.querySelectorAll('.swipe-row[data-correction-id]').forEach(row => {
+            attachCorrectionSwipe(row, skillId);
+        });
+    }
     // Remove see-more button
     const btn = document.querySelector('#skill-corrections-display .skill-see-more-btn');
     if (btn) btn.remove();
+}
+
+// ── PLI-018 — Correction resolve/delete actions ──
+
+function attachCorrectionSwipe(row, skillId) {
+    const content = row.querySelector('.swipe-content');
+    const leftEl  = row.querySelector('.swipe-action-left');
+    if (!content) return;
+
+    // Allow vertical scroll through but let JS handle horizontal — browser won't intercept pan-x
+    row.style.touchAction = 'pan-y';
+
+    const SNAP = 200, MIN_MS = 120, DEAD = 8;
+    let startX = 0, startY = 0, startTime = 0, dx = 0;
+    let dragging = false, revealed = false, axisLocked = false;
+
+    function getX(e) { return e.touches ? e.touches[0].clientX : e.clientX; }
+    function getY(e) { return e.touches ? e.touches[0].clientY : e.clientY; }
+
+    function reset() {
+        content.style.transition = 'transform 0.25s var(--ease-out)';
+        content.style.transform  = '';
+        if (leftEl) { leftEl.style.opacity = '0'; leftEl.classList.remove('corr-swipe-revealed'); }
+        revealed = false;
+        dragging = false;
+        axisLocked = false;
+    }
+
+    function onStart(e) {
+        if (revealed) { reset(); return; }
+        if (e.target.closest('button, input, a')) return;
+        startX     = getX(e);
+        startY     = getY(e);
+        startTime  = Date.now();
+        dx         = 0;
+        dragging   = true;
+        axisLocked = false;
+        content.style.transition = 'none';
+    }
+
+    function onMove(e) {
+        if (!dragging || revealed) return;
+        const rawX = getX(e) - startX;
+        const rawY = getY(e) - startY;
+
+        // Lock to horizontal axis after DEAD px — cancel if more vertical
+        if (!axisLocked) {
+            if (Math.abs(rawX) < DEAD && Math.abs(rawY) < DEAD) return;
+            if (Math.abs(rawY) >= Math.abs(rawX)) { dragging = false; return; }
+            axisLocked = true;
+        }
+
+        if (rawX >= 0) return; // left swipe only
+        dx = rawX;
+        e.preventDefault(); // stop page scroll during horizontal drag
+        const t = dx < -SNAP ? -SNAP + (dx + SNAP) * 0.1 : dx;
+        content.style.transform = `translateX(${t}px)`;
+        if (leftEl) leftEl.style.opacity = String(Math.min(1, Math.abs(dx) / SNAP));
+    }
+
+    function onEnd() {
+        if (!dragging) return;
+        dragging = false;
+        const elapsed = Date.now() - startTime;
+        if (dx <= -SNAP && elapsed >= MIN_MS) {
+            content.style.transition = 'transform 0.2s var(--ease-out)';
+            content.style.transform  = `translateX(-${SNAP}px)`;
+            if (leftEl) { leftEl.style.opacity = '1'; leftEl.classList.add('corr-swipe-revealed'); }
+            revealed = true;
+        } else {
+            reset();
+        }
+    }
+
+    // passive:false on touchstart so Safari knows this gesture may call preventDefault in touchmove
+    row.addEventListener('touchstart',  onStart, { passive: false });
+    row.addEventListener('touchmove',   onMove,  { passive: false });
+    row.addEventListener('touchend',    onEnd,   { passive: true });
+    row.addEventListener('touchcancel', reset,   { passive: true });
+    row.addEventListener('mousedown',   onStart);
+    row.addEventListener('mousemove',   onMove);
+    row.addEventListener('mouseup',     onEnd);
+    row.addEventListener('mouseleave',  onEnd);
+}
+
+function resolveCorrectionWithConfirm(correctionId, skillId) {
+    const c = appState.corrections.find(x => x.id === correctionId);
+    if (!c) return;
+
+    // Inline confirm — replaces swipe-content with two-option prompt
+    const row = document.querySelector(`.swipe-row[data-correction-id="${correctionId}"]`);
+    if (!row) return;
+    const content = row.querySelector('.swipe-content');
+    if (!content) return;
+
+    content.style.transition = '';
+    content.style.transform  = '';
+    content.innerHTML = `
+        <div class="corr-confirm-prompt">
+            <div class="corr-confirm-text">Mark as resolved? It'll stay in your full record but won't show up by default.</div>
+            <div class="corr-confirm-actions">
+                <button class="corr-confirm-btn corr-confirm-yes" onmousedown="commitResolveCorrection('${correctionId}', '${skillId}')" ontouchend="event.preventDefault(); commitResolveCorrection('${correctionId}', '${skillId}')">Yes, resolved</button>
+                <button class="corr-confirm-btn corr-confirm-cancel" onmousedown="cancelCorrectionConfirm('${correctionId}', '${skillId}')" ontouchend="event.preventDefault(); cancelCorrectionConfirm('${correctionId}', '${skillId}')">Keep it</button>
+            </div>
+        </div>`;
+}
+
+function commitResolveCorrection(correctionId, skillId) {
+    const c = appState.corrections.find(x => x.id === correctionId);
+    if (!c) return;
+    c.isResolved = true;
+    storage.save('corrections', appState.corrections);
+
+    // Animate row out then re-render the corrections section
+    const row = document.querySelector(`.swipe-row[data-correction-id="${correctionId}"]`);
+    if (row) {
+        row.style.transition = 'max-height 0.3s var(--ease-out), opacity 0.25s ease, margin 0.3s ease';
+        row.style.maxHeight  = row.offsetHeight + 'px';
+        requestAnimationFrame(() => {
+            row.style.maxHeight    = '0';
+            row.style.opacity      = '0';
+            row.style.marginBottom = '0';
+            row.style.overflow     = 'hidden';
+        });
+        setTimeout(() => _refreshCorrectionsList(skillId), 300);
+    } else {
+        _refreshCorrectionsList(skillId);
+    }
+}
+
+function cancelCorrectionConfirm(correctionId, skillId) {
+    // Re-render just this card back to its original state
+    const row = document.querySelector(`.swipe-row[data-correction-id="${correctionId}"]`);
+    if (!row) return;
+    const c = appState.corrections.find(x => x.id === correctionId);
+    if (!c) return;
+    const isResolved = !!c.isResolved;
+    const cardHtml = `
+        <div class="skill-corr-item${c.isRecurring && !isResolved ? ' is-recurring' : ''}${isResolved ? ' is-resolved' : ''}">
+            <div class="skill-corr-text">&ldquo;${escapeHtml(c.text)}&rdquo;</div>
+            ${c.isRecurring && !isResolved ? `<span class="skill-correction-recurring">recurring</span>` : ''}
+            ${isResolved ? `<span class="skill-corr-resolved-label">resolved</span>` : ''}
+        </div>`;
+    const content = row.querySelector('.swipe-content');
+    if (content) content.innerHTML = cardHtml;
+    attachCorrectionSwipe(row, skillId);
+}
+
+function unresolveCorrection(correctionId, skillId) {
+    const c = appState.corrections.find(x => x.id === correctionId);
+    if (!c) return;
+    c.isResolved = false;
+    storage.save('corrections', appState.corrections);
+    _refreshCorrectionsList(skillId);
+}
+
+function deleteCorrection(correctionId, skillId) {
+    const c = appState.corrections.find(x => x.id === correctionId);
+    if (!c) return;
+
+    const row = document.querySelector(`.swipe-row[data-correction-id="${correctionId}"]`);
+    if (!row) return;
+    const content = row.querySelector('.swipe-content');
+    if (!content) return;
+
+    content.style.transition = '';
+    content.style.transform  = '';
+    content.innerHTML = `
+        <div class="corr-confirm-prompt">
+            <div class="corr-confirm-text">Delete this correction? This can't be undone.</div>
+            <div class="corr-confirm-actions">
+                <button class="corr-confirm-btn corr-confirm-yes corr-confirm-delete" onmousedown="commitDeleteCorrection('${correctionId}', '${skillId}')" ontouchend="event.preventDefault(); commitDeleteCorrection('${correctionId}', '${skillId}')">Delete</button>
+                <button class="corr-confirm-btn corr-confirm-cancel" onmousedown="cancelCorrectionConfirm('${correctionId}', '${skillId}')" ontouchend="event.preventDefault(); cancelCorrectionConfirm('${correctionId}', '${skillId}')">Cancel</button>
+            </div>
+        </div>`;
+}
+
+function commitDeleteCorrection(correctionId, skillId) {
+    appState.corrections = appState.corrections.filter(c => c.id !== correctionId);
+    // Remove from any goals that reference this correction
+    (appState.goals || []).forEach(g => {
+        if (g.correctionIds) g.correctionIds = g.correctionIds.filter(id => id !== correctionId);
+    });
+    storage.save('corrections', appState.corrections);
+    storage.save('goals', appState.goals);
+
+    const row = document.querySelector(`.swipe-row[data-correction-id="${correctionId}"]`);
+    if (row) {
+        row.style.transition = 'max-height 0.3s var(--ease-out), opacity 0.25s ease, margin 0.3s ease';
+        row.style.maxHeight  = row.offsetHeight + 'px';
+        requestAnimationFrame(() => {
+            row.style.maxHeight    = '0';
+            row.style.opacity      = '0';
+            row.style.marginBottom = '0';
+            row.style.overflow     = 'hidden';
+        });
+        setTimeout(() => _refreshCorrectionsList(skillId), 300);
+    } else {
+        _refreshCorrectionsList(skillId);
+    }
+}
+
+function _refreshCorrectionsList(skillId) {
+    // Re-render the corrections section in place without a full screen reload
+    const display = document.getElementById('skill-corrections-display');
+    if (!display) return;
+
+    const allCorrections = appState.corrections
+        .filter(c => c.skillId === skillId)
+        .sort((a, b) => b.createdAt - a.createdAt);
+    const active   = allCorrections.filter(c => !c.isResolved);
+    const resolved = allCorrections.filter(c =>  c.isResolved);
+
+    const PREVIEW = 3;
+    const hasMore = active.length > PREVIEW;
+    const resolvedCount = resolved.length;
+    const seeAllLabel = resolvedCount > 0
+        ? `see all ${active.length} corrections · ${resolvedCount} resolved`
+        : `see all ${active.length} corrections`;
+
+    let html;
+    if (active.length === 0 && resolvedCount === 0) {
+        html = `<div class="skill-detail-empty-state">No corrections logged yet.</div>`;
+    } else if (active.length === 0) {
+        html = `<div class="skill-detail-empty-state">No active corrections. <button class="skill-see-more-btn" style="display:inline;padding:0;" onclick="expandSkillCorrections('${skillId}')">See ${resolvedCount} resolved.</button></div>`;
+    } else {
+        const listHtml = renderSkillCorrectionsGrouped(active.slice(0, PREVIEW), skillId);
+        html = `<div id="skill-corrections-list"><div id="skill-corr-list">${listHtml}</div></div>`;
+        if (hasMore || resolvedCount > 0) {
+            html += `<button class="skill-see-more-btn" id="skill-see-more" onclick="expandSkillCorrections('${skillId}')">${seeAllLabel}</button>`;
+        }
+    }
+
+    display.innerHTML = html;
+    display.querySelectorAll('.swipe-row[data-correction-id]').forEach(row => {
+        attachCorrectionSwipe(row, skillId);
+    });
 }
 
 function renderSkillNotesSectionInPlace(skillId, sectionEl) {

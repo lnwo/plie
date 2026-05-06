@@ -2035,7 +2035,7 @@ function renderFocusSheetContent(area) {
         .filter(s => s.dimensionIds && s.dimensionIds.some(d => areaDimIds.includes(d)))
         .map(s => s.id);
     const areaCorrs = (appState.corrections || [])
-        .filter(c => areaSkillIds.includes(c.skillId))
+        .filter(c => areaSkillIds.includes(c.skillId) && !c.isResolved)
         .sort((a, b) => b.createdAt - a.createdAt);
     const areaGoals = (appState.goals || [])
         .filter(g => areaDimIds.includes(g.dimensionId) && !g.completedAt);

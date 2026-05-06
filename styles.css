@@ -5597,6 +5597,132 @@ input.session-block-topic-input:focus {
 
 .skill-corr-source:hover { color: var(--gold); }
 
+/* ── PLI-018 — Resolved corrections ── */
+
+/* Muted styling for resolved items in see-all view */
+.skill-corr-item.is-resolved {
+    border-left-color: var(--ink-6);
+    opacity: 0.6;
+}
+
+.skill-corr-item.is-resolved .skill-corr-text {
+    color: var(--ink-5);
+    font-style: italic;
+}
+
+/* "resolved" quiet label */
+.skill-corr-resolved-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    color: var(--ink-5);
+    margin-top: 2px;
+    display: block;
+}
+
+/* Divider between active and resolved in see-all */
+.skill-corr-resolved-divider {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-5);
+    margin: var(--sp-md) 0 var(--sp-sm);
+}
+
+/* Swipe tray for correction cards */
+.corr-swipe-left {
+    padding: 0;
+    gap: 0;
+    width: 200px;
+    right: 0;
+    left: auto;
+    justify-content: flex-end;
+    overflow: hidden;
+}
+
+.corr-swipe-left.corr-swipe-revealed {
+    pointer-events: auto;
+}
+
+.corr-swipe-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 400;
+    border: none;
+    cursor: pointer;
+    height: 100%;
+    padding: 0 var(--sp-md);
+    white-space: nowrap;
+}
+
+.corr-swipe-resolve {
+    background: var(--sage);
+    color: #fff;
+    flex: 1;
+}
+
+.corr-swipe-unresolve {
+    background: var(--surface-warm);
+    color: var(--ink-4);
+    flex: 1;
+}
+
+.corr-swipe-delete {
+    background: var(--coral);
+    color: #fff;
+    width: 72px;
+}
+
+/* Inline confirm prompt — replaces swipe-content on confirm gesture */
+.corr-confirm-prompt {
+    background: var(--surface);
+    padding: var(--sp-md) var(--sp-lg);
+    border-radius: var(--r-md);
+}
+
+.corr-confirm-text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    color: var(--ink-2);
+    line-height: 1.5;
+    margin-bottom: var(--sp-sm);
+}
+
+.corr-confirm-actions {
+    display: flex;
+    gap: var(--sp-sm);
+}
+
+.corr-confirm-btn {
+    all: unset;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-small);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 12px;
+    border-radius: 4px;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.corr-confirm-yes {
+    background: var(--sage);
+    color: #fff;
+}
+
+.corr-confirm-delete {
+    background: var(--coral);
+    color: #fff;
+}
+
+.corr-confirm-cancel {
+    color: var(--ink-4);
+}
+
 /* See more button */
 .skill-see-more-btn {
     background: none;
