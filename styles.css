@@ -2538,9 +2538,11 @@ h1, h2, .screen-heading {
     border-radius: var(--r-md);
     box-shadow: var(--shadow-2);
     z-index: 10;
-    overflow: hidden;
-    max-height: 220px;
+    /* ~3.5 rows visible before scroll; each row ≈ 62px */
+    max-height: 217px;
+    overflow-x: hidden;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .session-combobox-row {
