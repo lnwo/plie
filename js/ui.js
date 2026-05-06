@@ -7231,12 +7231,12 @@ function renderSkillCorrectionsGrouped(corrections, skillId, opts = {}) {
             // Wrap in swipe-row — resolved items only get delete on left; active get resolve + delete
             const leftTray = isResolved
                 ? `<div class="swipe-action-left corr-swipe-left corr-swipe-left--resolved">
-                       <button class="corr-swipe-btn corr-swipe-unresolve" onmousedown="unresolveCorrection('${c.id}', '${skillId}')">mark as active</button>
-                       <button class="corr-swipe-btn corr-swipe-delete" onmousedown="deleteCorrection('${c.id}', '${skillId}')">delete</button>
+                       <button class="corr-swipe-btn corr-swipe-unresolve" onmousedown="unresolveCorrection('${c.id}', '${skillId}')" ontouchend="event.preventDefault(); unresolveCorrection('${c.id}', '${skillId}')">mark as active</button>
+                       <button class="corr-swipe-btn corr-swipe-delete" onmousedown="deleteCorrection('${c.id}', '${skillId}')" ontouchend="event.preventDefault(); deleteCorrection('${c.id}', '${skillId}')">delete</button>
                    </div>`
                 : `<div class="swipe-action-left corr-swipe-left">
-                       <button class="corr-swipe-btn corr-swipe-resolve" onmousedown="resolveCorrectionWithConfirm('${c.id}', '${skillId}')">resolve</button>
-                       <button class="corr-swipe-btn corr-swipe-delete" onmousedown="deleteCorrection('${c.id}', '${skillId}')">delete</button>
+                       <button class="corr-swipe-btn corr-swipe-resolve" onmousedown="resolveCorrectionWithConfirm('${c.id}', '${skillId}')" ontouchend="event.preventDefault(); resolveCorrectionWithConfirm('${c.id}', '${skillId}')">resolve</button>
+                       <button class="corr-swipe-btn corr-swipe-delete" onmousedown="deleteCorrection('${c.id}', '${skillId}')" ontouchend="event.preventDefault(); deleteCorrection('${c.id}', '${skillId}')">delete</button>
                    </div>`;
             return `
                 <div class="swipe-row" data-correction-id="${c.id}">
@@ -7415,6 +7415,9 @@ function attachCorrectionSwipe(row, skillId) {
     const leftEl  = row.querySelector('.swipe-action-left');
     if (!content) return;
 
+    // Allow vertical scroll through but let JS handle horizontal — browser won't intercept pan-x
+    row.style.touchAction = 'pan-y';
+
     const SNAP = 200, MIN_MS = 120, DEAD = 8;
     let startX = 0, startY = 0, startTime = 0, dx = 0;
     let dragging = false, revealed = false, axisLocked = false;
@@ -7504,8 +7507,8 @@ function resolveCorrectionWithConfirm(correctionId, skillId) {
         <div class="corr-confirm-prompt">
             <div class="corr-confirm-text">Mark as resolved? It'll stay in your full record but won't show up by default.</div>
             <div class="corr-confirm-actions">
-                <button class="corr-confirm-btn corr-confirm-yes" onmousedown="commitResolveCorrection('${correctionId}', '${skillId}')">Yes, resolved</button>
-                <button class="corr-confirm-btn corr-confirm-cancel" onmousedown="cancelCorrectionConfirm('${correctionId}', '${skillId}')">Keep it</button>
+                <button class="corr-confirm-btn corr-confirm-yes" onmousedown="commitResolveCorrection('${correctionId}', '${skillId}')" ontouchend="event.preventDefault(); commitResolveCorrection('${correctionId}', '${skillId}')">Yes, resolved</button>
+                <button class="corr-confirm-btn corr-confirm-cancel" onmousedown="cancelCorrectionConfirm('${correctionId}', '${skillId}')" ontouchend="event.preventDefault(); cancelCorrectionConfirm('${correctionId}', '${skillId}')">Keep it</button>
             </div>
         </div>`;
 }
@@ -7574,8 +7577,8 @@ function deleteCorrection(correctionId, skillId) {
         <div class="corr-confirm-prompt">
             <div class="corr-confirm-text">Delete this correction? This can't be undone.</div>
             <div class="corr-confirm-actions">
-                <button class="corr-confirm-btn corr-confirm-yes corr-confirm-delete" onmousedown="commitDeleteCorrection('${correctionId}', '${skillId}')">Delete</button>
-                <button class="corr-confirm-btn corr-confirm-cancel" onmousedown="cancelCorrectionConfirm('${correctionId}', '${skillId}')">Cancel</button>
+                <button class="corr-confirm-btn corr-confirm-yes corr-confirm-delete" onmousedown="commitDeleteCorrection('${correctionId}', '${skillId}')" ontouchend="event.preventDefault(); commitDeleteCorrection('${correctionId}', '${skillId}')">Delete</button>
+                <button class="corr-confirm-btn corr-confirm-cancel" onmousedown="cancelCorrectionConfirm('${correctionId}', '${skillId}')" ontouchend="event.preventDefault(); cancelCorrectionConfirm('${correctionId}', '${skillId}')">Cancel</button>
             </div>
         </div>`;
 }
