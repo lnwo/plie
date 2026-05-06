@@ -1595,9 +1595,12 @@ function renderTrainingRhythmChart() {
     const yMax    = Math.ceil(maxVal / 3) * 3 || 3;
     const yTicks  = Array.from({ length: yMax / 3 + 1 }, (_, i) => i * 3);
 
-    // Averages — days elapsed so far this week
-    const daysElapsed = Math.max(todayIdx + 1, 1);
-    const thisAvg = (thisWeekData.slice(0, daysElapsed).reduce((a, b) => a + b, 0) / daysElapsed).toFixed(1);
+    // Average — total across both weeks divided by 2 (full weeks, not days elapsed)
+    // This gives a stable "per week" number that doesn't collapse to 0 mid-week
+    const twoWeekTotal = [...thisWeekData, ...lastWeekData].reduce((a, b) => a + b, 0);
+    const avgRaw = twoWeekTotal / 2;
+    // Show one decimal only when meaningful — drop .0 suffix
+    const thisAvg = avgRaw % 1 === 0 ? String(avgRaw) : avgRaw.toFixed(1);
     const metricLabel = metric === 'hours' ? 'hours' : 'sessions';
 
     // SVG layout
