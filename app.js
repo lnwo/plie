@@ -2519,6 +2519,13 @@ function renderSettings() {
             </div>
             <div class="settings-row">
                 <div>
+                    <div class="settings-row-label">Load sample data</div>
+                    <div class="settings-row-sub">Populates sessions, corrections and goals for testing</div>
+                </div>
+                <button class="settings-row-action" onmousedown="loadSampleData()">Load</button>
+            </div>
+            <div class="settings-row">
+                <div>
                     <div class="settings-row-label">Reset all data</div>
                     <div class="settings-row-sub">Wipes everything and restarts from onboarding</div>
                 </div>
@@ -2778,6 +2785,24 @@ function handlePicUpload(input) {
         renderProfileStatus();
     };
     reader.readAsDataURL(file);
+}
+
+function loadSampleData() {
+    // Reset to clean state first, then seed — so it always loads a full fresh dataset
+    storage.clear();
+    appState.sessions      = [];
+    appState.corrections   = [];
+    appState.sessionSkills = [];
+    appState.goals         = [];
+    appState.timeline      = [];
+    appState.teachers      = [];
+    appState.venues        = [];
+    appState.cities        = [];
+    appState.skills.forEach(s => { s.flagged = false; s.tracked = false; });
+    seedMockData();
+    closeSettings();
+    navigateTo('barre');
+    showBarreScreen();
 }
 
 function exportReadableData() {
