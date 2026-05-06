@@ -4369,7 +4369,7 @@ function openGoalEditor(goalId) {
         category:         goal.category    || null,
         correctionIds:    [...(goal.correctionIds || [])],
         milestones:       (goal.milestones || []).map(m => ({ ...m })),
-        goalType:         goal.goalType         || null,
+        goalType:         goal.goalType === 'body' ? 'skill' : (goal.goalType || null),
         commitmentPeriod: goal.commitmentPeriod || '',
         progressMarkers:  markers,
         skillIds:         [...(goal.skillIds || [])],
@@ -4503,11 +4503,7 @@ function renderGoalCreator() {
                        value="${escapeHtml(m.text)}"
                        placeholder="${markerPlaceholders[i % markerPlaceholders.length]}"
                        oninput="appState._goalDraft.progressMarkers[${i}].text = this.value" />
-                <button class="block-remove-btn" onmousedown="removeProgressMarker(${i})">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                        <line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/>
-                    </svg>
-                </button>
+                <button class="block-remove-btn goal-marker-delete" onmousedown="removeProgressMarker(${i})">${ICONS.get('trash', 14)}</button>
             </div>
         `).join('');
 
@@ -4597,11 +4593,7 @@ function renderGoalCreator() {
                                value="${escapeHtml(m.text)}"
                                placeholder="${markerPlaceholders[i % markerPlaceholders.length]}"
                                oninput="appState._goalDraft.progressMarkers[${i}].text = this.value" />
-                        <button class="block-remove-btn" onmousedown="removeProgressMarker(${i})">
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                                <line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/>
-                            </svg>
-                        </button>
+                        <button class="block-remove-btn goal-marker-delete" onmousedown="removeProgressMarker(${i})">${ICONS.get('trash', 14)}</button>
                     </div>`).join('')}</div>
                 <button class="add-block-btn" style="margin-top: var(--sp-sm);" onmousedown="addProgressMarker()">+ add a step</button>
             </div>
@@ -4717,15 +4709,13 @@ function renderGoalCreator() {
     const typeTabsHtml = d.goalType ? `
         <div class="goal-type-tabs" id="goal-type-tabs">
             <button type="button" class="goal-type-tab ${d.goalType === 'skill' ? 'active' : ''}" data-type="skill">A skill</button>
-            <button type="button" class="goal-type-tab ${d.goalType === 'body' ? 'active' : ''}" data-type="body">Body</button>
             <button type="button" class="goal-type-tab ${d.goalType === 'intention' ? 'active' : ''}" data-type="intention">A feeling or state</button>
             <button type="button" class="goal-type-tab ${d.goalType === 'habit' ? 'active' : ''}" data-type="habit">A habit</button>
         </div>
     ` : '';
 
     let bodyHtml = '';
-    if (d.goalType === 'skill') bodyHtml = skillFormHtml();
-    else if (d.goalType === 'body') bodyHtml = bodyGoalFormHtml();
+    if (d.goalType === 'skill' || d.goalType === 'body') bodyHtml = skillFormHtml();
     else if (d.goalType === 'intention') bodyHtml = intentionFormHtml();
     else if (d.goalType === 'habit') bodyHtml = habitFormHtml();
     if (bodyHtml && d._editId) {
@@ -6388,9 +6378,9 @@ function renderTimelineEntry(entry) {
                 ? `showGoalReflectionDetail('${goal.id}')`
                 : `openGoalReflectionSheet('${goal.id}')`;
             const editFn = `openGoalReflectionSheet('${goal.id}')`;
-            const actionLabel = hasReflection ? 'edit' : 'add note';
+            const actionLabel = hasReflection ? 'edit' : '+ add note';
             const tapHint = hasReflection
-                ? `<div class="timeline-tap-hint">tap to review \u2192</div>`
+                ? `<div class="timeline-milestone-review">Review \u2192</div>`
                 : '';
             return `
             <div class="timeline-item timeline-item-milestone timeline-item-tappable" onclick="${cardTapFn}">
