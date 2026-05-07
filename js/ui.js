@@ -568,7 +568,7 @@ function closeSkillSlot(blockId, slot) {
             _skillPickerOnSelect = null;
             renderSkillSlotInPlace(blockId);
         }
-    }, 250);
+    }, 400);
 }
 
 function confirmSkillSlot(blockId, slot, topicId, label) {
@@ -1630,7 +1630,7 @@ function renderBlockHtml(block, index) {
                     ${ICONS.get('x', 16)}
                     remove
                 </div>
-                <div class="session-block session-block--expanded${block.isHighlight ? ' session-block--highlighted' : ''}" id="block-${block.id}">
+                <div class="session-block session-block--expanded session-block--goal${block.isHighlight ? ' session-block--highlighted' : ''}" id="block-${block.id}">
                     ${blockTypeLabelHtml}
                     <div class="session-block-header">
                         ${!block.isHighlight ? `<button class="block-star-btn"
