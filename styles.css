@@ -2767,14 +2767,14 @@ h1, h2, .screen-heading {
 .session-name-input {
     flex: 1;
     min-width: 0;
-    background: var(--surface-warm);
-    border: 1.5px solid var(--gold-soft);
-    border-radius: 8px;
+    background: #fff;
+    border: 0.5px solid rgba(26, 23, 20, 0.15);
+    border-radius: 4px;
     padding: 13px var(--sp-md);
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-body);
     color: var(--ink);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: border-color 0.15s ease, background 0.15s ease;
     -webkit-appearance: none;
     appearance: none;
 }
@@ -2782,10 +2782,11 @@ h1, h2, .screen-heading {
 .session-name-input:focus {
     outline: none;
     border-color: var(--gold);
-    box-shadow: 0 0 0 3px rgba(196, 144, 12, 0.12);
+    background: var(--surface-warm);
+    box-shadow: none;
 }
 
-.session-name-input::placeholder { color: var(--ink-4); }
+.session-name-input::placeholder { color: var(--ink-4); font-style: italic; }
 
 .session-name-clear {
     all: unset;
@@ -3468,15 +3469,7 @@ h1, h2, .screen-heading {
 }
 
 /* Session name input — overrides global input[type="text"] rule above */
-input.session-name-input {
-    background: var(--surface-warm);
-    border-radius: 8px;
-}
-
-input.session-name-input:focus {
-    border-color: var(--gold);
-    box-shadow: 0 0 0 3px rgba(196, 144, 12, 0.12);
-}
+/* Duplicate rule removed — .session-name-input above is canonical */
 
 /* Topic input — overrides global input[type="text"] to keep transparent bg */
 input.session-block-topic-input {
@@ -3873,21 +3866,22 @@ input.session-block-topic-input:focus {
 .block-bullet-entry {
     width: 100%;
     min-height: 60px;
-    background: var(--surface-warm);
-    border: 1px solid var(--border-light);
-    border-radius: var(--r-sm);
+    background: #fff;
+    border: 0.5px solid rgba(26, 23, 20, 0.15);
+    border-radius: 4px;
     padding: 10px var(--sp-md);
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-small);
     color: var(--ink);
     line-height: 1.55;
     outline: none;
-    transition: border-color 0.2s ease;
+    transition: border-color 0.15s ease, background 0.15s ease;
     box-sizing: border-box;
 }
 
 .block-bullet-entry:focus {
-    border-color: var(--gold-mid);
+    border-color: var(--gold);
+    background: var(--surface-warm);
 }
 
 /* Each line (div) gets a dash prefix via ::before */
@@ -9695,29 +9689,29 @@ button, a, input, select, textarea,
     height: 24px;
     padding: 4px 8px;
     border-radius: 2px;
-    border: 0.5px solid rgba(233, 233, 231, 1);
-    background: var(--surface-warm);
+    border: 0.5px solid rgba(26, 23, 20, 0.15);
+    background: #fff;
     font-size: var(--fs-card);
     box-shadow: none;
 }
 #goal-creator-overlay .session-input:not(textarea):focus {
     border-color: var(--gold);
-    box-shadow: none;
     background: var(--surface-warm);
+    box-shadow: none;
 }
 #goal-creator-overlay textarea.session-input {
     padding: 6px 8px;
     border-radius: 2px;
-    border: 0.5px solid rgba(233, 233, 231, 1);
-    background: var(--surface-warm);
+    border: 0.5px solid rgba(26, 23, 20, 0.15);
+    background: #fff;
     font-size: var(--fs-card);
     box-shadow: none;
     min-height: 52px;
 }
 #goal-creator-overlay textarea.session-input:focus {
     border-color: var(--gold);
-    box-shadow: none;
     background: var(--surface-warm);
+    box-shadow: none;
 }
 
 /* Progress marker inputs — same spec */
@@ -9734,9 +9728,9 @@ button, a, input, select, textarea,
     padding: 4px 8px;
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-card);
-    border: 0.5px solid rgba(233, 233, 231, 1);
+    border: 0.5px solid rgba(26, 23, 20, 0.15);
     border-radius: 2px;
-    background: var(--surface-warm);
+    background: #fff;
     color: var(--ink);
     box-sizing: border-box;
 }
