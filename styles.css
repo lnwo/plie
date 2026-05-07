@@ -3125,27 +3125,55 @@ h1, h2, .screen-heading {
     flex-wrap: wrap;
 }
 
-.day-chip {
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: var(--r-sm);
-    padding: 6px 10px;
+/* ── Base chip component ─────────────────────────────────────────────────────
+   Shared by: .day-chip, .recurrence-chip, .block-tag-chip, .goal-period-chip
+   Per CLAUDE.md: default white bg + subtle border; selected = --ink fill, white text
+   Goal-period chips override selected state to gold (goal creator only).
+   ──────────────────────────────────────────────────────────────────────────── */
+.chip,
+.day-chip,
+.recurrence-chip,
+.block-tag-chip,
+.goal-period-chip {
+    background: #fff;
+    border: 0.5px solid rgba(26, 23, 20, 0.15);
+    border-radius: 4px;
     font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
-    font-weight: 500;
+    font-size: var(--fs-card);
+    font-weight: 400;
     color: var(--ink-2);
+    padding: 4px 10px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
     cursor: pointer;
-    transition: all 0.2s var(--ease-out);
-    min-width: 40px;
-    text-align: center;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: background .12s, border-color .12s, color .12s;
+    box-sizing: border-box;
+    white-space: nowrap;
 }
 
-.day-chip:hover { border-color: var(--gold-mid); color: var(--primary); }
-
-.day-chip.selected {
-    background: var(--primary);
-    border-color: var(--primary);
+.chip.selected, .chip--selected,
+.day-chip.selected,
+.recurrence-chip.selected,
+.block-tag-chip.active {
+    background: var(--ink);
+    border-color: var(--ink);
     color: #fff;
+}
+
+.chip:hover:not(.selected):not(.chip--selected),
+.day-chip:hover:not(.selected),
+.recurrence-chip:hover:not(.selected) {
+    border-color: var(--gold);
+    color: var(--ink);
+}
+
+/* day-chip keeps its min-width for MO/TU/WE labels */
+.day-chip {
+    min-width: 40px;
+    justify-content: center;
 }
 
 /* ── New session form (inline card) ── */
@@ -3186,29 +3214,11 @@ h1, h2, .screen-heading {
 
 .recurrence-chips {
     display: flex;
-    gap: var(--sp-sm);
+    gap: 4px;
     flex-wrap: wrap;
 }
 
-.recurrence-chip {
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: var(--r-full);
-    padding: 7px 14px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
-    color: var(--ink-2);
-    cursor: pointer;
-    transition: all 0.2s var(--ease-out);
-}
-
-.recurrence-chip:hover { border-color: var(--gold-mid); color: var(--primary); }
-
-.recurrence-chip.selected {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: #fff;
-}
+/* .recurrence-chip base styles come from .chip composite selector above */
 
 /* ── Notes & corrections blocks ── */
 
@@ -3998,25 +4008,7 @@ input.session-block-topic-input:focus {
     padding: var(--sp-sm) var(--sp-md) var(--sp-md);
 }
 
-.block-tag-chip {
-    font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-caption);
-    font-weight: 500;
-    color: var(--ink-4);
-    background: none;
-    border: 1px solid var(--ink-6);
-    border-radius: var(--r-full);
-    padding: 3px 10px;
-    cursor: pointer;
-    transition: background .15s, color .15s, border-color .15s;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.block-tag-chip.active {
-    background: var(--ink);
-    color: #fff;
-    border-color: var(--ink);
-}
+/* .block-tag-chip base + active come from .chip composite selector above */
 
 /* ── Correction reuse section (PLI-011) ───────────────────────────────────── */
 
@@ -9552,28 +9544,11 @@ button, a, input, select, textarea,
     margin: 0;
 }
 
-/* Commitment period / how-often chips */
+/* Commitment period chips — base from .chip, selected overrides to gold (goal creator only) */
 .goal-period-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-}
-.goal-period-chip {
-    background: var(--surface);
-    border: 0.5px solid rgba(233, 233, 231, 1);
-    border-radius: 4px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-card);
-    color: var(--ink);
-    padding: 4px 10px;
-    height: 24px;
-    display: inline-flex;
-    align-items: center;
-    cursor: pointer;
-    transition: background .12s, border-color .12s;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-    box-sizing: border-box;
 }
 .goal-period-chip.selected {
     background: var(--gold-soft);
