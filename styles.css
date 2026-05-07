@@ -2537,26 +2537,20 @@ h1, h2, .screen-heading {
     pointer-events: none;
 }
 
-/* Legacy standalone note-editor (kept for backward compat) */
+/* .note-editor — uses note-card-input container for border/bg; inner is transparent */
 .note-editor {
     width: 100%;
     min-height: 220px;
-    background: var(--surface-warm);
-    border: 1px solid var(--gold);
-    border-radius: var(--r-md);
-    padding: var(--sp-lg);
-    font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-body);
-    color: var(--ink-2);
     line-height: 1.6;
-    outline: none;
     cursor: text;
     box-sizing: border-box;
     white-space: pre-wrap;
     word-break: break-word;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 0;
 }
-
-.note-editor:focus { border-color: var(--gold); }
 
 .note-editor-hint {
     font-size: var(--fs-caption);
@@ -2725,32 +2719,66 @@ h1, h2, .screen-heading {
 }
 
 /* ── Reusable text field — applies to all single-line and multi-line inputs ── */
-.session-input {
-    width: 100%;
+/* ═══════════════════════════════════════════════════════════════════════════
+   FIELD INPUT — single reusable component for all text entry in the app
+   Spec: white rest, 0.5px border, 4px radius, 12px DM Sans, gold+warm on focus
+   ═══════════════════════════════════════════════════════════════════════════ */
+.session-input,
+.session-name-input,
+.block-bullet-entry,
+.session-block-textarea,
+input[type="text"],
+input[type="date"],
+input[type="search"],
+textarea.session-input {
     background: #fff;
     border: 0.5px solid rgba(26, 23, 20, 0.15);
-    border-radius: var(--r-md);
-    padding: 13px var(--sp-md);
+    border-radius: 4px;
     font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-body);
+    font-size: var(--fs-card);
     color: var(--ink);
     transition: border-color 0.15s ease, background 0.15s ease;
+    outline: none;
+    box-shadow: none;
     -webkit-appearance: none;
     appearance: none;
 }
 
-.session-input:focus {
-    outline: none;
+.session-input:focus,
+.session-name-input:focus,
+.block-bullet-entry:focus,
+.session-block-textarea:focus,
+input[type="text"]:focus,
+input[type="date"]:focus,
+input[type="search"]:focus {
     border-color: var(--gold);
     background: var(--surface-warm);
+    outline: none;
     box-shadow: none;
 }
 
-.session-input.input-error {
+.session-input::placeholder,
+.session-name-input::placeholder,
+.session-block-textarea::placeholder,
+input::placeholder,
+textarea::placeholder {
+    color: var(--ink-4);
+    font-style: italic;
+}
+
+.session-input.input-error,
+.session-name-input.input-error {
     border-color: var(--error);
 }
 
-.session-input::placeholder { color: var(--ink-3); font-style: italic; }
+/* Padding variants — same component, context-appropriate sizing */
+.session-input,
+.session-name-input,
+.session-block-textarea { width: 100%; padding: 10px 12px; }
+
+.session-input.session-input--compact { padding: 4px 8px; height: 24px; }
+
+.block-bullet-entry { width: 100%; min-height: 60px; padding: 10px var(--sp-md); line-height: 1.55; box-sizing: border-box; }
 
 /* ── Session name field (document-style logger) ── */
 .session-name-field {
@@ -2764,29 +2792,8 @@ h1, h2, .screen-heading {
     gap: var(--sp-sm);
 }
 
-.session-name-input {
-    flex: 1;
-    min-width: 0;
-    background: #fff;
-    border: 0.5px solid rgba(26, 23, 20, 0.15);
-    border-radius: 4px;
-    padding: 13px var(--sp-md);
-    font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-body);
-    color: var(--ink);
-    transition: border-color 0.15s ease, background 0.15s ease;
-    -webkit-appearance: none;
-    appearance: none;
-}
-
-.session-name-input:focus {
-    outline: none;
-    border-color: var(--gold);
-    background: var(--surface-warm);
-    box-shadow: none;
-}
-
-.session-name-input::placeholder { color: var(--ink-4); font-style: italic; }
+/* .session-name-input styles defined in FIELD INPUT block above */
+.session-name-input { flex: 1; min-width: 0; }
 
 .session-name-clear {
     all: unset;
@@ -3447,31 +3454,7 @@ h1, h2, .screen-heading {
     border-bottom: none;
 }
 
-.session-block-textarea, .session-block-title-input, textarea, input[type="text"], input[type="date"], input[type="search"] {
-    background: #fff;
-    border: 0.5px solid rgba(26, 23, 20, 0.15);
-    border-radius: var(--r-md);
-    color: var(--ink);
-    font-family: 'DM Sans', sans-serif;
-    transition: border-color 0.15s ease, background 0.15s ease;
-    outline: none;
-    box-shadow: none;
-}
-
-.session-block-textarea:focus, .session-block-title-input:focus, textarea:focus, input[type="text"]:focus, input[type="date"]:focus, input[type="search"]:focus {
-    border-color: var(--gold);
-    background: var(--surface-warm);
-    outline: none;
-    box-shadow: none;
-}
-
-.session-block-textarea::placeholder, .session-block-title-input::placeholder, textarea::placeholder, input::placeholder {
-    color: var(--ink-4);
-    font-style: italic;
-}
-
-/* Session name input — overrides global input[type="text"] rule above */
-/* Duplicate rule removed — .session-name-input above is canonical */
+/* All input[type=text]/textarea rules are in the FIELD INPUT block above */
 
 /* Topic input — overrides global input[type="text"] to keep transparent bg */
 input.session-block-topic-input {
@@ -3865,26 +3848,7 @@ input.session-block-topic-input:focus {
 .session-block-field {}
 
 /* Block bullet entry — contenteditable with live dash prefix per line */
-.block-bullet-entry {
-    width: 100%;
-    min-height: 60px;
-    background: #fff;
-    border: 0.5px solid rgba(26, 23, 20, 0.15);
-    border-radius: 4px;
-    padding: 10px var(--sp-md);
-    font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
-    color: var(--ink);
-    line-height: 1.55;
-    outline: none;
-    transition: border-color 0.15s ease, background 0.15s ease;
-    box-sizing: border-box;
-}
-
-.block-bullet-entry:focus {
-    border-color: var(--gold);
-    background: var(--surface-warm);
-}
+/* .block-bullet-entry base styles in FIELD INPUT block above */
 
 /* Each line (div) gets a dash prefix via ::before */
 .block-bullet-entry > div {
@@ -4140,26 +4104,8 @@ input.session-block-topic-input:focus {
     margin-bottom: var(--sp-xs);
 }
 
-.session-block-textarea {
-    width: 100%;
-    background: var(--surface-warm);
-    border: 1px solid var(--border-light);
-    border-radius: var(--r-sm);
-    padding: 10px var(--sp-md);
-    font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
-    color: var(--ink);
-    resize: none;
-    line-height: 1.55;
-    transition: border-color 0.2s ease;
-}
-
-.session-block-textarea:focus {
-    outline: none;
-    border-color: var(--gold-mid);
-}
-
-.session-block-textarea::placeholder { color: var(--ink-3); }
+/* .session-block-textarea base from FIELD INPUT block */
+.session-block-textarea { resize: none; line-height: 1.55; }
 
 /* Title textarea — bold, Apple Notes style */
 .session-block-title-input {
@@ -9687,33 +9633,15 @@ button, a, input, select, textarea,
 }
 
 /* Goal creator — compact input override (24px, Pixso spec) */
+/* Goal creator — compact padding only; all other field styles from base component */
 #goal-creator-overlay .session-input:not(textarea) {
     height: 24px;
     padding: 4px 8px;
-    border-radius: 2px;
-    border: 0.5px solid rgba(26, 23, 20, 0.15);
-    background: #fff;
-    font-size: var(--fs-card);
-    box-shadow: none;
-}
-#goal-creator-overlay .session-input:not(textarea):focus {
-    border-color: var(--gold);
-    background: var(--surface-warm);
-    box-shadow: none;
 }
 #goal-creator-overlay textarea.session-input {
     padding: 6px 8px;
-    border-radius: 2px;
-    border: 0.5px solid rgba(26, 23, 20, 0.15);
-    background: #fff;
-    font-size: var(--fs-card);
-    box-shadow: none;
     min-height: 52px;
-}
-#goal-creator-overlay textarea.session-input:focus {
-    border-color: var(--gold);
-    background: var(--surface-warm);
-    box-shadow: none;
+    height: auto;
 }
 
 /* Progress marker inputs — same spec */
@@ -9724,22 +9652,12 @@ button, a, input, select, textarea,
     margin-bottom: var(--sp-xs, 6px);
     min-height: 24px;
 }
+/* .goal-marker-input base from FIELD INPUT; only size overrides here */
 .goal-marker-input {
     flex: 1;
     height: 24px;
     padding: 4px 8px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-card);
-    border: 0.5px solid rgba(26, 23, 20, 0.15);
-    border-radius: 2px;
-    background: #fff;
-    color: var(--ink);
     box-sizing: border-box;
-}
-.goal-marker-input:focus {
-    outline: none;
-    border-color: var(--gold);
-    background: var(--surface-warm);
 }
 
 /* Goal type selection cards (no-type state) */
