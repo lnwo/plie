@@ -888,13 +888,9 @@ function renderSessionLogger() {
 
     const sessionBodyHtml = isNoteMode ?
         `<div class="note-card-input">
-            <input type="text" id="note-title-input" class="note-card-title-input"
-                   placeholder="Give it a title (optional)"
-                   value="${escapeHtml(s.sessionName || '')}"
-                   oninput="appState.currentSession.sessionName = this.value" />
-            <div contenteditable="true" id="note-editor" class="note-editor note-card-body"
+            <div contenteditable="true" id="note-editor" class="block-bullet-entry block-bullet-entry--note note-card-body"
                  spellcheck="true"
-                 data-placeholder="What stood out today?"
+                 data-placeholder="What stood out today? First line becomes the title."
             >${escapeHtml(s.generalNotes || '')}</div>
         </div>`
         :
@@ -1554,12 +1550,10 @@ function renderBlockHtml(block, index) {
         // Build preview body — no placeholder copy for empty blocks
         let bodyHtml = '';
         if (blockType === 'note') {
-            const noteTitle = block.blockTitle;
-            if (noteTitle) {
-                bodyHtml = '<div class="session-block-preview-line session-block-preview-line--bold">' + escapeHtml(noteTitle) + '</div>';
-                if (firstLine) bodyHtml += '<div class="session-block-preview-line session-block-preview-line--italic">' + escapeHtml(firstLine) + '</div>';
-            } else if (firstLine) {
-                bodyHtml = '<div class="session-block-preview-line session-block-preview-line--italic">' + escapeHtml(firstLine) + '</div>';
+            const noteLines = blockText ? blockText.split('\n').filter(l => l.trim()) : [];
+            if (noteLines[0]) {
+                bodyHtml = '<div class="session-block-preview-line session-block-preview-line--bold">' + escapeHtml(noteLines[0]) + '</div>';
+                if (noteLines[1]) bodyHtml += '<div class="session-block-preview-line session-block-preview-line--italic">' + escapeHtml(noteLines[1]) + '</div>';
             }
         } else if (blockType === 'goal') {
             const gd = block._goalDraft;
@@ -1663,17 +1657,13 @@ function renderBlockHtml(block, index) {
     if (blockType === 'note') {
         entryHtml = `
         <div class="note-card-input">
-            <input type="text" class="note-card-title-input"
-                   placeholder="Title (optional)"
-                   value="${escapeHtml(block.blockTitle || '')}"
-                   oninput="updateBlockField('${block.id}', 'blockTitle', this.value)" />
             <div class="block-bullet-entry block-bullet-entry--note note-card-body"
                  contenteditable="true"
                  data-block-id="${block.id}"
                  onfocus="normalizeBulletEntryOnFocus(this)"
                  onblur="normalizeBulletEntry(this)"
                  oninput="updateBlockBullets('${block.id}', this)"
-                 data-placeholder="What happened?"
+                 data-placeholder="Write something — first line becomes the title."
             >${escapeHtml(blockText) || ''}</div>
         </div>`;
     } else {
@@ -2547,13 +2537,11 @@ function saveSession() {
         el.innerText = ''; // clear so it doesn't double-save
     });
 
-    // Note mode: capture title + body
+    // Note mode: capture body (first line is the title by convention)
     const isNoteMode = s._mode === 'note';
     if (isNoteMode) {
         const noteEl = document.getElementById('note-editor');
         s.generalNotes = noteEl ? (noteEl.innerText || '').replace(/\n+$/, '') : '';
-        const titleEl = document.getElementById('note-title-input');
-        if (titleEl) s.sessionName = titleEl.value.trim() || null;
     }
 
     const now = Date.now();
@@ -6582,13 +6570,9 @@ function showSessionDetail(sessionId) {
 
     if (isNote) {
         const noteText = session.notes || '';
-        const lines = noteText.split('\n');
-        const titleLine = session.sessionName
-            ? escapeHtml(session.sessionName)
-            : escapeHtml(lines[0] || '');
-        const bodyLines = session.sessionName
-            ? escapeHtml(noteText)
-            : escapeHtml(lines.slice(1).join('\n'));
+        const lines = noteText.split('\n').filter(l => l.trim());
+        const titleLine = escapeHtml(lines[0] || '');
+        const bodyLines = escapeHtml(lines.slice(1).join('\n'));
         const noteContentHtml = titleLine
             ? `<span class="note-detail-line-title">${titleLine}</span>${bodyLines ? `<span class="note-detail-line-body">${bodyLines}</span>` : ''}`
             : `<span class="note-detail-line-body" style="color:var(--ink-4);font-style:italic;">No content.</span>`;

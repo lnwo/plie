@@ -2501,35 +2501,6 @@ h1, h2, .screen-heading {
     box-sizing: border-box;
 }
 
-.note-card-title-input {
-    display: block;
-    width: 100%;
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    outline: none;
-    box-shadow: none;
-    -webkit-appearance: none;
-    font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-body);
-    font-weight: 600;
-    color: var(--ink);
-    padding: 0;
-    margin-bottom: var(--sp-sm);
-}
-
-.note-card-title-input:focus {
-    border: none;
-    outline: none;
-    box-shadow: none;
-    background: transparent;
-}
-
-.note-card-title-input::placeholder {
-    color: var(--ink-4);
-    font-weight: 400;
-    font-style: italic;
-}
 
 /* Strip block-bullet-entry boxing when inside the note card */
 .note-card-input .block-bullet-entry {
