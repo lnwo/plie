@@ -3904,21 +3904,22 @@ input.session-block-topic-input:focus {
 /* ── Skill Slot Field ── */
 .skill-slot-field {
     margin: var(--sp-xs) var(--sp-md) var(--sp-sm);
-    background: var(--input-bg, #F9F5F0);
-    border: 1.5px solid var(--gold-soft);
-    border-radius: var(--r-md);
+    background: #fff;
+    border: 0.5px solid rgba(26, 23, 20, 0.15);
+    border-radius: 4px;
     padding: 7px var(--sp-md);
     position: relative;
-    transition: border-color 0.15s ease;
+    transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .skill-slot-field:focus-within {
     border-color: var(--gold);
+    background: var(--surface-warm);
 }
 
 .skill-slot-field--filled {
-    border-color: var(--border, #E9E9E7);
-    background: transparent;
+    border-color: rgba(26, 23, 20, 0.15);
+    background: #fff;
 }
 
 .skill-slot-row {
@@ -9633,15 +9634,26 @@ button, a, input, select, textarea,
 }
 
 /* Goal creator — compact input override (24px, Pixso spec) */
-/* Goal creator — compact padding only; all other field styles from base component */
-#goal-creator-overlay .session-input:not(textarea) {
+/* Goal field compact spec — shared by goal creator overlay AND inline goal blocks in logger */
+#goal-creator-overlay .session-input:not(textarea),
+.session-block--goal .session-input:not(textarea) {
     height: 24px;
     padding: 4px 8px;
 }
-#goal-creator-overlay textarea.session-input {
+#goal-creator-overlay textarea.session-input,
+.session-block--goal textarea.session-input {
     padding: 6px 8px;
     min-height: 52px;
     height: auto;
+}
+#goal-creator-overlay .session-field-label,
+.session-block--goal .session-field-label {
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0;
 }
 
 /* Progress marker inputs — same spec */
