@@ -60,7 +60,7 @@
     --surface:       #FFFFFF;   /* cards, sheets */
     --surface-warm:   #FDF8F3;   /* block shells */
     --surface-raised: #FAF5EE;   /* completed goal cards */
-    --input-bg:       #F9F5F0;   /* input fields — off-white */
+    --input-bg:       #ffffff;   /* input fields — white at rest (was warm #F9F5F0) */
 
     /* ── Borders ── */
     --border:        rgba(26, 23, 20, 0.12);
@@ -3448,24 +3448,26 @@ h1, h2, .screen-heading {
 }
 
 .session-block-textarea, .session-block-title-input, textarea, input[type="text"], input[type="date"], input[type="search"] {
-    background: var(--input-bg);
-    border: 1.5px solid var(--gold-soft);
+    background: #fff;
+    border: 0.5px solid rgba(26, 23, 20, 0.15);
     border-radius: var(--r-md);
     color: var(--ink);
     font-family: 'DM Sans', sans-serif;
-    transition: border-color 0.15s ease;
+    transition: border-color 0.15s ease, background 0.15s ease;
     outline: none;
     box-shadow: none;
 }
 
 .session-block-textarea:focus, .session-block-title-input:focus, textarea:focus, input[type="text"]:focus, input[type="date"]:focus, input[type="search"]:focus {
-    border-color: var(--gold-mid);
+    border-color: var(--gold);
+    background: var(--surface-warm);
     outline: none;
     box-shadow: none;
 }
 
 .session-block-textarea::placeholder, .session-block-title-input::placeholder, textarea::placeholder, input::placeholder {
     color: var(--ink-4);
+    font-style: italic;
 }
 
 /* Session name input — overrides global input[type="text"] rule above */
