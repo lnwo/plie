@@ -2506,7 +2506,10 @@ h1, h2, .screen-heading {
     width: 100%;
     background: transparent;
     border: none;
+    border-radius: 0;
     outline: none;
+    box-shadow: none;
+    -webkit-appearance: none;
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-body);
     font-weight: 600;
@@ -2515,14 +2518,34 @@ h1, h2, .screen-heading {
     margin-bottom: var(--sp-sm);
 }
 
+.note-card-title-input:focus {
+    border: none;
+    outline: none;
+    box-shadow: none;
+    background: transparent;
+}
+
 .note-card-title-input::placeholder {
     color: var(--ink-4);
     font-weight: 400;
     font-style: italic;
 }
 
+/* Strip block-bullet-entry boxing when inside the note card */
+.note-card-input .block-bullet-entry {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+}
+
+.note-card-input .block-bullet-entry:focus {
+    border: none;
+    outline: none;
+}
+
 .note-card-body {
-    min-height: 120px;
+    min-height: 100px;
     font-size: var(--fs-body);
     color: var(--ink-2);
     line-height: 1.6;
@@ -2532,6 +2555,7 @@ h1, h2, .screen-heading {
     width: 100%;
     white-space: pre-wrap;
     word-break: break-word;
+    cursor: text;
 }
 
 /* data-placeholder for contenteditable empty state */
