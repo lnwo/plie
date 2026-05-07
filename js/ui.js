@@ -5236,7 +5236,7 @@ function searchGoalCorrections(query) {
 
 function renderLinkedCorrectionsHtml(correctionIds) {
     return (correctionIds || []).map(id => {
-        const c = appState.corrections.find(c => c.id === id);
+        const c = appState.corrections.find(c => String(c.id) === String(id));
         if (!c) return '';
         const skill = DATA.skills.find(s => s.id === c.skillId);
         const date = formatTimelineDate(new Date(c.createdAt).toISOString().split('T')[0]);
@@ -5266,7 +5266,7 @@ function linkCorrectionToGoal(correctionId) {
 function unlinkCorrectionFromGoal(correctionId) {
     const d = appState._goalDraft;
     if (!d) return;
-    d.correctionIds = (d.correctionIds || []).filter(id => id !== correctionId);
+    d.correctionIds = (d.correctionIds || []).filter(id => String(id) !== String(correctionId));
     renderGoalLinkedCorrectionsInPlace();
 }
 

@@ -9555,24 +9555,29 @@ button, a, input, select, textarea,
 .goal-period-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--sp-xs, 6px);
-    margin-top: var(--sp-xs, 6px);
+    gap: 6px;
 }
 .goal-period-chip {
     background: var(--surface);
-    border: 1.5px solid var(--border-mid, #DDD6CF);
+    border: 0.5px solid rgba(233, 233, 231, 1);
     border-radius: 100px;
     font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
+    font-size: var(--fs-card);
     color: var(--ink);
-    padding: 6px 14px;
+    padding: 4px 12px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
     cursor: pointer;
     transition: background .12s, border-color .12s;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    box-sizing: border-box;
 }
 .goal-period-chip.selected {
     background: var(--gold-soft);
     border-color: var(--gold);
+    border-width: 1px;
     color: var(--ink);
 }
 
@@ -9584,19 +9589,51 @@ button, a, input, select, textarea,
     margin-top: var(--sp-xs);
 }
 
-/* Goal creator — field labels use small-caps muted style */
+/* Goal creator — all body text 12px */
+#goal-creator-overlay .session-logger-body {
+    font-size: var(--fs-card);
+}
+
+/* Goal creator — session-field uses flex-column gap:10px (label-to-input spacing) */
+#goal-creator-overlay .session-field {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: var(--sp-md);
+}
+
+/* Goal creator — field labels: small-caps 11px muted */
 #goal-creator-overlay .session-field-label {
     font-size: var(--fs-caption);
     font-weight: 600;
     color: var(--ink-3);
     text-transform: uppercase;
     letter-spacing: 1px;
+    margin-bottom: 0;
 }
 
-/* Goal creator — milestone delete button */
+/* Goal creator — optional hint beside label */
+#goal-creator-overlay .session-field-optional {
+    font-size: var(--fs-caption);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--ink-4);
+}
+
+/* Goal creator — milestone delete button — 24px tall, icon centered */
 .goal-marker-delete {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: var(--ink-3);
     flex-shrink: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
 }
 .goal-marker-delete:hover { color: var(--ink); }
 
@@ -9626,26 +9663,60 @@ button, a, input, select, textarea,
     color: #fff;
 }
 
-/* Progress marker inputs */
+/* Goal creator — compact input override (24px, Pixso spec) */
+#goal-creator-overlay .session-input:not(textarea) {
+    height: 24px;
+    padding: 4px 8px;
+    border-radius: 2px;
+    border: 0.5px solid rgba(233, 233, 231, 1);
+    background: var(--surface-warm);
+    font-size: var(--fs-card);
+    box-shadow: none;
+}
+#goal-creator-overlay .session-input:not(textarea):focus {
+    border-color: var(--gold);
+    box-shadow: none;
+    background: var(--surface-warm);
+}
+#goal-creator-overlay textarea.session-input {
+    padding: 6px 8px;
+    border-radius: 2px;
+    border: 0.5px solid rgba(233, 233, 231, 1);
+    background: var(--surface-warm);
+    font-size: var(--fs-card);
+    box-shadow: none;
+    min-height: 52px;
+}
+#goal-creator-overlay textarea.session-input:focus {
+    border-color: var(--gold);
+    box-shadow: none;
+    background: var(--surface-warm);
+}
+
+/* Progress marker inputs — same spec */
 .goal-marker-row {
     display: flex;
-    align-items: center;
-    gap: var(--sp-sm);
+    align-items: flex-start;
+    gap: 10px;
     margin-bottom: var(--sp-xs, 6px);
+    min-height: 24px;
 }
 .goal-marker-input {
     flex: 1;
-    padding: 10px var(--sp-md);
+    height: 24px;
+    padding: 4px 8px;
     font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-body);
-    border: 1.5px solid var(--border-mid, #DDD6CF);
-    border-radius: 8px;
-    background: var(--surface);
+    font-size: var(--fs-card);
+    border: 0.5px solid rgba(233, 233, 231, 1);
+    border-radius: 2px;
+    background: var(--surface-warm);
     color: var(--ink);
+    box-sizing: border-box;
 }
 .goal-marker-input:focus {
     outline: none;
     border-color: var(--gold);
+    background: var(--surface-warm);
 }
 
 /* Goal type selection cards (no-type state) */
