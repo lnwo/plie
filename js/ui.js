@@ -4518,21 +4518,17 @@ function renderGoalCreator() {
     const howOftenOptions = ['Every class', 'Every week', 'set a number', 'other'];
 
     function periodChipsHtml() {
-        const presets = periodOptions.slice(0, -1);
+        const presets = periodOptions.slice(0, -1); // ['A week', 'Two weeks', 'A month', 'Three months']
         const isDateSelected = d.commitmentPeriod && !presets.includes(d.commitmentPeriod) && d.commitmentPeriod !== 'Choose a date';
-        const showDatePicker = d.commitmentPeriod === 'Choose a date' || isDateSelected;
+        const showCalendarAnchor = d.commitmentPeriod === 'Choose a date' || isDateSelected;
 
-        let dateDisplayHtml = '';
+        // "Choose a date" chip shows the picked date once selected
+        let customDateLabel = 'Choose a date';
         if (isDateSelected) {
             const dt = new Date(d.commitmentPeriod + 'T12:00:00');
             if (!isNaN(dt.getTime())) {
-                const formatted = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-                dateDisplayHtml = `<span class="date-display-label">${formatted}</span>`;
-            } else {
-                dateDisplayHtml = `<span class="date-display-label" style="color:var(--ink-3);font-weight:400;">Tap to pick a date</span>`;
+                customDateLabel = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
             }
-        } else {
-            dateDisplayHtml = `<span class="date-display-label" style="color:var(--ink-3);font-weight:400;">Tap to pick a date</span>`;
         }
 
         const draftCreatedAt = d.createdAt || new Date().toISOString();
@@ -4541,18 +4537,13 @@ function renderGoalCreator() {
 
         return `
             <div class="goal-period-chips">
-                ${periodOptions.map(p => {
-                    const isActive = p === 'Choose a date' ? showDatePicker : d.commitmentPeriod === p;
-                    return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onmousedown="setGoalPeriod('${p}')">${p}</button>`;
+                ${presets.map(p => {
+                    const isActive = d.commitmentPeriod === p;
+                    return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onmousedown="setGoalPeriod('${p}')" ontouchend="event.preventDefault(); setGoalPeriod('${p}')">${p}</button>`;
                 }).join('')}
+                <button class="goal-period-chip ${showCalendarAnchor ? 'selected' : ''}" onmousedown="setGoalPeriod('Choose a date')" ontouchend="event.preventDefault(); setGoalPeriod('Choose a date')">${customDateLabel}</button>
             </div>
-            ${showDatePicker ? `
-                <div class="session-date-picker" id="goal-period-date-picker" style="margin-top: var(--sp-sm);">
-                    <div class="date-display" onmousedown="toggleGoalDateCalendar()" style="border-left:none; border-right:none;">
-                        ${dateDisplayHtml}
-                    </div>
-                </div>
-            ` : ''}
+            ${showCalendarAnchor ? `<div id="goal-period-date-picker" style="position:relative;"></div>` : ''}
             ${resolvedExpiryStr ? `<p class="goal-period-resolved">until ${resolvedExpiryStr}</p>` : ''}
         `;
     }
@@ -4885,7 +4876,12 @@ function setGoalPeriod(period) {
     if (!d) return;
     d.commitmentPeriod = period;
     renderGoalCreator();
-    if (period === 'Choose a date') requestAnimationFrame(() => toggleGoalDateCalendar());
+    if (period === 'Choose a date') {
+        requestAnimationFrame(() => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            renderGoalDateCalendar(todayStr);
+        });
+    }
 }
 
 function toggleGoalDateCalendar() {
@@ -4919,14 +4915,7 @@ function pickGoalCalendarDate(dateStr) {
     const d = appState._goalDraft;
     if (!d) return;
     d.commitmentPeriod = dateStr;
-    document.getElementById('goal-date-calendar-popup')?.remove();
-    // Update display in-place
-    const display = document.querySelector('#goal-period-date-picker .date-display');
-    if (display) {
-        const dt = new Date(dateStr + 'T12:00:00');
-        const formatted = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-        display.innerHTML = `<span class="date-display-label">${formatted}</span>`;
-    }
+    renderGoalCreator();
 }
 
 function checkGoalTitleForSkills(text) {
