@@ -887,9 +887,16 @@ function renderSessionLogger() {
     const isToday = s.date === todayStr;
 
     const sessionBodyHtml = isNoteMode ?
-        '<div class="session-field" style="padding-top: var(--sp-sm);">' +
-        '<div contenteditable="true" id="note-editor" class="note-editor" spellcheck="true">' + escapeHtml(s.generalNotes || '') + '</div>' +
-        '</div>'
+        `<div class="note-card-input">
+            <input type="text" id="note-title-input" class="note-card-title-input"
+                   placeholder="Give it a title (optional)"
+                   value="${escapeHtml(s.sessionName || '')}"
+                   oninput="appState.currentSession.sessionName = this.value" />
+            <div contenteditable="true" id="note-editor" class="note-editor note-card-body"
+                 spellcheck="true"
+                 data-placeholder="What stood out today?"
+            >${escapeHtml(s.generalNotes || '')}</div>
+        </div>`
         :
         // Date row — no label, full weekday + date
         '<div class="session-date-picker" style="margin-bottom: var(--sp-md);">' +
@@ -938,8 +945,8 @@ function renderSessionLogger() {
         '<div class="session-sheet-handle"></div>' +
         '<div class="session-logger-header">' +
         '<div>' +
-        '<div class="session-logger-eyebrow">' + (isNoteMode ? 'Quick note' : 'New session') + '</div>' +
-        '<h2 class="session-logger-title">' + (isNoteMode ? 'Add a note' : 'Log a class') + '</h2>' +
+        '<div class="session-logger-eyebrow">' + (isNoteMode ? 'Save a note' : 'New session') + '</div>' +
+        '<h2 class="session-logger-title">' + (isNoteMode ? 'What stood out today?' : 'Log a class') + '</h2>' +
         '</div>' +
         '<button class="session-close-btn" onclick="closeSessionLogger()" aria-label="Close">' + ICONS.get('x', 18) + '</button>' +
         '</div>' +
@@ -1547,7 +1554,11 @@ function renderBlockHtml(block, index) {
         // Build preview body — no placeholder copy for empty blocks
         let bodyHtml = '';
         if (blockType === 'note') {
-            if (firstLine) {
+            const noteTitle = block.blockTitle;
+            if (noteTitle) {
+                bodyHtml = '<div class="session-block-preview-line session-block-preview-line--bold">' + escapeHtml(noteTitle) + '</div>';
+                if (firstLine) bodyHtml += '<div class="session-block-preview-line session-block-preview-line--italic">' + escapeHtml(firstLine) + '</div>';
+            } else if (firstLine) {
                 bodyHtml = '<div class="session-block-preview-line session-block-preview-line--italic">' + escapeHtml(firstLine) + '</div>';
             }
         } else if (blockType === 'goal') {
@@ -1646,17 +1657,25 @@ function renderBlockHtml(block, index) {
             </div>`;
     }
 
-    // Note: plain contenteditable, no dash prefix
+    // Note: card with bold title + body contenteditable
     // Correction/observation: dash-prefixed bullet lines
     let entryHtml;
     if (blockType === 'note') {
-        entryHtml = `<div class="block-bullet-entry block-bullet-entry--note"
-                         contenteditable="true"
-                         data-block-id="${block.id}"
-                         onfocus="normalizeBulletEntryOnFocus(this)"
-                         onblur="normalizeBulletEntry(this)"
-                         oninput="updateBlockBullets('${block.id}', this)"
-                         >${escapeHtml(blockText) || ''}</div>`;
+        entryHtml = `
+        <div class="note-card-input">
+            <input type="text" class="note-card-title-input"
+                   placeholder="Title (optional)"
+                   value="${escapeHtml(block.blockTitle || '')}"
+                   oninput="updateBlockField('${block.id}', 'blockTitle', this.value)" />
+            <div class="block-bullet-entry block-bullet-entry--note note-card-body"
+                 contenteditable="true"
+                 data-block-id="${block.id}"
+                 onfocus="normalizeBulletEntryOnFocus(this)"
+                 onblur="normalizeBulletEntry(this)"
+                 oninput="updateBlockBullets('${block.id}', this)"
+                 data-placeholder="What happened?"
+            >${escapeHtml(blockText) || ''}</div>
+        </div>`;
     } else {
         const bulletLines = blockText ? blockText.split('\n') : [];
         const bulletDivsHtml = bulletLines.length
@@ -2528,11 +2547,13 @@ function saveSession() {
         el.innerText = ''; // clear so it doesn't double-save
     });
 
-    // Note mode: capture text from the single contenteditable
+    // Note mode: capture title + body
     const isNoteMode = s._mode === 'note';
     if (isNoteMode) {
         const noteEl = document.getElementById('note-editor');
         s.generalNotes = noteEl ? (noteEl.innerText || '').replace(/\n+$/, '') : '';
+        const titleEl = document.getElementById('note-title-input');
+        if (titleEl) s.sessionName = titleEl.value.trim() || null;
     }
 
     const now = Date.now();
@@ -6562,8 +6583,12 @@ function showSessionDetail(sessionId) {
     if (isNote) {
         const noteText = session.notes || '';
         const lines = noteText.split('\n');
-        const titleLine = escapeHtml(lines[0] || '');
-        const bodyLines = escapeHtml(lines.slice(1).join('\n'));
+        const titleLine = session.sessionName
+            ? escapeHtml(session.sessionName)
+            : escapeHtml(lines[0] || '');
+        const bodyLines = session.sessionName
+            ? escapeHtml(noteText)
+            : escapeHtml(lines.slice(1).join('\n'));
         const noteContentHtml = titleLine
             ? `<span class="note-detail-line-title">${titleLine}</span>${bodyLines ? `<span class="note-detail-line-body">${bodyLines}</span>` : ''}`
             : `<span class="note-detail-line-body" style="color:var(--ink-4);font-style:italic;">No content.</span>`;

@@ -2489,11 +2489,65 @@ h1, h2, .screen-heading {
 }
 
 /* ── Note editor ── */
+/* ── Note card component — PLI-022 ─────────────────────────────────────────
+   Shared by: standalone note sheet, note blocks in logger
+   ──────────────────────────────────────────────────────────────────────────── */
+.note-card-input {
+    background: var(--surface-warm);
+    border: 1px solid var(--gold);
+    border-radius: var(--r-md);
+    padding: var(--sp-md) var(--sp-lg);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.note-card-title-input {
+    display: block;
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--ink);
+    padding: 0;
+    margin-bottom: var(--sp-sm);
+}
+
+.note-card-title-input::placeholder {
+    color: var(--ink-4);
+    font-weight: 400;
+    font-style: italic;
+}
+
+.note-card-body {
+    min-height: 120px;
+    font-size: var(--fs-body);
+    color: var(--ink-2);
+    line-height: 1.6;
+    background: transparent;
+    border: none;
+    outline: none;
+    width: 100%;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* data-placeholder for contenteditable empty state */
+.note-card-body:empty::before {
+    content: attr(data-placeholder);
+    color: var(--ink-4);
+    font-style: italic;
+    pointer-events: none;
+}
+
+/* Legacy standalone note-editor (kept for backward compat) */
 .note-editor {
     width: 100%;
     min-height: 220px;
     background: var(--surface-warm);
-    border: 1.5px solid var(--gold-soft);
+    border: 1px solid var(--gold);
     border-radius: var(--r-md);
     padding: var(--sp-lg);
     font-family: 'DM Sans', sans-serif;
@@ -2507,13 +2561,7 @@ h1, h2, .screen-heading {
     word-break: break-word;
 }
 
-.note-editor:focus {
-    border-color: var(--gold);
-}
-
-.note-editor::first-line {
-    font-weight: 600;
-}
+.note-editor:focus { border-color: var(--gold); }
 
 .note-editor-hint {
     font-size: var(--fs-caption);
@@ -2681,32 +2729,33 @@ h1, h2, .screen-heading {
     margin-top: var(--sp-sm);
 }
 
+/* ── Reusable text field — applies to all single-line and multi-line inputs ── */
 .session-input {
     width: 100%;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
+    background: #fff;
+    border: 0.5px solid rgba(26, 23, 20, 0.15);
     border-radius: var(--r-md);
     padding: 13px var(--sp-md);
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-body);
     color: var(--ink);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: border-color 0.15s ease, background 0.15s ease;
     -webkit-appearance: none;
     appearance: none;
 }
 
 .session-input:focus {
     outline: none;
-    border-color: var(--gold-mid);
-    box-shadow: 0 0 0 3px rgba(196, 168, 130, 0.15);
+    border-color: var(--gold);
+    background: var(--surface-warm);
+    box-shadow: none;
 }
 
 .session-input.input-error {
     border-color: var(--error);
-    box-shadow: 0 0 0 3px rgba(201, 107, 92, 0.12);
 }
 
-.session-input::placeholder { color: var(--ink-3); }
+.session-input::placeholder { color: var(--ink-3); font-style: italic; }
 
 /* ── Session name field (document-style logger) ── */
 .session-name-field {
@@ -3157,10 +3206,12 @@ h1, h2, .screen-heading {
 .chip.selected, .chip--selected,
 .day-chip.selected,
 .recurrence-chip.selected,
-.block-tag-chip.active {
-    background: var(--ink);
-    border-color: var(--ink);
-    color: #fff;
+.block-tag-chip.active,
+.goal-period-chip.selected {
+    background: var(--gold-soft);
+    border-color: var(--gold);
+    border-width: 1px;
+    color: var(--ink);
 }
 
 .chip:hover:not(.selected):not(.chip--selected),
@@ -9544,17 +9595,11 @@ button, a, input, select, textarea,
     margin: 0;
 }
 
-/* Commitment period chips — base from .chip, selected overrides to gold (goal creator only) */
+/* Commitment period chips — base from .chip composite selector */
 .goal-period-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-}
-.goal-period-chip.selected {
-    background: var(--gold-soft);
-    border-color: var(--gold);
-    border-width: 1px;
-    color: var(--ink);
 }
 
 .goal-period-resolved {
