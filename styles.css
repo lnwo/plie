@@ -41,6 +41,7 @@
     /* ── Semantic ── */
     --coral:         #A84030;   /* corrections, alerts, delete */
     --coral-soft:    #F0D5CF;   /* recurring badge bg */
+    --dec-coral:     #C97060;   /* calendar selected date, decoration */
     --sage:          #4A7038;   /* milestones, completed states */
     --sage-soft:     #D4E5C8;   /* milestone tags */
     --success:       #4A7038;
@@ -2832,84 +2833,113 @@ h1, h2, .screen-heading {
 
 /* Inline calendar popup */
 
+/* ── Calendar date picker — PLI-020 ── */
+/* Container: 204×186px, padding 8px, gap 2px between rows */
 .date-calendar-popup {
     position: absolute;
-    top: calc(100% + 6px);
+    top: calc(100% + 4px);
     left: 0;
-    right: 0;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: var(--r-md);
-    padding: var(--sp-md);
+    width: 204px;
+    box-sizing: border-box;
+    background: #fff;
+    border: 0.5px solid rgba(233, 233, 231, 1);
+    border-radius: 8px;
+    padding: 8px;
     z-index: 20;
-    box-shadow: var(--shadow-2);
+    box-shadow: 0 1px 14px 0 rgba(0, 0, 0, 0.10);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
+/* Header row: ◄  Month Year  ► */
 .date-cal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: var(--sp-sm);
+    height: 20px;
 }
 
 .date-cal-month-label {
     font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
+    font-size: 12px;
     font-weight: 600;
     color: var(--ink);
+    text-align: center;
+    flex: 1;
 }
 
 .date-cal-nav {
+    width: 20px;
+    height: 20px;
     background: none;
     border: none;
-    color: var(--ink-2);
+    color: var(--ink-3);
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: var(--r-sm);
-    font-size: var(--fs-body);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    border-radius: 4px;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    flex-shrink: 0;
+    transition: color 0.12s, background 0.12s;
 }
 
-.date-cal-nav:active { background: var(--gold-wash); }
-.date-cal-nav:disabled { color: var(--ink-4); cursor: default; }
+.date-cal-nav:hover { color: var(--ink); background: var(--gold-wash); }
+.date-cal-nav:disabled { color: var(--ink-4); cursor: default; background: none; }
 
+/* 7-column grid — inner width 188px, gap 2px → each cell ≈25px */
 .date-cal-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 2px;
-    text-align: center;
 }
 
+/* DOW headers: MO TU WE TH FR SA SU */
 .date-cal-dow {
     font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-caption);
-    color: var(--ink-3);
-    padding: 2px 0;
-    font-weight: 500;
+    font-size: 8px;
+    font-weight: 600;
+    color: var(--ink-4);
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    text-align: center;
+    height: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
+/* Day cells: height 22px to fit 6 rows in 170px inner height */
 .date-cal-day {
     font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
+    font-size: 11px;
+    font-weight: 400;
     color: var(--ink);
-    padding: 6px 0;
+    height: 22px;
     cursor: pointer;
-    border-radius: var(--r-sm);
+    border-radius: 4px;
     background: none;
     border: none;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: background 0.1s ease;
+    padding: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-.date-cal-day:hover { background: var(--gold-wash); }
-.date-cal-day:active { background: var(--gold-soft); }
-.date-cal-day.selected { background: var(--gold-mid); color: white; font-weight: 600; }
-.date-cal-day.today { color: var(--gold); font-weight: 600; }
-.date-cal-day.future,
-.date-cal-day:disabled { color: var(--ink-4); cursor: default; }
-.date-cal-day.future:hover,
-.date-cal-day:disabled:hover { background: none; }
-.date-cal-day.empty { cursor: default; }
+.date-cal-day:hover:not(:disabled):not(.out-of-month) { background: var(--gold-wash); }
+.date-cal-day.today  { background: var(--gold-wash); font-weight: 600; color: var(--ink); }
+.date-cal-day.selected { background: var(--dec-coral); color: #fff; font-weight: 600; border-radius: 4px; }
+.date-cal-day.selected:hover { background: #b85c4e; }
+.date-cal-day:disabled:not(.out-of-month) { color: var(--ink-4); cursor: default; }
+.date-cal-day.out-of-month { color: var(--ink-4); font-size: 10px; cursor: default; }
 
 /* ── Session select ── */
 
@@ -6542,6 +6572,10 @@ mark.search-highlight {
     cursor: pointer;
     border-bottom: 1px solid var(--border-light);
     transition: background 0.15s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .goal-correction-suggestion:last-child { border-bottom: none; }
@@ -7135,6 +7169,24 @@ button, a, input, select, textarea,
 }
 
 .goal-edit-btn:hover { color: var(--primary); }
+
+.goal-add-note-btn {
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: var(--fs-caption);
+    color: var(--gold);
+    cursor: pointer;
+    padding: 12px 8px;
+    margin: -12px -8px;
+    transition: color 0.15s ease;
+    white-space: nowrap;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.goal-add-note-btn:hover { color: var(--gold-mid); }
 
 /* ═══════════════════════════════════════
    GOAL MILESTONE SCROLL CAP
@@ -9479,6 +9531,7 @@ button, a, input, select, textarea,
 }
 .goal-type-tab.active {
     color: var(--ink);
+    font-weight: 600;
     border-bottom-color: var(--gold);
 }
 
@@ -9518,7 +9571,7 @@ button, a, input, select, textarea,
     -webkit-tap-highlight-color: transparent;
 }
 .goal-period-chip.selected {
-    background: var(--gold-wash);
+    background: var(--gold-soft);
     border-color: var(--gold);
     color: var(--ink);
 }
@@ -9532,12 +9585,12 @@ button, a, input, select, textarea,
 }
 
 /* Goal creator — field labels use small-caps muted style */
-.goal-creator-overlay .session-field-label {
+#goal-creator-overlay .session-field-label {
     font-size: var(--fs-caption);
-    font-weight: 500;
+    font-weight: 600;
     color: var(--ink-3);
     text-transform: uppercase;
-    letter-spacing: 0.07em;
+    letter-spacing: 1px;
 }
 
 /* Goal creator — milestone delete button */

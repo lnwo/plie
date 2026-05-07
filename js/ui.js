@@ -722,58 +722,89 @@ function toggleDateCalendar() {
     renderDateCalendar(appState.currentSession.date);
 }
 
-function renderDateCalendar(selectedDateStr) {
-    const existing = document.getElementById('date-calendar-popup');
-    if (existing) existing.remove();
-
-    const sel = new Date(selectedDateStr + 'T12:00:00');
-    const todayStr = new Date().toISOString().split('T')[0];
+// ── Shared calendar HTML builder (PLI-020) ──────────────────────────────────
+// allowPast/allowFuture control which dates are tappable.
+// navFn / pickFn are global function name strings used in inline handlers.
+function _buildCalendarHtml({ selectedDateStr, todayStr, navFn, pickFn, allowPast, allowFuture }) {
+    const sel      = new Date(selectedDateStr + 'T12:00:00');
     const viewYear = sel.getFullYear();
-    const viewMonth = sel.getMonth(); // 0-indexed
+    const viewMonth = sel.getMonth();
 
-    const firstDay = new Date(viewYear, viewMonth, 1);
-    const lastDay  = new Date(viewYear, viewMonth + 1, 0);
-    const startDow = (firstDay.getDay() + 6) % 7; // Mon=0
+    const firstDay   = new Date(viewYear, viewMonth, 1);
+    const lastDay    = new Date(viewYear, viewMonth + 1, 0);
+    const startDow   = (firstDay.getDay() + 6) % 7; // Mon=0
     const monthLabel = firstDay.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    const todayD     = new Date(todayStr + 'T12:00:00');
 
-    // Prev month: only allow if month has days in the past
-    const prevMonthLastDay = new Date(viewYear, viewMonth, 0);
-    const prevMonthLastStr = prevMonthLastDay.toISOString().split('T')[0];
-    const canGoPrev = prevMonthLastStr <= todayStr;
+    const prevNavStr = getCalNavMonth(selectedDateStr, -1);
+    const nextNavStr = getCalNavMonth(selectedDateStr, 1);
 
-    // Next month: only allow if current month is not the current month
-    const todayD = new Date(todayStr + 'T12:00:00');
-    const canGoNext = viewYear < todayD.getFullYear() || (viewYear === todayD.getFullYear() && viewMonth < todayD.getMonth());
-
-    const dowHeaders = ['M','T','W','T','F','S','S'].map(d => `<div class="date-cal-dow">${d}</div>`).join('');
-
-    let dayCells = '';
-    // Empty cells before first day
-    for (let i = 0; i < startDow; i++) dayCells += `<button class="date-cal-day empty" disabled></button>`;
-    for (let day = 1; day <= lastDay.getDate(); day++) {
-        const dStr = `${viewYear}-${String(viewMonth + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-        const isSelected = dStr === selectedDateStr;
-        const isToday    = dStr === todayStr;
-        const isFuture   = dStr > todayStr;
-        const cls = ['date-cal-day', isSelected ? 'selected' : '', isToday && !isSelected ? 'today' : '', isFuture ? 'future' : ''].filter(Boolean).join(' ');
-        dayCells += `<button class="${cls}" onmousedown="pickCalendarDate('${dStr}')" ${isFuture ? 'disabled' : ''}>${day}</button>`;
+    let canGoPrev, canGoNext;
+    if (allowFuture && !allowPast) {
+        canGoPrev = viewYear > todayD.getFullYear() || (viewYear === todayD.getFullYear() && viewMonth > todayD.getMonth());
+        canGoNext = true;
+    } else {
+        const prevLastStr = new Date(viewYear, viewMonth, 0).toISOString().split('T')[0];
+        canGoPrev = prevLastStr <= todayStr;
+        canGoNext = viewYear < todayD.getFullYear() || (viewYear === todayD.getFullYear() && viewMonth < todayD.getMonth());
     }
 
-    const popup = document.createElement('div');
-    popup.id = 'date-calendar-popup';
-    popup.className = 'date-calendar-popup';
-    popup.innerHTML = `
+    const dowHeaders = ['MO','TU','WE','TH','FR','SA','SU']
+        .map(h => `<div class="date-cal-dow">${h}</div>`).join('');
+
+    let dayCells = '';
+
+    // Leading out-of-month days (prev month tail)
+    const prevLast = new Date(viewYear, viewMonth, 0).getDate();
+    for (let i = startDow - 1; i >= 0; i--) {
+        dayCells += `<div class="date-cal-day out-of-month">${prevLast - i}</div>`;
+    }
+
+    // Current month days
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+        const dStr     = `${viewYear}-${String(viewMonth + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const isSelected = dStr === selectedDateStr;
+        const isToday    = dStr === todayStr;
+        const disabled   = (allowFuture && !allowPast && dStr < todayStr) || (!allowFuture && dStr > todayStr);
+        const cls = ['date-cal-day',
+            isSelected ? 'selected' : '',
+            isToday && !isSelected ? 'today' : '',
+        ].filter(Boolean).join(' ');
+        dayCells += `<button class="${cls}" onmousedown="${pickFn}('${dStr}')" ontouchend="event.preventDefault(); ${pickFn}('${dStr}')" ${disabled ? 'disabled' : ''}>${day}</button>`;
+    }
+
+    // Trailing out-of-month days (next month head)
+    const total    = startDow + lastDay.getDate();
+    const trailing = (7 - (total % 7)) % 7;
+    for (let i = 1; i <= trailing; i++) {
+        dayCells += `<div class="date-cal-day out-of-month">${i}</div>`;
+    }
+
+    return `
         <div class="date-cal-header">
-            <button class="date-cal-nav" onmousedown="renderDateCalendar(getCalNavMonth('${selectedDateStr}', -1))" ${canGoPrev ? '' : 'disabled'}>‹</button>
+            <button class="date-cal-nav" onmousedown="${navFn}('${prevNavStr}')" ontouchend="event.preventDefault(); ${navFn}('${prevNavStr}')" ${canGoPrev ? '' : 'disabled'}>&#9664;</button>
             <span class="date-cal-month-label">${monthLabel}</span>
-            <button class="date-cal-nav" onmousedown="renderDateCalendar(getCalNavMonth('${selectedDateStr}', 1))" ${canGoNext ? '' : 'disabled'}>›</button>
+            <button class="date-cal-nav" onmousedown="${navFn}('${nextNavStr}')" ontouchend="event.preventDefault(); ${navFn}('${nextNavStr}')" ${canGoNext ? '' : 'disabled'}>&#9654;</button>
         </div>
         <div class="date-cal-grid">
             ${dowHeaders}
             ${dayCells}
         </div>
     `;
+}
 
+function renderDateCalendar(selectedDateStr) {
+    const existing = document.getElementById('date-calendar-popup');
+    if (existing) existing.remove();
+    const todayStr = new Date().toISOString().split('T')[0];
+    const popup = document.createElement('div');
+    popup.id = 'date-calendar-popup';
+    popup.className = 'date-calendar-popup';
+    popup.innerHTML = _buildCalendarHtml({
+        selectedDateStr, todayStr,
+        navFn: 'renderDateCalendar', pickFn: 'pickCalendarDate',
+        allowPast: true, allowFuture: false,
+    });
     const picker = document.querySelector('.session-date-picker');
     if (picker) picker.appendChild(popup);
 }
@@ -3861,6 +3892,8 @@ function attachGoalSwipe(row, goalId) {
         }
     }
 
+    const isCompleted = !!row.querySelector('.swipe-action-reopen');
+
     function onEnd() {
         if (!dragging) return;
         dragging = false;
@@ -3873,7 +3906,11 @@ function attachGoalSwipe(row, goalId) {
         } else if (dx >= COMPLETE && elapsed >= MIN_MS) {
             content.style.transition = 'transform 0.25s var(--ease-out)';
             content.style.transform  = 'translateX(110%)';
-            setTimeout(() => markGoalComplete(goalId), 200);
+            if (isCompleted) {
+                setTimeout(() => reopenGoal(goalId), 200);
+            } else {
+                setTimeout(() => markGoalComplete(goalId), 200);
+            }
         } else {
             reset();
         }
@@ -3962,7 +3999,7 @@ function renderGoalsScreen() {
 
     // Attach swipes to goal cards
     screen.querySelectorAll('.swipe-row[data-goal-id]').forEach(row => {
-        attachGoalSwipe(row, Number(row.dataset.goalId));
+        attachGoalSwipe(row, row.dataset.goalId);
     });
     requestAnimationFrame(() => initClampedTexts(screen));
 }
@@ -4091,7 +4128,7 @@ function showAllGoalsScreen() {
     `;
 
     screen.querySelectorAll('.swipe-row[data-goal-id]').forEach(row => {
-        attachReactivateSwipe(row, Number(row.dataset.goalId));
+        attachReactivateSwipe(row, row.dataset.goalId);
     });
 
     showScreen('all-goals-screen');
@@ -4286,7 +4323,9 @@ function renderGoalCard(goal, completed) {
                                 return ` <span class="goal-card-expiry${nearClass}">· ${expStr}</span>`;
                             })()}
                         </div>
-                        ${!completed ? `<button class="goal-edit-btn" onmousedown="openGoalEditor('${goal.id}')">edit</button>` : ''}
+                        ${completed
+                            ? `<button class="goal-add-note-btn" onmousedown="openGoalReflectionSheet('${goal.id}')" ontouchend="event.preventDefault(); openGoalReflectionSheet('${goal.id}')">+ add note</button>`
+                            : `<button class="goal-edit-btn" onmousedown="openGoalEditor('${goal.id}')">edit</button>`}
                     </div>
                 </div>
             </div>
@@ -4863,48 +4902,15 @@ function toggleGoalDateCalendar() {
 function renderGoalDateCalendar(selectedDateStr) {
     const existing = document.getElementById('goal-date-calendar-popup');
     if (existing) existing.remove();
-
     const todayStr = new Date().toISOString().split('T')[0];
-    const sel = new Date(selectedDateStr + 'T12:00:00');
-    const viewYear = sel.getFullYear();
-    const viewMonth = sel.getMonth();
-
-    const firstDay = new Date(viewYear, viewMonth, 1);
-    const lastDay  = new Date(viewYear, viewMonth + 1, 0);
-    const startDow = (firstDay.getDay() + 6) % 7; // Mon=0
-    const monthLabel = firstDay.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-
-    const todayD = new Date(todayStr + 'T12:00:00');
-    const canGoPrev = viewYear > todayD.getFullYear() || (viewYear === todayD.getFullYear() && viewMonth > todayD.getMonth());
-
-    const dowHeaders = ['M','T','W','T','F','S','S'].map(d => `<div class="date-cal-dow">${d}</div>`).join('');
-
-    let dayCells = '';
-    for (let i = 0; i < startDow; i++) dayCells += `<button class="date-cal-day empty" disabled></button>`;
-    for (let day = 1; day <= lastDay.getDate(); day++) {
-        const dStr = `${viewYear}-${String(viewMonth + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-        const isSelected = dStr === selectedDateStr;
-        const isPast = dStr < todayStr;
-        const isToday = dStr === todayStr;
-        const cls = ['date-cal-day', isSelected ? 'selected' : '', isToday && !isSelected ? 'today' : ''].filter(Boolean).join(' ');
-        dayCells += `<button class="${cls}" onmousedown="pickGoalCalendarDate('${dStr}')" ${isPast ? 'disabled' : ''}>${day}</button>`;
-    }
-
     const popup = document.createElement('div');
     popup.id = 'goal-date-calendar-popup';
     popup.className = 'date-calendar-popup';
-    popup.innerHTML = `
-        <div class="date-cal-header">
-            <button class="date-cal-nav" onmousedown="renderGoalDateCalendar(getCalNavMonth('${selectedDateStr}', -1))" ${canGoPrev ? '' : 'disabled'}>‹</button>
-            <span class="date-cal-month-label">${monthLabel}</span>
-            <button class="date-cal-nav" onmousedown="renderGoalDateCalendar(getCalNavMonth('${selectedDateStr}', 1))">›</button>
-        </div>
-        <div class="date-cal-grid">
-            ${dowHeaders}
-            ${dayCells}
-        </div>
-    `;
-
+    popup.innerHTML = _buildCalendarHtml({
+        selectedDateStr, todayStr,
+        navFn: 'renderGoalDateCalendar', pickFn: 'pickGoalCalendarDate',
+        allowPast: false, allowFuture: true,
+    });
     const picker = document.getElementById('goal-period-date-picker');
     if (picker) picker.appendChild(popup);
 }
@@ -5229,7 +5235,9 @@ function searchGoalCorrections(query) {
                 const skill = DATA.skills.find(s => s.id === c.skillId);
                 const date = formatTimelineDate(new Date(c.createdAt).toISOString().split('T')[0]);
                 return `
-                    <div class="goal-correction-suggestion" onmousedown="linkCorrectionToGoal('${c.id}')">
+                    <div class="goal-correction-suggestion"
+                         onmousedown="linkCorrectionToGoal('${c.id}')"
+                         ontouchend="event.preventDefault(); linkCorrectionToGoal('${c.id}')">
                         <div class="goal-correction-suggestion-text">${c.text}</div>
                         <div class="goal-correction-suggestion-meta">${[skill?.french, date].filter(Boolean).join(' · ')}</div>
                     </div>`;
@@ -5247,7 +5255,7 @@ function renderLinkedCorrectionsHtml(correctionIds) {
             <div class="goal-linked-correction">
                 <div class="goal-linked-correction-text">${c.text}</div>
                 <div class="goal-linked-correction-meta">${[skill?.french, date].filter(Boolean).join(' · ')}</div>
-                <button class="goal-unlink-correction" onmousedown="unlinkCorrectionFromGoal(${id})">unlink</button>
+                <button class="goal-unlink-correction" onmousedown="unlinkCorrectionFromGoal('${id}')">unlink</button>
             </div>`;
     }).join('');
 }
