@@ -722,58 +722,89 @@ function toggleDateCalendar() {
     renderDateCalendar(appState.currentSession.date);
 }
 
-function renderDateCalendar(selectedDateStr) {
-    const existing = document.getElementById('date-calendar-popup');
-    if (existing) existing.remove();
-
-    const sel = new Date(selectedDateStr + 'T12:00:00');
-    const todayStr = new Date().toISOString().split('T')[0];
+// ── Shared calendar HTML builder (PLI-020) ──────────────────────────────────
+// allowPast/allowFuture control which dates are tappable.
+// navFn / pickFn are global function name strings used in inline handlers.
+function _buildCalendarHtml({ selectedDateStr, todayStr, navFn, pickFn, allowPast, allowFuture }) {
+    const sel      = new Date(selectedDateStr + 'T12:00:00');
     const viewYear = sel.getFullYear();
-    const viewMonth = sel.getMonth(); // 0-indexed
+    const viewMonth = sel.getMonth();
 
-    const firstDay = new Date(viewYear, viewMonth, 1);
-    const lastDay  = new Date(viewYear, viewMonth + 1, 0);
-    const startDow = (firstDay.getDay() + 6) % 7; // Mon=0
+    const firstDay   = new Date(viewYear, viewMonth, 1);
+    const lastDay    = new Date(viewYear, viewMonth + 1, 0);
+    const startDow   = (firstDay.getDay() + 6) % 7; // Mon=0
     const monthLabel = firstDay.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    const todayD     = new Date(todayStr + 'T12:00:00');
 
-    // Prev month: only allow if month has days in the past
-    const prevMonthLastDay = new Date(viewYear, viewMonth, 0);
-    const prevMonthLastStr = prevMonthLastDay.toISOString().split('T')[0];
-    const canGoPrev = prevMonthLastStr <= todayStr;
+    const prevNavStr = getCalNavMonth(selectedDateStr, -1);
+    const nextNavStr = getCalNavMonth(selectedDateStr, 1);
 
-    // Next month: only allow if current month is not the current month
-    const todayD = new Date(todayStr + 'T12:00:00');
-    const canGoNext = viewYear < todayD.getFullYear() || (viewYear === todayD.getFullYear() && viewMonth < todayD.getMonth());
-
-    const dowHeaders = ['M','T','W','T','F','S','S'].map(d => `<div class="date-cal-dow">${d}</div>`).join('');
-
-    let dayCells = '';
-    // Empty cells before first day
-    for (let i = 0; i < startDow; i++) dayCells += `<button class="date-cal-day empty" disabled></button>`;
-    for (let day = 1; day <= lastDay.getDate(); day++) {
-        const dStr = `${viewYear}-${String(viewMonth + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-        const isSelected = dStr === selectedDateStr;
-        const isToday    = dStr === todayStr;
-        const isFuture   = dStr > todayStr;
-        const cls = ['date-cal-day', isSelected ? 'selected' : '', isToday && !isSelected ? 'today' : '', isFuture ? 'future' : ''].filter(Boolean).join(' ');
-        dayCells += `<button class="${cls}" onmousedown="pickCalendarDate('${dStr}')" ${isFuture ? 'disabled' : ''}>${day}</button>`;
+    let canGoPrev, canGoNext;
+    if (allowFuture && !allowPast) {
+        canGoPrev = viewYear > todayD.getFullYear() || (viewYear === todayD.getFullYear() && viewMonth > todayD.getMonth());
+        canGoNext = true;
+    } else {
+        const prevLastStr = new Date(viewYear, viewMonth, 0).toISOString().split('T')[0];
+        canGoPrev = prevLastStr <= todayStr;
+        canGoNext = viewYear < todayD.getFullYear() || (viewYear === todayD.getFullYear() && viewMonth < todayD.getMonth());
     }
 
-    const popup = document.createElement('div');
-    popup.id = 'date-calendar-popup';
-    popup.className = 'date-calendar-popup';
-    popup.innerHTML = `
+    const dowHeaders = ['MO','TU','WE','TH','FR','SA','SU']
+        .map(h => `<div class="date-cal-dow">${h}</div>`).join('');
+
+    let dayCells = '';
+
+    // Leading out-of-month days (prev month tail)
+    const prevLast = new Date(viewYear, viewMonth, 0).getDate();
+    for (let i = startDow - 1; i >= 0; i--) {
+        dayCells += `<div class="date-cal-day out-of-month">${prevLast - i}</div>`;
+    }
+
+    // Current month days
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+        const dStr     = `${viewYear}-${String(viewMonth + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const isSelected = dStr === selectedDateStr;
+        const isToday    = dStr === todayStr;
+        const disabled   = (allowFuture && !allowPast && dStr < todayStr) || (!allowFuture && dStr > todayStr);
+        const cls = ['date-cal-day',
+            isSelected ? 'selected' : '',
+            isToday && !isSelected ? 'today' : '',
+        ].filter(Boolean).join(' ');
+        dayCells += `<button class="${cls}" onmousedown="${pickFn}('${dStr}')" ontouchend="event.preventDefault(); ${pickFn}('${dStr}')" ${disabled ? 'disabled' : ''}>${day}</button>`;
+    }
+
+    // Trailing out-of-month days (next month head)
+    const total    = startDow + lastDay.getDate();
+    const trailing = (7 - (total % 7)) % 7;
+    for (let i = 1; i <= trailing; i++) {
+        dayCells += `<div class="date-cal-day out-of-month">${i}</div>`;
+    }
+
+    return `
         <div class="date-cal-header">
-            <button class="date-cal-nav" onmousedown="renderDateCalendar(getCalNavMonth('${selectedDateStr}', -1))" ${canGoPrev ? '' : 'disabled'}>‹</button>
+            <button class="date-cal-nav" onmousedown="${navFn}('${prevNavStr}')" ontouchend="event.preventDefault(); ${navFn}('${prevNavStr}')" ${canGoPrev ? '' : 'disabled'}>&#9664;</button>
             <span class="date-cal-month-label">${monthLabel}</span>
-            <button class="date-cal-nav" onmousedown="renderDateCalendar(getCalNavMonth('${selectedDateStr}', 1))" ${canGoNext ? '' : 'disabled'}>›</button>
+            <button class="date-cal-nav" onmousedown="${navFn}('${nextNavStr}')" ontouchend="event.preventDefault(); ${navFn}('${nextNavStr}')" ${canGoNext ? '' : 'disabled'}>&#9654;</button>
         </div>
         <div class="date-cal-grid">
             ${dowHeaders}
             ${dayCells}
         </div>
     `;
+}
 
+function renderDateCalendar(selectedDateStr) {
+    const existing = document.getElementById('date-calendar-popup');
+    if (existing) existing.remove();
+    const todayStr = new Date().toISOString().split('T')[0];
+    const popup = document.createElement('div');
+    popup.id = 'date-calendar-popup';
+    popup.className = 'date-calendar-popup';
+    popup.innerHTML = _buildCalendarHtml({
+        selectedDateStr, todayStr,
+        navFn: 'renderDateCalendar', pickFn: 'pickCalendarDate',
+        allowPast: true, allowFuture: false,
+    });
     const picker = document.querySelector('.session-date-picker');
     if (picker) picker.appendChild(popup);
 }
@@ -856,9 +887,16 @@ function renderSessionLogger() {
     const isToday = s.date === todayStr;
 
     const sessionBodyHtml = isNoteMode ?
-        '<div class="session-field" style="padding-top: var(--sp-sm);">' +
-        '<div contenteditable="true" id="note-editor" class="note-editor" spellcheck="true">' + escapeHtml(s.generalNotes || '') + '</div>' +
-        '</div>'
+        `<div class="note-card-input">
+            <input type="text" id="note-title-input" class="note-card-title-input"
+                   placeholder="Give it a title (optional)"
+                   value="${escapeHtml(s.sessionName || '')}"
+                   oninput="appState.currentSession.sessionName = this.value" />
+            <div contenteditable="true" id="note-editor" class="note-editor note-card-body"
+                 spellcheck="true"
+                 data-placeholder="What stood out today?"
+            >${escapeHtml(s.generalNotes || '')}</div>
+        </div>`
         :
         // Date row — no label, full weekday + date
         '<div class="session-date-picker" style="margin-bottom: var(--sp-md);">' +
@@ -907,8 +945,8 @@ function renderSessionLogger() {
         '<div class="session-sheet-handle"></div>' +
         '<div class="session-logger-header">' +
         '<div>' +
-        '<div class="session-logger-eyebrow">' + (isNoteMode ? 'Quick note' : 'New session') + '</div>' +
-        '<h2 class="session-logger-title">' + (isNoteMode ? 'Add a note' : 'Log a class') + '</h2>' +
+        '<div class="session-logger-eyebrow">' + (isNoteMode ? 'Save a note' : 'New session') + '</div>' +
+        '<h2 class="session-logger-title">' + (isNoteMode ? 'What stood out today?' : 'Log a class') + '</h2>' +
         '</div>' +
         '<button class="session-close-btn" onclick="closeSessionLogger()" aria-label="Close">' + ICONS.get('x', 18) + '</button>' +
         '</div>' +
@@ -1516,7 +1554,11 @@ function renderBlockHtml(block, index) {
         // Build preview body — no placeholder copy for empty blocks
         let bodyHtml = '';
         if (blockType === 'note') {
-            if (firstLine) {
+            const noteTitle = block.blockTitle;
+            if (noteTitle) {
+                bodyHtml = '<div class="session-block-preview-line session-block-preview-line--bold">' + escapeHtml(noteTitle) + '</div>';
+                if (firstLine) bodyHtml += '<div class="session-block-preview-line session-block-preview-line--italic">' + escapeHtml(firstLine) + '</div>';
+            } else if (firstLine) {
                 bodyHtml = '<div class="session-block-preview-line session-block-preview-line--italic">' + escapeHtml(firstLine) + '</div>';
             }
         } else if (blockType === 'goal') {
@@ -1615,17 +1657,25 @@ function renderBlockHtml(block, index) {
             </div>`;
     }
 
-    // Note: plain contenteditable, no dash prefix
+    // Note: card with bold title + body contenteditable
     // Correction/observation: dash-prefixed bullet lines
     let entryHtml;
     if (blockType === 'note') {
-        entryHtml = `<div class="block-bullet-entry block-bullet-entry--note"
-                         contenteditable="true"
-                         data-block-id="${block.id}"
-                         onfocus="normalizeBulletEntryOnFocus(this)"
-                         onblur="normalizeBulletEntry(this)"
-                         oninput="updateBlockBullets('${block.id}', this)"
-                         >${escapeHtml(blockText) || ''}</div>`;
+        entryHtml = `
+        <div class="note-card-input">
+            <input type="text" class="note-card-title-input"
+                   placeholder="Title (optional)"
+                   value="${escapeHtml(block.blockTitle || '')}"
+                   oninput="updateBlockField('${block.id}', 'blockTitle', this.value)" />
+            <div class="block-bullet-entry block-bullet-entry--note note-card-body"
+                 contenteditable="true"
+                 data-block-id="${block.id}"
+                 onfocus="normalizeBulletEntryOnFocus(this)"
+                 onblur="normalizeBulletEntry(this)"
+                 oninput="updateBlockBullets('${block.id}', this)"
+                 data-placeholder="What happened?"
+            >${escapeHtml(blockText) || ''}</div>
+        </div>`;
     } else {
         const bulletLines = blockText ? blockText.split('\n') : [];
         const bulletDivsHtml = bulletLines.length
@@ -2497,11 +2547,13 @@ function saveSession() {
         el.innerText = ''; // clear so it doesn't double-save
     });
 
-    // Note mode: capture text from the single contenteditable
+    // Note mode: capture title + body
     const isNoteMode = s._mode === 'note';
     if (isNoteMode) {
         const noteEl = document.getElementById('note-editor');
         s.generalNotes = noteEl ? (noteEl.innerText || '').replace(/\n+$/, '') : '';
+        const titleEl = document.getElementById('note-title-input');
+        if (titleEl) s.sessionName = titleEl.value.trim() || null;
     }
 
     const now = Date.now();
@@ -3861,6 +3913,8 @@ function attachGoalSwipe(row, goalId) {
         }
     }
 
+    const isCompleted = !!row.querySelector('.swipe-action-reopen');
+
     function onEnd() {
         if (!dragging) return;
         dragging = false;
@@ -3873,7 +3927,11 @@ function attachGoalSwipe(row, goalId) {
         } else if (dx >= COMPLETE && elapsed >= MIN_MS) {
             content.style.transition = 'transform 0.25s var(--ease-out)';
             content.style.transform  = 'translateX(110%)';
-            setTimeout(() => markGoalComplete(goalId), 200);
+            if (isCompleted) {
+                setTimeout(() => reopenGoal(goalId), 200);
+            } else {
+                setTimeout(() => markGoalComplete(goalId), 200);
+            }
         } else {
             reset();
         }
@@ -3962,7 +4020,7 @@ function renderGoalsScreen() {
 
     // Attach swipes to goal cards
     screen.querySelectorAll('.swipe-row[data-goal-id]').forEach(row => {
-        attachGoalSwipe(row, Number(row.dataset.goalId));
+        attachGoalSwipe(row, row.dataset.goalId);
     });
     requestAnimationFrame(() => initClampedTexts(screen));
 }
@@ -4091,7 +4149,7 @@ function showAllGoalsScreen() {
     `;
 
     screen.querySelectorAll('.swipe-row[data-goal-id]').forEach(row => {
-        attachReactivateSwipe(row, Number(row.dataset.goalId));
+        attachReactivateSwipe(row, row.dataset.goalId);
     });
 
     showScreen('all-goals-screen');
@@ -4286,7 +4344,9 @@ function renderGoalCard(goal, completed) {
                                 return ` <span class="goal-card-expiry${nearClass}">· ${expStr}</span>`;
                             })()}
                         </div>
-                        ${!completed ? `<button class="goal-edit-btn" onmousedown="openGoalEditor('${goal.id}')">edit</button>` : ''}
+                        ${completed
+                            ? `<button class="goal-add-note-btn" onmousedown="openGoalReflectionSheet('${goal.id}')" ontouchend="event.preventDefault(); openGoalReflectionSheet('${goal.id}')">+ add note</button>`
+                            : `<button class="goal-edit-btn" onmousedown="openGoalEditor('${goal.id}')">edit</button>`}
                     </div>
                 </div>
             </div>
@@ -4479,21 +4539,17 @@ function renderGoalCreator() {
     const howOftenOptions = ['Every class', 'Every week', 'set a number', 'other'];
 
     function periodChipsHtml() {
-        const presets = periodOptions.slice(0, -1);
+        const presets = periodOptions.slice(0, -1); // ['A week', 'Two weeks', 'A month', 'Three months']
         const isDateSelected = d.commitmentPeriod && !presets.includes(d.commitmentPeriod) && d.commitmentPeriod !== 'Choose a date';
-        const showDatePicker = d.commitmentPeriod === 'Choose a date' || isDateSelected;
+        const showCalendarAnchor = d.commitmentPeriod === 'Choose a date' || isDateSelected;
 
-        let dateDisplayHtml = '';
+        // "Choose a date" chip shows the picked date once selected
+        let customDateLabel = 'Choose a date';
         if (isDateSelected) {
             const dt = new Date(d.commitmentPeriod + 'T12:00:00');
             if (!isNaN(dt.getTime())) {
-                const formatted = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-                dateDisplayHtml = `<span class="date-display-label">${formatted}</span>`;
-            } else {
-                dateDisplayHtml = `<span class="date-display-label" style="color:var(--ink-3);font-weight:400;">Tap to pick a date</span>`;
+                customDateLabel = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
             }
-        } else {
-            dateDisplayHtml = `<span class="date-display-label" style="color:var(--ink-3);font-weight:400;">Tap to pick a date</span>`;
         }
 
         const draftCreatedAt = d.createdAt || new Date().toISOString();
@@ -4502,18 +4558,13 @@ function renderGoalCreator() {
 
         return `
             <div class="goal-period-chips">
-                ${periodOptions.map(p => {
-                    const isActive = p === 'Choose a date' ? showDatePicker : d.commitmentPeriod === p;
-                    return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onmousedown="setGoalPeriod('${p}')">${p}</button>`;
+                ${presets.map(p => {
+                    const isActive = d.commitmentPeriod === p;
+                    return `<button class="goal-period-chip ${isActive ? 'selected' : ''}" onmousedown="setGoalPeriod('${p}')" ontouchend="event.preventDefault(); setGoalPeriod('${p}')">${p}</button>`;
                 }).join('')}
+                <button class="goal-period-chip ${showCalendarAnchor ? 'selected' : ''}" onmousedown="setGoalPeriod('Choose a date')" ontouchend="event.preventDefault(); setGoalPeriod('Choose a date')">${customDateLabel}</button>
             </div>
-            ${showDatePicker ? `
-                <div class="session-date-picker" id="goal-period-date-picker" style="margin-top: var(--sp-sm);">
-                    <div class="date-display" onmousedown="toggleGoalDateCalendar()" style="border-left:none; border-right:none;">
-                        ${dateDisplayHtml}
-                    </div>
-                </div>
-            ` : ''}
+            ${showCalendarAnchor ? `<div id="goal-period-date-picker" style="position:relative;"></div>` : ''}
             ${resolvedExpiryStr ? `<p class="goal-period-resolved">until ${resolvedExpiryStr}</p>` : ''}
         `;
     }
@@ -4846,7 +4897,12 @@ function setGoalPeriod(period) {
     if (!d) return;
     d.commitmentPeriod = period;
     renderGoalCreator();
-    if (period === 'Choose a date') requestAnimationFrame(() => toggleGoalDateCalendar());
+    if (period === 'Choose a date') {
+        requestAnimationFrame(() => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            renderGoalDateCalendar(todayStr);
+        });
+    }
 }
 
 function toggleGoalDateCalendar() {
@@ -4863,48 +4919,15 @@ function toggleGoalDateCalendar() {
 function renderGoalDateCalendar(selectedDateStr) {
     const existing = document.getElementById('goal-date-calendar-popup');
     if (existing) existing.remove();
-
     const todayStr = new Date().toISOString().split('T')[0];
-    const sel = new Date(selectedDateStr + 'T12:00:00');
-    const viewYear = sel.getFullYear();
-    const viewMonth = sel.getMonth();
-
-    const firstDay = new Date(viewYear, viewMonth, 1);
-    const lastDay  = new Date(viewYear, viewMonth + 1, 0);
-    const startDow = (firstDay.getDay() + 6) % 7; // Mon=0
-    const monthLabel = firstDay.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-
-    const todayD = new Date(todayStr + 'T12:00:00');
-    const canGoPrev = viewYear > todayD.getFullYear() || (viewYear === todayD.getFullYear() && viewMonth > todayD.getMonth());
-
-    const dowHeaders = ['M','T','W','T','F','S','S'].map(d => `<div class="date-cal-dow">${d}</div>`).join('');
-
-    let dayCells = '';
-    for (let i = 0; i < startDow; i++) dayCells += `<button class="date-cal-day empty" disabled></button>`;
-    for (let day = 1; day <= lastDay.getDate(); day++) {
-        const dStr = `${viewYear}-${String(viewMonth + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-        const isSelected = dStr === selectedDateStr;
-        const isPast = dStr < todayStr;
-        const isToday = dStr === todayStr;
-        const cls = ['date-cal-day', isSelected ? 'selected' : '', isToday && !isSelected ? 'today' : ''].filter(Boolean).join(' ');
-        dayCells += `<button class="${cls}" onmousedown="pickGoalCalendarDate('${dStr}')" ${isPast ? 'disabled' : ''}>${day}</button>`;
-    }
-
     const popup = document.createElement('div');
     popup.id = 'goal-date-calendar-popup';
     popup.className = 'date-calendar-popup';
-    popup.innerHTML = `
-        <div class="date-cal-header">
-            <button class="date-cal-nav" onmousedown="renderGoalDateCalendar(getCalNavMonth('${selectedDateStr}', -1))" ${canGoPrev ? '' : 'disabled'}>‹</button>
-            <span class="date-cal-month-label">${monthLabel}</span>
-            <button class="date-cal-nav" onmousedown="renderGoalDateCalendar(getCalNavMonth('${selectedDateStr}', 1))">›</button>
-        </div>
-        <div class="date-cal-grid">
-            ${dowHeaders}
-            ${dayCells}
-        </div>
-    `;
-
+    popup.innerHTML = _buildCalendarHtml({
+        selectedDateStr, todayStr,
+        navFn: 'renderGoalDateCalendar', pickFn: 'pickGoalCalendarDate',
+        allowPast: false, allowFuture: true,
+    });
     const picker = document.getElementById('goal-period-date-picker');
     if (picker) picker.appendChild(popup);
 }
@@ -4913,14 +4936,7 @@ function pickGoalCalendarDate(dateStr) {
     const d = appState._goalDraft;
     if (!d) return;
     d.commitmentPeriod = dateStr;
-    document.getElementById('goal-date-calendar-popup')?.remove();
-    // Update display in-place
-    const display = document.querySelector('#goal-period-date-picker .date-display');
-    if (display) {
-        const dt = new Date(dateStr + 'T12:00:00');
-        const formatted = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-        display.innerHTML = `<span class="date-display-label">${formatted}</span>`;
-    }
+    renderGoalCreator();
 }
 
 function checkGoalTitleForSkills(text) {
@@ -5229,7 +5245,9 @@ function searchGoalCorrections(query) {
                 const skill = DATA.skills.find(s => s.id === c.skillId);
                 const date = formatTimelineDate(new Date(c.createdAt).toISOString().split('T')[0]);
                 return `
-                    <div class="goal-correction-suggestion" onmousedown="linkCorrectionToGoal('${c.id}')">
+                    <div class="goal-correction-suggestion"
+                         onmousedown="linkCorrectionToGoal('${c.id}')"
+                         ontouchend="event.preventDefault(); linkCorrectionToGoal('${c.id}')">
                         <div class="goal-correction-suggestion-text">${c.text}</div>
                         <div class="goal-correction-suggestion-meta">${[skill?.french, date].filter(Boolean).join(' · ')}</div>
                     </div>`;
@@ -5239,7 +5257,7 @@ function searchGoalCorrections(query) {
 
 function renderLinkedCorrectionsHtml(correctionIds) {
     return (correctionIds || []).map(id => {
-        const c = appState.corrections.find(c => c.id === id);
+        const c = appState.corrections.find(c => String(c.id) === String(id));
         if (!c) return '';
         const skill = DATA.skills.find(s => s.id === c.skillId);
         const date = formatTimelineDate(new Date(c.createdAt).toISOString().split('T')[0]);
@@ -5247,7 +5265,7 @@ function renderLinkedCorrectionsHtml(correctionIds) {
             <div class="goal-linked-correction">
                 <div class="goal-linked-correction-text">${c.text}</div>
                 <div class="goal-linked-correction-meta">${[skill?.french, date].filter(Boolean).join(' · ')}</div>
-                <button class="goal-unlink-correction" onmousedown="unlinkCorrectionFromGoal(${id})">unlink</button>
+                <button class="goal-unlink-correction" onmousedown="unlinkCorrectionFromGoal('${id}')">unlink</button>
             </div>`;
     }).join('');
 }
@@ -5269,7 +5287,7 @@ function linkCorrectionToGoal(correctionId) {
 function unlinkCorrectionFromGoal(correctionId) {
     const d = appState._goalDraft;
     if (!d) return;
-    d.correctionIds = (d.correctionIds || []).filter(id => id !== correctionId);
+    d.correctionIds = (d.correctionIds || []).filter(id => String(id) !== String(correctionId));
     renderGoalLinkedCorrectionsInPlace();
 }
 
@@ -6565,8 +6583,12 @@ function showSessionDetail(sessionId) {
     if (isNote) {
         const noteText = session.notes || '';
         const lines = noteText.split('\n');
-        const titleLine = escapeHtml(lines[0] || '');
-        const bodyLines = escapeHtml(lines.slice(1).join('\n'));
+        const titleLine = session.sessionName
+            ? escapeHtml(session.sessionName)
+            : escapeHtml(lines[0] || '');
+        const bodyLines = session.sessionName
+            ? escapeHtml(noteText)
+            : escapeHtml(lines.slice(1).join('\n'));
         const noteContentHtml = titleLine
             ? `<span class="note-detail-line-title">${titleLine}</span>${bodyLines ? `<span class="note-detail-line-body">${bodyLines}</span>` : ''}`
             : `<span class="note-detail-line-body" style="color:var(--ink-4);font-style:italic;">No content.</span>`;

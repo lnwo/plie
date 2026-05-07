@@ -1,4 +1,4 @@
-const CACHE_NAME = 'plie-v10';
+const CACHE_NAME = 'plie-v11';
 const ASSETS_TO_CACHE = [
     '/index.html',
     '/manifest.json',
@@ -32,6 +32,13 @@ self.addEventListener('activate', (event) => {
 // Fetch — serve from cache, fall back to network
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
+
+    // Never cache JS or CSS — always fetch fresh
+    const url = new URL(event.request.url);
+    if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
 
     event.respondWith(
         caches.match(event.request).then((cachedResponse) => {

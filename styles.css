@@ -41,6 +41,7 @@
     /* ── Semantic ── */
     --coral:         #A84030;   /* corrections, alerts, delete */
     --coral-soft:    #F0D5CF;   /* recurring badge bg */
+    --dec-coral:     #C97060;   /* calendar selected date, decoration */
     --sage:          #4A7038;   /* milestones, completed states */
     --sage-soft:     #D4E5C8;   /* milestone tags */
     --success:       #4A7038;
@@ -2488,11 +2489,89 @@ h1, h2, .screen-heading {
 }
 
 /* ── Note editor ── */
+/* ── Note card component — PLI-022 ─────────────────────────────────────────
+   Shared by: standalone note sheet, note blocks in logger
+   ──────────────────────────────────────────────────────────────────────────── */
+.note-card-input {
+    background: var(--surface-warm);
+    border: 1px solid var(--gold);
+    border-radius: var(--r-md);
+    padding: var(--sp-md) var(--sp-lg);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.note-card-title-input {
+    display: block;
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    outline: none;
+    box-shadow: none;
+    -webkit-appearance: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--ink);
+    padding: 0;
+    margin-bottom: var(--sp-sm);
+}
+
+.note-card-title-input:focus {
+    border: none;
+    outline: none;
+    box-shadow: none;
+    background: transparent;
+}
+
+.note-card-title-input::placeholder {
+    color: var(--ink-4);
+    font-weight: 400;
+    font-style: italic;
+}
+
+/* Strip block-bullet-entry boxing when inside the note card */
+.note-card-input .block-bullet-entry {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+}
+
+.note-card-input .block-bullet-entry:focus {
+    border: none;
+    outline: none;
+}
+
+.note-card-body {
+    min-height: 100px;
+    font-size: var(--fs-body);
+    color: var(--ink-2);
+    line-height: 1.6;
+    background: transparent;
+    border: none;
+    outline: none;
+    width: 100%;
+    white-space: pre-wrap;
+    word-break: break-word;
+    cursor: text;
+}
+
+/* data-placeholder for contenteditable empty state */
+.note-card-body:empty::before {
+    content: attr(data-placeholder);
+    color: var(--ink-4);
+    font-style: italic;
+    pointer-events: none;
+}
+
+/* Legacy standalone note-editor (kept for backward compat) */
 .note-editor {
     width: 100%;
     min-height: 220px;
     background: var(--surface-warm);
-    border: 1.5px solid var(--gold-soft);
+    border: 1px solid var(--gold);
     border-radius: var(--r-md);
     padding: var(--sp-lg);
     font-family: 'DM Sans', sans-serif;
@@ -2506,13 +2585,7 @@ h1, h2, .screen-heading {
     word-break: break-word;
 }
 
-.note-editor:focus {
-    border-color: var(--gold);
-}
-
-.note-editor::first-line {
-    font-weight: 600;
-}
+.note-editor:focus { border-color: var(--gold); }
 
 .note-editor-hint {
     font-size: var(--fs-caption);
@@ -2680,32 +2753,33 @@ h1, h2, .screen-heading {
     margin-top: var(--sp-sm);
 }
 
+/* ── Reusable text field — applies to all single-line and multi-line inputs ── */
 .session-input {
     width: 100%;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
+    background: #fff;
+    border: 0.5px solid rgba(26, 23, 20, 0.15);
     border-radius: var(--r-md);
     padding: 13px var(--sp-md);
     font-family: 'DM Sans', sans-serif;
     font-size: var(--fs-body);
     color: var(--ink);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: border-color 0.15s ease, background 0.15s ease;
     -webkit-appearance: none;
     appearance: none;
 }
 
 .session-input:focus {
     outline: none;
-    border-color: var(--gold-mid);
-    box-shadow: 0 0 0 3px rgba(196, 168, 130, 0.15);
+    border-color: var(--gold);
+    background: var(--surface-warm);
+    box-shadow: none;
 }
 
 .session-input.input-error {
     border-color: var(--error);
-    box-shadow: 0 0 0 3px rgba(201, 107, 92, 0.12);
 }
 
-.session-input::placeholder { color: var(--ink-3); }
+.session-input::placeholder { color: var(--ink-3); font-style: italic; }
 
 /* ── Session name field (document-style logger) ── */
 .session-name-field {
@@ -2832,84 +2906,113 @@ h1, h2, .screen-heading {
 
 /* Inline calendar popup */
 
+/* ── Calendar date picker — PLI-020 ── */
+/* Container: 204×186px, padding 8px, gap 2px between rows */
 .date-calendar-popup {
     position: absolute;
-    top: calc(100% + 6px);
+    top: calc(100% + 4px);
     left: 0;
-    right: 0;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: var(--r-md);
-    padding: var(--sp-md);
+    width: 204px;
+    box-sizing: border-box;
+    background: #fff;
+    border: 0.5px solid rgba(233, 233, 231, 1);
+    border-radius: 8px;
+    padding: 8px;
     z-index: 20;
-    box-shadow: var(--shadow-2);
+    box-shadow: 0 1px 14px 0 rgba(0, 0, 0, 0.10);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
+/* Header row: ◄  Month Year  ► */
 .date-cal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: var(--sp-sm);
+    height: 20px;
 }
 
 .date-cal-month-label {
     font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
+    font-size: 12px;
     font-weight: 600;
     color: var(--ink);
+    text-align: center;
+    flex: 1;
 }
 
 .date-cal-nav {
+    width: 20px;
+    height: 20px;
     background: none;
     border: none;
-    color: var(--ink-2);
+    color: var(--ink-3);
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: var(--r-sm);
-    font-size: var(--fs-body);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    border-radius: 4px;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    flex-shrink: 0;
+    transition: color 0.12s, background 0.12s;
 }
 
-.date-cal-nav:active { background: var(--gold-wash); }
-.date-cal-nav:disabled { color: var(--ink-4); cursor: default; }
+.date-cal-nav:hover { color: var(--ink); background: var(--gold-wash); }
+.date-cal-nav:disabled { color: var(--ink-4); cursor: default; background: none; }
 
+/* 7-column grid — inner width 188px, gap 2px → each cell ≈25px */
 .date-cal-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 2px;
-    text-align: center;
 }
 
+/* DOW headers: MO TU WE TH FR SA SU */
 .date-cal-dow {
     font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-caption);
-    color: var(--ink-3);
-    padding: 2px 0;
-    font-weight: 500;
+    font-size: 8px;
+    font-weight: 600;
+    color: var(--ink-4);
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    text-align: center;
+    height: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
+/* Day cells: height 22px to fit 6 rows in 170px inner height */
 .date-cal-day {
     font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
+    font-size: 11px;
+    font-weight: 400;
     color: var(--ink);
-    padding: 6px 0;
+    height: 22px;
     cursor: pointer;
-    border-radius: var(--r-sm);
+    border-radius: 4px;
     background: none;
     border: none;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: background 0.1s ease;
+    padding: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-.date-cal-day:hover { background: var(--gold-wash); }
-.date-cal-day:active { background: var(--gold-soft); }
-.date-cal-day.selected { background: var(--gold-mid); color: white; font-weight: 600; }
-.date-cal-day.today { color: var(--gold); font-weight: 600; }
-.date-cal-day.future,
-.date-cal-day:disabled { color: var(--ink-4); cursor: default; }
-.date-cal-day.future:hover,
-.date-cal-day:disabled:hover { background: none; }
-.date-cal-day.empty { cursor: default; }
+.date-cal-day:hover:not(:disabled):not(.out-of-month) { background: var(--gold-wash); }
+.date-cal-day.today  { background: var(--gold-wash); font-weight: 600; color: var(--ink); }
+.date-cal-day.selected { background: var(--dec-coral); color: #fff; font-weight: 600; border-radius: 4px; }
+.date-cal-day.selected:hover { background: #b85c4e; }
+.date-cal-day:disabled:not(.out-of-month) { color: var(--ink-4); cursor: default; }
+.date-cal-day.out-of-month { color: var(--ink-4); font-size: 10px; cursor: default; }
 
 /* ── Session select ── */
 
@@ -3095,27 +3198,57 @@ h1, h2, .screen-heading {
     flex-wrap: wrap;
 }
 
-.day-chip {
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: var(--r-sm);
-    padding: 6px 10px;
+/* ── Base chip component ─────────────────────────────────────────────────────
+   Shared by: .day-chip, .recurrence-chip, .block-tag-chip, .goal-period-chip
+   Per CLAUDE.md: default white bg + subtle border; selected = --ink fill, white text
+   Goal-period chips override selected state to gold (goal creator only).
+   ──────────────────────────────────────────────────────────────────────────── */
+.chip,
+.day-chip,
+.recurrence-chip,
+.block-tag-chip,
+.goal-period-chip {
+    background: #fff;
+    border: 0.5px solid rgba(26, 23, 20, 0.15);
+    border-radius: 4px;
     font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
-    font-weight: 500;
+    font-size: var(--fs-card);
+    font-weight: 400;
     color: var(--ink-2);
+    padding: 4px 10px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
     cursor: pointer;
-    transition: all 0.2s var(--ease-out);
-    min-width: 40px;
-    text-align: center;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: background .12s, border-color .12s, color .12s;
+    box-sizing: border-box;
+    white-space: nowrap;
 }
 
-.day-chip:hover { border-color: var(--gold-mid); color: var(--primary); }
+.chip.selected, .chip--selected,
+.day-chip.selected,
+.recurrence-chip.selected,
+.block-tag-chip.active,
+.goal-period-chip.selected {
+    background: var(--gold-soft);
+    border-color: var(--gold);
+    border-width: 1px;
+    color: var(--ink);
+}
 
-.day-chip.selected {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: #fff;
+.chip:hover:not(.selected):not(.chip--selected),
+.day-chip:hover:not(.selected),
+.recurrence-chip:hover:not(.selected) {
+    border-color: var(--gold);
+    color: var(--ink);
+}
+
+/* day-chip keeps its min-width for MO/TU/WE labels */
+.day-chip {
+    min-width: 40px;
+    justify-content: center;
 }
 
 /* ── New session form (inline card) ── */
@@ -3156,29 +3289,11 @@ h1, h2, .screen-heading {
 
 .recurrence-chips {
     display: flex;
-    gap: var(--sp-sm);
+    gap: 4px;
     flex-wrap: wrap;
 }
 
-.recurrence-chip {
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: var(--r-full);
-    padding: 7px 14px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
-    color: var(--ink-2);
-    cursor: pointer;
-    transition: all 0.2s var(--ease-out);
-}
-
-.recurrence-chip:hover { border-color: var(--gold-mid); color: var(--primary); }
-
-.recurrence-chip.selected {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: #fff;
-}
+/* .recurrence-chip base styles come from .chip composite selector above */
 
 /* ── Notes & corrections blocks ── */
 
@@ -3968,25 +4083,7 @@ input.session-block-topic-input:focus {
     padding: var(--sp-sm) var(--sp-md) var(--sp-md);
 }
 
-.block-tag-chip {
-    font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-caption);
-    font-weight: 500;
-    color: var(--ink-4);
-    background: none;
-    border: 1px solid var(--ink-6);
-    border-radius: var(--r-full);
-    padding: 3px 10px;
-    cursor: pointer;
-    transition: background .15s, color .15s, border-color .15s;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.block-tag-chip.active {
-    background: var(--ink);
-    color: #fff;
-    border-color: var(--ink);
-}
+/* .block-tag-chip base + active come from .chip composite selector above */
 
 /* ── Correction reuse section (PLI-011) ───────────────────────────────────── */
 
@@ -6542,6 +6639,10 @@ mark.search-highlight {
     cursor: pointer;
     border-bottom: 1px solid var(--border-light);
     transition: background 0.15s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .goal-correction-suggestion:last-child { border-bottom: none; }
@@ -7135,6 +7236,24 @@ button, a, input, select, textarea,
 }
 
 .goal-edit-btn:hover { color: var(--primary); }
+
+.goal-add-note-btn {
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: var(--fs-caption);
+    color: var(--gold);
+    cursor: pointer;
+    padding: 12px 8px;
+    margin: -12px -8px;
+    transition: color 0.15s ease;
+    white-space: nowrap;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.goal-add-note-btn:hover { color: var(--gold-mid); }
 
 /* ═══════════════════════════════════════
    GOAL MILESTONE SCROLL CAP
@@ -9460,16 +9579,17 @@ button, a, input, select, textarea,
     border-bottom: 1px solid var(--border-soft, #EEEBE6);
     padding: 0 var(--sp-lg);
     gap: 0;
+    margin-top: 22px;
 }
 .goal-type-tab {
     background: none;
     border: none;
     border-bottom: 2px solid transparent;
     font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
-    font-weight: 500;
+    font-size: var(--fs-card);
+    font-weight: 400;
     color: var(--ink-3);
-    padding: 10px var(--sp-md) 10px 0;
+    padding: 6px var(--sp-md) 5px 0;
     cursor: pointer;
     margin-bottom: -1px;
     transition: color .15s, border-color .15s;
@@ -9479,6 +9599,7 @@ button, a, input, select, textarea,
 }
 .goal-type-tab.active {
     color: var(--ink);
+    font-weight: 600;
     border-bottom-color: var(--gold);
 }
 
@@ -9498,29 +9619,11 @@ button, a, input, select, textarea,
     margin: 0;
 }
 
-/* Commitment period / how-often chips */
+/* Commitment period chips — base from .chip composite selector */
 .goal-period-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--sp-xs, 6px);
-    margin-top: var(--sp-xs, 6px);
-}
-.goal-period-chip {
-    background: var(--surface);
-    border: 1.5px solid var(--border-mid, #DDD6CF);
-    border-radius: 100px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-small);
-    color: var(--ink);
-    padding: 6px 14px;
-    cursor: pointer;
-    transition: background .12s, border-color .12s;
-    -webkit-tap-highlight-color: transparent;
-}
-.goal-period-chip.selected {
-    background: var(--gold-wash);
-    border-color: var(--gold);
-    color: var(--ink);
+    gap: 4px;
 }
 
 .goal-period-resolved {
@@ -9531,19 +9634,62 @@ button, a, input, select, textarea,
     margin-top: var(--sp-xs);
 }
 
-/* Goal creator — field labels use small-caps muted style */
-.goal-creator-overlay .session-field-label {
-    font-size: var(--fs-caption);
-    font-weight: 500;
-    color: var(--ink-3);
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
+/* Goal creator — all body text 12px, header flush (tabs provide the 22px gap) */
+#goal-creator-overlay .session-logger-body {
+    font-size: var(--fs-card);
+}
+#goal-creator-overlay .session-logger-header {
+    padding-bottom: 0;
 }
 
-/* Goal creator — milestone delete button */
+/* Goal creator — session-field uses flex-column gap:10px (label-to-input spacing) */
+#goal-creator-overlay .session-field {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: var(--sp-md);
+}
+
+/* Goal creator — field labels: small-caps 11px muted */
+#goal-creator-overlay .session-field-label {
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0;
+}
+
+/* Goal creator — optional hint beside label */
+#goal-creator-overlay .session-field-optional {
+    font-size: var(--fs-caption);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--ink-4);
+}
+
+/* Goal creator — "+ add a step" left-aligned, not stretched */
+#goal-creator-overlay .add-block-btn {
+    align-self: flex-start;
+    font-size: var(--fs-card);
+    padding: 2px 0;
+    margin-bottom: 0;
+}
+
+/* Goal creator — milestone delete button — 24px tall, icon centered */
 .goal-marker-delete {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: var(--ink-3);
     flex-shrink: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
 }
 .goal-marker-delete:hover { color: var(--ink); }
 
@@ -9573,26 +9719,60 @@ button, a, input, select, textarea,
     color: #fff;
 }
 
-/* Progress marker inputs */
+/* Goal creator — compact input override (24px, Pixso spec) */
+#goal-creator-overlay .session-input:not(textarea) {
+    height: 24px;
+    padding: 4px 8px;
+    border-radius: 2px;
+    border: 0.5px solid rgba(233, 233, 231, 1);
+    background: var(--surface-warm);
+    font-size: var(--fs-card);
+    box-shadow: none;
+}
+#goal-creator-overlay .session-input:not(textarea):focus {
+    border-color: var(--gold);
+    box-shadow: none;
+    background: var(--surface-warm);
+}
+#goal-creator-overlay textarea.session-input {
+    padding: 6px 8px;
+    border-radius: 2px;
+    border: 0.5px solid rgba(233, 233, 231, 1);
+    background: var(--surface-warm);
+    font-size: var(--fs-card);
+    box-shadow: none;
+    min-height: 52px;
+}
+#goal-creator-overlay textarea.session-input:focus {
+    border-color: var(--gold);
+    box-shadow: none;
+    background: var(--surface-warm);
+}
+
+/* Progress marker inputs — same spec */
 .goal-marker-row {
     display: flex;
-    align-items: center;
-    gap: var(--sp-sm);
+    align-items: flex-start;
+    gap: 10px;
     margin-bottom: var(--sp-xs, 6px);
+    min-height: 24px;
 }
 .goal-marker-input {
     flex: 1;
-    padding: 10px var(--sp-md);
+    height: 24px;
+    padding: 4px 8px;
     font-family: 'DM Sans', sans-serif;
-    font-size: var(--fs-body);
-    border: 1.5px solid var(--border-mid, #DDD6CF);
-    border-radius: 8px;
-    background: var(--surface);
+    font-size: var(--fs-card);
+    border: 0.5px solid rgba(233, 233, 231, 1);
+    border-radius: 2px;
+    background: var(--surface-warm);
     color: var(--ink);
+    box-sizing: border-box;
 }
 .goal-marker-input:focus {
     outline: none;
     border-color: var(--gold);
+    background: var(--surface-warm);
 }
 
 /* Goal type selection cards (no-type state) */
